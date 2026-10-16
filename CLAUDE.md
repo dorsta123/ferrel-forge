@@ -14,7 +14,7 @@ Run from the repo root (pnpm + Turborepo):
 
 ```sh
 pnpm install
-pnpm db:up            # docker compose: Postgres :5432, Redis :6379, MinIO :9000 (console :9001)
+pnpm db:up            # docker compose: Postgres :5432, Redis :6379, RustFS (S3-compatible) :9000 (console :9001)
 pnpm db:migrate       # apply Drizzle migrations
 pnpm dev              # web on :3000 + worker, in parallel
 pnpm test             # vitest (currently only @ferrel/pricing)
@@ -56,4 +56,6 @@ This Next.js version differs from older training data — read `apps/web/AGENTS.
 
 - pnpm requires explicit approval for dependency install scripts: add them under `allowBuilds` in `pnpm-workspace.yaml` (`true` to allow, `false` to silence) or install fails with `ERR_PNPM_IGNORED_BUILDS`.
 - TypeScript is pinned to `^5` to match Next.js — don't upgrade to 7.
+- BullMQ 6 needs an explicit `ioredis` client instance (see `apps/worker/src/queues.ts`); passing `{ url }` options fails under ESM.
+- MinIO no longer publishes free Docker images; RustFS is the local S3 stand-in.
 - Windows dev machine; FFmpeg is not installed yet (needed from phase 4).

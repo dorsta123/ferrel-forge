@@ -19,6 +19,7 @@ await systemQueue.add("ping", {});
 const shutdown = async () => {
   await worker.close();
   await systemQueue.close();
+  connection.disconnect();
   process.exit(0);
 };
 process.on("SIGINT", shutdown);

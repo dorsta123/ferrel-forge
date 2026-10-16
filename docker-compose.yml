@@ -1,3 +1,5 @@
+name: ferrel-forge
+
 services:
   postgres:
     image: postgres:17
@@ -12,15 +14,16 @@ services:
     image: redis:7
     ports: ["6379:6379"]
 
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
+  # S3-compatible object storage. MinIO no longer publishes free images, so RustFS stands in.
+  rustfs:
+    image: rustfs/rustfs:latest
     environment:
-      MINIO_ROOT_USER: ferrel
-      MINIO_ROOT_PASSWORD: ferrelsecret
+      RUSTFS_ACCESS_KEY: ferrel
+      RUSTFS_SECRET_KEY: ferrelsecret
+      RUSTFS_CONSOLE_ENABLE: "true"
     ports: ["9000:9000", "9001:9001"]
-    volumes: [miniodata:/data]
+    volumes: [s3data:/data]
 
 volumes:
   pgdata:
-  miniodata:
+  s3data:

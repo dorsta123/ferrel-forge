@@ -9,7 +9,7 @@ Requires Node 22+, pnpm, and Docker Desktop.
 ```sh
 pnpm install
 cp .env.example .env
-pnpm db:up        # start Postgres, Redis, MinIO
+pnpm db:up        # start Postgres, Redis, RustFS
 pnpm db:migrate   # create tables
 pnpm dev          # http://localhost:3000
 ```
