@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ferrel-forge is a **non-commercial** licensed music marketplace: creators list tracks, buyers purchase licenses at Roblox-style dynamic prices (limited supply, demand-driven). It must stay $0 to run — only free/open-source tools, Stripe in **test mode only**, no paid services.
 
-Built in phases: 1 scaffold (done) → 2 auth (Auth.js, creator/buyer roles) → 3 listings → 4 audio (worker + FFmpeg previews) → 5 fixed-price checkout (Stripe Connect test mode, ledger, licenses) → 6 dynamic pricing → 7 search/dashboard/extras.
+Built in phases: 1 scaffold (done) → 2 auth (done: Better Auth — Auth.js now recommends it for new projects — email+password; a user is a creator iff they have a `creator_profiles` row) → 3 listings → 4 audio (worker + FFmpeg previews) → 5 fixed-price checkout (Stripe Connect test mode, ledger, licenses) → 6 dynamic pricing → 7 search/dashboard/extras.
 
 ## Commands
 
@@ -17,7 +17,7 @@ pnpm install
 pnpm db:up            # docker compose: Postgres :5432, Redis :6379, RustFS (S3-compatible) :9000 (console :9001)
 pnpm db:migrate       # apply Drizzle migrations
 pnpm dev              # web on :3000 + worker, in parallel
-pnpm test             # vitest (currently only @ferrel/pricing)
+pnpm test             # vitest (@ferrel/pricing, @ferrel/web)
 pnpm typecheck        # runs `next typegen` first for the web app
 pnpm lint
 pnpm build
@@ -41,6 +41,7 @@ packages/pricing Pure pricing engine
 
 - Internal packages are consumed as **TypeScript source** (`"exports": "./src/index.ts"`, no build step). The web app lists them in `transpilePackages`; the worker runs them through tsx. New internal packages need adding to both `package.json` deps (`workspace:*`) and `transpilePackages`.
 - **Pricing engine must stay pure** — no DB, Redis, or clock access. Inputs in, price out, so it can be unit-tested and replayed against sales history. Callers (web/worker) gather inputs.
+- **Auth**: server config in `apps/web/src/lib/auth.ts`, browser helpers in `auth-client.ts`. Server code gets the user only via `getCurrentUser()` (`apps/web/src/lib/session.ts`), which reads the session cookie, so callers must sit inside `<Suspense>`. Authorize inside each page/Server Action next to the data, never only in the header. After a Server Action changes something the header shows, call `revalidatePath("/", "layout")` before `redirect()` or the layout stays stale.
 - **Web → worker** communication is only through BullMQ queues in Redis. Queue names are defined in `apps/worker/src/queues.ts`; one queue per kind of work.
 - Planned money/licensing rules (phases 5–6): lock a price quote in Redis (~60s) at checkout and charge exactly that; record every money movement in a double-entry ledger table rather than mutating balances; a license is its own record separate from the audio file; master audio files stay in a private bucket and are served only via signed URLs, previews in a public bucket.
 
@@ -58,4 +59,6 @@ This Next.js version differs from older training data — read `apps/web/AGENTS.
 - TypeScript is pinned to `^5` to match Next.js — don't upgrade to 7.
 - BullMQ 6 needs an explicit `ioredis` client instance (see `apps/worker/src/queues.ts`); passing `{ url }` options fails under ESM.
 - MinIO no longer publishes free Docker images; RustFS is the local S3 stand-in.
+- shadcn/ui here is the `base-nova` style on **Base UI** (not Radix): no `asChild`. To style a `<Link>` as a button, use `className={buttonVariants(...)}`. Components import `cn` from the `cn` package (pinned to an exact version).
+- If styles look stale or unstyled in dev after changing `globals.css` or adding CSS imports, Turbopack's persistent dev cache is serving old CSS: stop the dev server and delete `apps/web/.next/dev`.
 - Windows dev machine; FFmpeg is not installed yet (needed from phase 4).

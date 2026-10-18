@@ -12,3 +12,5 @@ if (process.env.NODE_ENV !== "production") globalForDb.pgClient = client;
 
 export const db = drizzle(client, { schema });
 export * from "./schema";
+// Re-export query helpers so apps use the same drizzle-orm instance as the schema.
+export { and, eq, or, sql } from "drizzle-orm";
