@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authErrorMessage } from "@/components/auth/auth-errors";
 import { signUp } from "@/lib/auth-client";
+import { DISPLAY_NAME_MAX, displayNameError, normalizeDisplayName } from "@/lib/display-name";
 
 const MIN_PASSWORD = 8;
 
@@ -18,13 +19,14 @@ export function SignUpForm() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const name = String(form.get("name") ?? "").trim();
+    const name = normalizeDisplayName(String(form.get("name") ?? ""));
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
     const confirm = String(form.get("confirm") ?? "");
 
     // Instant feedback only; the server validates again.
-    if (!name) return setError("Enter your name.");
+    const nameError = displayNameError(name);
+    if (nameError) return setError(nameError);
     if (password.length < MIN_PASSWORD) return setError(`Password must be at least ${MIN_PASSWORD} characters.`);
     if (password !== confirm) return setError("Passwords don't match.");
 
@@ -43,7 +45,7 @@ export function SignUpForm() {
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
       <div className="flex flex-col gap-2">
         <Label htmlFor="name">Name</Label>
-        <Input className="h-10" id="name" name="name" autoComplete="name" required />
+        <Input className="h-10" id="name" name="name" autoComplete="name" maxLength={DISPLAY_NAME_MAX} required />
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="email">Email</Label>
