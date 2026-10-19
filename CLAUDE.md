@@ -14,7 +14,7 @@ Run from the repo root (pnpm + Turborepo):
 
 ```sh
 pnpm install
-pnpm db:up            # docker compose: Postgres :5432, Redis :6379, RustFS (S3-compatible) :9000 (console :9001)
+pnpm db:up            # docker compose: Postgres :5432, Redis :6379, RustFS (S3-compatible) :9000 (console :9001) — all bound to 127.0.0.1, images pinned
 pnpm db:migrate       # apply Drizzle migrations
 pnpm dev              # web on :3000 + worker, in parallel
 pnpm test             # vitest (@ferrel/pricing, @ferrel/web)
@@ -42,6 +42,7 @@ packages/pricing Pure pricing engine
 - Internal packages are consumed as **TypeScript source** (`"exports": "./src/index.ts"`, no build step). The web app lists them in `transpilePackages`; the worker runs them through tsx. New internal packages need adding to both `package.json` deps (`workspace:*`) and `transpilePackages`.
 - **Pricing engine must stay pure** — no DB, Redis, or clock access. Inputs in, price out, so it can be unit-tested and replayed against sales history. Callers (web/worker) gather inputs.
 - **Auth**: server config in `apps/web/src/lib/auth.ts`, browser helpers in `auth-client.ts`. Server code gets the user only via `getCurrentUser()` (`apps/web/src/lib/session.ts`), which reads the session cookie, so callers must sit inside `<Suspense>`. Authorize inside each page/Server Action next to the data, never only in the header. After a Server Action changes something the header shows, call `revalidatePath("/", "layout")` before `redirect()` or the layout stays stale.
+- **User data validation** lives in Better Auth `databaseHooks` in `auth.ts` (sign-up *and* the `/update-user` endpoint both write users). Display names: `lib/display-name.ts` (normalized, 1–60 chars). `image` is forced to null until avatar uploads exist. Hooks are merged as `{ ...request, ...hookData }` — to strip a field, overwrite it (e.g. `image: null`); omitting the key keeps the request value.
 - **Web → worker** communication is only through BullMQ queues in Redis. Queue names are defined in `apps/worker/src/queues.ts`; one queue per kind of work.
 - Planned money/licensing rules (phases 5–6): lock a price quote in Redis (~60s) at checkout and charge exactly that; record every money movement in a double-entry ledger table rather than mutating balances; a license is its own record separate from the audio file; master audio files stay in a private bucket and are served only via signed URLs, previews in a public bucket.
 
