@@ -43,26 +43,26 @@ export function SignUpForm() {
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
       <div className="flex flex-col gap-2">
         <Label htmlFor="name">Name</Label>
-        <Input id="name" name="name" autoComplete="name" required />
+        <Input className="h-10" id="name" name="name" autoComplete="name" required />
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" autoComplete="email" required />
+        <Input className="h-10" id="email" name="email" type="email" autoComplete="email" required />
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="password">Password</Label>
-        <Input id="password" name="password" type="password" autoComplete="new-password" minLength={MIN_PASSWORD} required />
+        <Input className="h-10" id="password" name="password" type="password" autoComplete="new-password" minLength={MIN_PASSWORD} required />
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="confirm">Confirm password</Label>
-        <Input id="confirm" name="confirm" type="password" autoComplete="new-password" required />
+        <Input className="h-10" id="confirm" name="confirm" type="password" autoComplete="new-password" required />
       </div>
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}
-      <Button type="submit" disabled={pending} className="w-full">
+      <Button type="submit" disabled={pending} className="h-10 w-full font-semibold">
         {pending ? "Creating account…" : "Create account"}
       </Button>
     </form>

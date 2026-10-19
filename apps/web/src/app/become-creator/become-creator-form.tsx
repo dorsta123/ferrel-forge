@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Avatar } from "@/components/avatar";
 import { ARTIST_NAME_MAX, BIO_MAX, SLUG_MAX, slugify } from "@/lib/creator-profile";
 import { becomeCreator, type BecomeCreatorState } from "./actions";
 
@@ -29,10 +30,12 @@ export function BecomeCreatorForm() {
   ) as BecomeCreatorState["errors"];
 
   return (
-    <form action={formAction} className="flex flex-col gap-5" noValidate>
+    <div className="grid items-start gap-8 lg:grid-cols-[1fr_22rem]">
+    <form action={formAction} className="flex flex-col gap-5 rounded-2xl border bg-card p-6 sm:p-8" noValidate>
       <div className="flex flex-col gap-2">
         <Label htmlFor="artistName">Artist name</Label>
         <Input
+          className="h-10"
           id="artistName"
           name="artistName"
           value={artistName}
@@ -54,6 +57,7 @@ export function BecomeCreatorForm() {
       <div className="flex flex-col gap-2">
         <Label htmlFor="slug">Profile URL</Label>
         <Input
+          className="h-10"
           id="slug"
           name="slug"
           value={slug}
@@ -98,10 +102,41 @@ export function BecomeCreatorForm() {
       </div>
 
       <FieldError message={errors.form} />
-      <Button type="submit" disabled={pending} className="w-full">
+      <Button type="submit" disabled={pending} className="h-10 w-full font-semibold">
         {pending ? "Creating profile…" : "Become a creator"}
       </Button>
     </form>
+    <ProfilePreview artistName={artistName} slug={slug} bio={bio} />
+    </div>
+  );
+}
+
+/** Live preview of the public profile card, updated as the user types. */
+function ProfilePreview({ artistName, slug, bio }: { artistName: string; slug: string; bio: string }) {
+  const name = artistName.trim() || "Your artist name";
+  return (
+    <aside aria-label="Profile preview" className="flex flex-col gap-3 lg:sticky lg:top-20">
+      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Preview</p>
+      <div className="overflow-hidden rounded-2xl border bg-card">
+        <div className="grain ember-glow h-24 border-b" />
+        <div className="-mt-8 flex flex-col gap-3 p-5">
+          <Avatar name={artistName.trim() || "?"} className="size-16 text-xl ring-4 ring-card" />
+          <div className="min-w-0">
+            <p className={`truncate font-display text-xl font-semibold ${artistName.trim() ? "" : "text-muted-foreground"}`}>
+              {name}
+            </p>
+            <p className="truncate font-mono text-xs text-muted-foreground">/creators/{slug || "your-name"}</p>
+          </div>
+          <p className="line-clamp-4 text-sm break-words whitespace-pre-line text-muted-foreground">
+            {bio.trim() || "Your bio will appear here."}
+          </p>
+          <div className="flex gap-2 border-t pt-3 text-xs text-muted-foreground">
+            <span className="rounded-full bg-secondary px-2 py-0.5">0 tracks</span>
+            <span className="rounded-full bg-secondary px-2 py-0.5">New creator</span>
+          </div>
+        </div>
+      </div>
+    </aside>
   );
 }
 
