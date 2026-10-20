@@ -10,7 +10,7 @@ One file per decision, numbered in order. To reverse a decision, add a new recor
 | [004](004-rustfs-and-s3-protocol.md) | RustFS locally, via the S3 protocol | Accepted |
 | [005](005-creator-as-profile-row.md) | "Creator" = has a `creator_profiles` row | Accepted |
 | [006](006-money-in-cents-and-pure-pricing.md) | Money in integer cents; pricing engine is pure | Accepted |
-| [007](007-one-license-type.md) | One license type per track (for now) | Accepted |
+| [007](007-one-license-type.md) | One license type per track (for now) | Superseded by 016 |
 | [008](008-generated-cover-art.md) | Generated cover art (no uploads yet) | Accepted |
 | [009](009-slug-rules.md) | Slug rules: creator slugs fixed for now, track slugs lock on publish | Accepted |
 | [010](010-validate-users-in-auth-hooks.md) | Validate user data in Better Auth hooks | Accepted |
@@ -19,6 +19,10 @@ One file per decision, numbered in order. To reverse a decision, add a new recor
 | [013](013-feature-modules.md) | Feature modules: pure rules, a service, thin actions | Accepted |
 | [014](014-release-lifecycle.md) | Release lifecycle: draft → published → archived, URL and sale locks | Accepted |
 | [015](015-public-catalog.md) | Public catalog: published lists, archived pages stay reachable, always fresh, streamed 404s | Accepted |
+| [016](016-metered-exposure-licensing.md) | Metered exposure licensing for advertisers: views × seconds watched, rate locked per license, postpaid monthly, read-only | Accepted |
+| [017](017-simulated-data.md) | Simulated ad platforms and market data behind real adapter interfaces | Accepted |
+| [018](018-pricing-model.md) | Pricing model: city income, demand, culture, capped AI trends; v1 formula then v2 ML | Accepted |
+| [019](019-contributor-splits.md) | Contributor splits: basis points, everyone accepts, locked per license, settled automatically as each invoice is paid | Accepted |
 
 ## Template
 
