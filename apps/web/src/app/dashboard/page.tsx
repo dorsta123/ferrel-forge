@@ -1,32 +1,39 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { DiscAlbumIcon, SparklesIcon, UploadIcon } from "lucide-react";
+import { SparklesIcon } from "lucide-react";
 import { creatorProfiles, db, eq } from "@ferrel/db";
 import { Avatar } from "@/components/avatar";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { CreatorReleases } from "@/features/creator-tracks/creator-releases";
+import { parseTrackFilter } from "@/features/creator-tracks/filters";
+import { creatorTrackStats } from "@/features/creator-tracks/queries";
 import { getCurrentUser } from "@/lib/session";
 
 export const metadata = { title: "Dashboard · ferrel-forge" };
 
-export default function Page() {
+export default function Page({ searchParams }: PageProps<"/dashboard">) {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-10 sm:px-6">
       <Suspense fallback={<div className="h-72 rounded-2xl border bg-card" />}>
-        <Dashboard />
+        <Dashboard searchParams={searchParams} />
       </Suspense>
     </main>
   );
 }
 
-async function Dashboard() {
+async function Dashboard({ searchParams }: { searchParams: PageProps<"/dashboard">["searchParams"] }) {
   // Creators only. Checked here on the server, next to the data, not in the header.
-  const user = await getCurrentUser();
+  const [user, params] = await Promise.all([getCurrentUser(), searchParams]);
   if (!user) redirect("/sign-in");
   if (!user.creator) return <CreatorsOnly />;
 
-  const [profile] = await db.select().from(creatorProfiles).where(eq(creatorProfiles.userId, user.id)).limit(1);
+  const [[profile], stats] = await Promise.all([
+    db.select().from(creatorProfiles).where(eq(creatorProfiles.userId, user.id)).limit(1),
+    creatorTrackStats(user.id),
+  ]);
   if (!profile) return <CreatorsOnly />; // deleted between the two reads
+  const filter = parseTrackFilter(params.status);
 
   const since = profile.createdAt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
@@ -47,31 +54,15 @@ async function Dashboard() {
         </div>
       </section>
 
-      {/* Stats: real values, all zero until listings exist */}
+      {/* Stats: real counts. Earnings return in phase 5, when there are real sales. */}
       <section aria-label="Stats" className="grid grid-cols-3 gap-2 sm:gap-4">
-        <Stat label="Tracks listed" value="0" />
-        <Stat label="Copies sold" value="0" />
-        <Stat label="Earnings" value="$0.00" />
+        <Stat label="Releases" value={stats.all} />
+        <Stat label="Published" value={stats.published} />
+        <Stat label="Copies sold" value={stats.copiesSold} />
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
-        {/* Tracks empty state */}
-        <section className="flex flex-col items-center gap-4 rounded-2xl border border-dashed bg-card/50 px-6 py-14 text-center">
-          <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-brand/15 text-brand-text">
-            <DiscAlbumIcon className="size-6" aria-hidden="true" />
-          </span>
-          <div className="flex flex-col gap-1">
-            <h2 className="font-display text-xl font-semibold">Your tracks</h2>
-            <p className="max-w-sm text-sm text-pretty text-muted-foreground">
-              No tracks yet. Uploading and listing tracks arrives in the next phase.
-            </p>
-          </div>
-          <Button disabled className="gap-2">
-            <UploadIcon aria-hidden="true" />
-            Upload a track
-            <span className="rounded-full bg-primary-foreground/15 px-1.5 text-[10px] uppercase">Soon</span>
-          </Button>
-        </section>
+      <div className="grid items-start gap-6 lg:grid-cols-[1fr_20rem]">
+        <CreatorReleases creatorId={user.id} filter={filter} stats={stats} />
 
         {/* Profile details */}
         <section className="flex flex-col gap-4 rounded-2xl border bg-card p-6">
@@ -96,11 +87,11 @@ async function Dashboard() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex flex-col gap-1 rounded-2xl border bg-card p-3 sm:p-5">
+    <div className="flex flex-col gap-1 rounded-2xl border bg-card p-3 sm:p-5" data-testid={`stat-${label.toLowerCase().replace(/\s+/g, "-")}`}>
       <span className="text-xs text-muted-foreground sm:text-sm">{label}</span>
-      <span className="text-xl font-semibold tracking-tight sm:text-3xl">{value}</span>
+      <span className="text-xl font-semibold tracking-tight tabular-nums sm:text-3xl">{value.toLocaleString("en-US")}</span>
     </div>
   );
 }

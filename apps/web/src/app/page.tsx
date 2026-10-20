@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { BadgeCheckIcon, DiscAlbumIcon, TrendingUpIcon } from "lucide-react";
 import { quotePrice } from "@ferrel/pricing";
 import { Waveform } from "@/components/brand/waveform";
 import { PriceCurve } from "@/components/price-curve";
 import { buttonVariants } from "@/components/ui/button";
+import { LatestReleases } from "@/features/catalog/latest-releases";
 
 const STEPS = [
   {
@@ -76,6 +78,11 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Newest real releases; streams in, renders nothing while the marketplace is empty. */}
+      <Suspense fallback={null}>
+        <LatestReleases />
+      </Suspense>
 
       {/* Pricing demo */}
       <section id="how" className="scroll-mt-20 border-b">

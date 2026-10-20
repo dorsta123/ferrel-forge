@@ -10,7 +10,7 @@ try {
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
-  transpilePackages: ["@ferrel/db", "@ferrel/pricing"],
+  transpilePackages: ["@ferrel/db", "@ferrel/pricing", "@ferrel/storage"],
   turbopack: {
     rules: {
       "*.css": {

@@ -30,6 +30,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // next-themes sets the theme class on <html> before hydration.
     <html
       lang="en"
+      // globals.css enables smooth scrolling; this tells Next.js to skip it during route changes.
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${display.variable} h-full antialiased`}
     >
