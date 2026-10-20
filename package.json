@@ -11,7 +11,8 @@
     "db:down": "docker compose down",
     "db:generate": "pnpm --filter @ferrel/db generate",
     "db:migrate": "pnpm --filter @ferrel/db migrate",
-    "db:studio": "pnpm --filter @ferrel/db studio"
+    "db:studio": "pnpm --filter @ferrel/db studio",
+    "storage:setup": "pnpm --filter @ferrel/storage run setup-buckets"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

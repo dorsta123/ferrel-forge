@@ -14,6 +14,7 @@ export function SiteFooter() {
         <nav aria-label="Footer" className="flex gap-10 text-sm">
           <div className="flex flex-col gap-2">
             <span className="font-medium">Explore</span>
+            <Link href="/explore" className="text-muted-foreground hover:text-foreground">All releases</Link>
             <Link href="/#how" className="text-muted-foreground hover:text-foreground">How it works</Link>
             <Link href="/#creators" className="text-muted-foreground hover:text-foreground">For creators</Link>
           </div>

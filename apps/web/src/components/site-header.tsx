@@ -15,6 +15,9 @@ export function SiteHeader() {
             <Logo />
           </Link>
           <nav aria-label="Main" className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
+            <Link href="/explore" className="font-medium text-foreground transition-colors hover:text-brand-text">
+              Explore
+            </Link>
             <Link href="/#how" className="transition-colors hover:text-foreground">
               How it works
             </Link>
