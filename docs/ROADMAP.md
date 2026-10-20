@@ -1,8 +1,8 @@
 # Roadmap
 
-**ferrel-forge** — a non-commercial licensed music marketplace. Creators release a limited number of licenses per track; every sale raises the price of the next copy (Roblox-style scarcity pricing). Must cost $0 to run (see [decision 001](decisions/001-non-commercial-zero-cost.md)). Full product definition and the stages as agreed: [PRODUCT.md](PRODUCT.md).
+**ferrel-forge** — a non-commercial music licensing marketplace for advertisers. Artists list tracks; advertisers license them for paid ads on Instagram, TikTok and Google/YouTube and pay monthly for metered **exposure** (views × seconds watched) at a rate set by a pricing model and locked per license. Ad platforms and market data are simulated. Must cost $0 to run (see [decision 001](decisions/001-non-commercial-zero-cost.md)). Full product definition: [PRODUCT.md](PRODUCT.md). The product was redefined on 2026-10-20 ([decision 016](decisions/016-metered-exposure-licensing.md)); phases 1–3 were built for the earlier "limited copies" model and mostly carry over.
 
-**Current:** Phase 3 done. Next: move the browser/security test scripts into the repo (proposed), then plan Phase 4 — Audio.
+**Current:** Phase 3 done; product redefined. Next: move the browser/security test scripts into the repo (proposed), then plan Phase 4 — Audio.
 
 | Phase | Scope | Status |
 |---|---|---|
@@ -11,9 +11,11 @@
 | — | [UI redesign + security fixes](phases/interlude-redesign-and-security.md) — Ember Forge theme; localhost-only services, input validation | ✅ Done 2026-10-20 |
 | 3 | [Listings](phases/phase-3-listings.md) — tracks table, storage, secure upload, create/publish releases, explore + public pages | ✅ Done 2026-10-20 |
 | 4 | Audio — worker + FFmpeg watermarked previews, waveform player, cleanup of abandoned uploads | Not started |
-| 5 | Checkout — Stripe Connect **test mode**, double-entry ledger, license records | Not started |
-| 6 | Dynamic pricing — real price curve, 60s price-quote lock in Redis, live price updates | Not started |
-| 7 | Extras — search, dashboard stats, license PDFs, profile/slug editing, admin tools | Not started |
+| 5 | Licensing — contributors and percentage splits (invite links, everyone accepts); advertiser accounts; license flow (track, platforms, cities, term); rate and split locked per license (artist base rate until phase 8); card saved in Stripe test mode; license records; master download; replace phase 3's copies/supply with the new model | Not started |
+| 6 | Ad simulator + metering — simulated Instagram/TikTok/Google behind a real adapter interface; campaigns linked to licenses; daily exposure-seconds by city | Not started |
+| 7 | Billing + settlement — monthly invoices from exposure × locked rate, Stripe test-mode charges, double-entry ledger, automatic split to every contributor as each invoice is paid (Stripe Connect test-mode transfers), held balances, earnings pages | Not started |
+| 8 | Pricing model — city/country income, demand, culture, capped AI trend score; v1 formula then v2 ML on simulated history; artist custom rate + earnings forecast | Not started |
+| 9 | Extras — search, license PDFs, admin tools, profile/slug editing, optionally one real platform connector (sandbox) | Not started |
 
 ## Before any deployment
 
