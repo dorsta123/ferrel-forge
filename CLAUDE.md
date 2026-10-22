@@ -22,14 +22,17 @@ pnpm db:up            # docker compose: Postgres :5432, Redis :6379, RustFS (S3-
 pnpm db:migrate       # apply Drizzle migrations
 pnpm storage:setup    # create RustFS buckets (masters private, previews public-read) + upload CORS; idempotent
 pnpm dev              # web on :3000 + worker, in parallel
-pnpm test             # vitest (@ferrel/pricing, @ferrel/web)
+pnpm test             # unit tests (vitest), no services needed
+pnpm test:integration # services/queries with forged input, DB constraints, storage security (needs pnpm db:up)
+pnpm e2e              # Playwright browser journeys with the installed Chrome (needs pnpm db:up; starts dev server if not running)
 pnpm typecheck        # runs `next typegen` first for the web app
 pnpm lint
 pnpm build
 ```
 
 - Single package: `pnpm --filter @ferrel/pricing test`, `pnpm --filter @ferrel/web dev`
-- Single test: `pnpm --filter @ferrel/pricing exec vitest run -t "rises as supply"`
+- Single test: `pnpm --filter @ferrel/pricing exec vitest run -t "rises as supply"`; one e2e file: `pnpm --filter @ferrel/e2e exec playwright test specs/catalog.spec.ts`; failure report: `pnpm --filter @ferrel/e2e run report`
+- Tests (docs/decisions/020): unit tests sit next to the code (`*.test.ts`); integration tests in `apps/web/tests/integration/` (helpers in `support.ts`); e2e in `e2e/specs/` using `open()` from `e2e/helpers/fixtures.ts` (fresh session per call, theme/viewport options, fails on console errors unless `allow`ed). Test accounts must use `e2e.*@example.com` (helpers do this); the e2e run purges them before and after. Restart the dev server after `pnpm install` before running e2e: a stale server once produced false Next.js validation errors.
 - Schema change: edit the domain file in `packages/db/src/schema/` (`auth.ts`, `creators.ts`, `tracks.ts`, one table group per file, re-exported by `schema/index.ts`), then `pnpm db:generate` (writes SQL to `packages/db/drizzle/`) and `pnpm db:migrate`. Commit the generated migration.
 - `pnpm db:studio` opens Drizzle Studio to browse the database.
 

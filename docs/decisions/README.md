@@ -23,6 +23,7 @@ One file per decision, numbered in order. To reverse a decision, add a new recor
 | [017](017-simulated-data.md) | Simulated ad platforms and market data behind real adapter interfaces | Accepted |
 | [018](018-pricing-model.md) | Pricing model: city income, demand, culture, capped AI trends; v1 formula then v2 ML | Accepted |
 | [019](019-contributor-splits.md) | Contributor splits: basis points, everyone accepts, locked per license, settled automatically as each invoice is paid | Accepted |
+| [020](020-test-layout.md) | Three test layers in the repo: unit, integration (DB + storage), end-to-end (Playwright) | Accepted |
 
 ## Template
 
