@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db, tracks } from "@ferrel/db";
 import { parseTrackFilter } from "@/features/creator-tracks/filters";
 import { TRACK_LIST_LIMIT, creatorTrackStats, listCreatorTracks } from "@/features/creator-tracks/queries";
-import { ago, createUsers, removeUsers, type TestUser } from "./support";
+import { ago, createUsers, removeCreatedUsers, type TestUser } from "./support";
 
 let A: TestUser, B: TestUser, C: TestUser;
 const audio = (id: string, n: number) => ({ audioKey: `${id}/x/${n}.wav`, audioSizeBytes: 10, audioFormat: "wav" as const });
@@ -18,7 +18,7 @@ beforeAll(async () => {
     t(B.id, "b-secret", { updatedAt: ago(1) }),
   ]);
 });
-afterAll(() => removeUsers([A.id, B.id, C.id]));
+afterAll(removeCreatedUsers);
 
 describe("listCreatorTracks", () => {
   it("returns only the creator's releases, newest-edited first", async () => {

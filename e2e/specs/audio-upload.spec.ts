@@ -1,5 +1,5 @@
 // Uploading a track's master audio: browser checks, server byte checks, privacy, access.
-import { getObjectInfo } from "@ferrel/storage";
+import { bucketId, getObjectInfo } from "@ferrel/storage";
 import { newCreator } from "../helpers/accounts";
 import { makeWav, minimalMp3 } from "../helpers/audio";
 import { sql, userIdByEmail } from "../helpers/db";
@@ -46,7 +46,7 @@ test("a creator uploads, replaces and protects a master file", async ({ open }) 
   });
 
   await test.step("the stored master can't be downloaded anonymously", async () => {
-    expect((await fetch(`${STORAGE}/masters/${firstKey}`)).status).toBe(403);
+    expect((await fetch(`${STORAGE}/${bucketId("masters")}/${firstKey}`)).status).toBe(403);
   });
 
   await test.step("replacing it with an MP3 attaches the new file and deletes the old one", async () => {

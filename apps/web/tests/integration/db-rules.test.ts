@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { creatorProfiles, db, eq, tracks, users } from "@ferrel/db";
-import { createUsers, pgError, removeUsers, type TestUser } from "./support";
+import { createUsers, pgError, removeCreatedUsers, type TestUser } from "./support";
 
 let A: TestUser, B: TestUser, buyer: TestUser;
 type TrackRow = typeof tracks.$inferInsert;
@@ -26,7 +26,7 @@ beforeAll(async () => {
   [A, B] = await createUsers(["dba", "dbb"]);
   [buyer] = await createUsers(["dbbuyer"], { creators: false });
 });
-afterAll(() => removeUsers([A.id, B.id, buyer.id]));
+afterAll(removeCreatedUsers);
 
 describe("tracks table", () => {
   it("accepts a valid draft (control)", async () => {

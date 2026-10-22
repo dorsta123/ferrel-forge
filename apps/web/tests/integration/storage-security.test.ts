@@ -1,10 +1,13 @@
 // Storage security: expired and tampered upload links, anonymous access, CORS.
 import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
-import { createUploadUrl, deleteObject, getObjectInfo } from "@ferrel/storage";
+import { bucketId, createUploadUrl, deleteObject, getObjectInfo } from "@ferrel/storage";
 
 const ENDPOINT = process.env.S3_ENDPOINT ?? "http://localhost:9000";
 const SITE = process.env.S3_CORS_ORIGINS?.split(",")[0] ?? "http://localhost:3000";
+// Real bucket names from settings (they can differ from the logical names "masters"/"previews").
+const MASTERS = bucketId("masters");
+const PREVIEWS = bucketId("previews");
 const BODY = "RIFF0000WAVEdata"; // 16 bytes
 const folder = `security-test-${randomUUID()}`;
 const key = (name: string) => `${folder}/${name}.wav`;
@@ -43,12 +46,12 @@ describe("signed upload links", () => {
     };
 
     it("used for a different file name", async () => {
-      refused((await put(variant((u) => (u.pathname = `/masters/${folder}/someone-else.wav`)))).status);
+      refused((await put(variant((u) => (u.pathname = `/${MASTERS}/${folder}/someone-else.wav`)))).status);
       expect(await getObjectInfo("masters", `${folder}/someone-else.wav`)).toBeNull();
     });
 
     it("used for the public bucket", async () => {
-      refused((await put(variant((u) => (u.pathname = u.pathname.replace("/masters/", "/previews/"))))).status);
+      refused((await put(variant((u) => (u.pathname = u.pathname.replace(`/${MASTERS}/`, `/${PREVIEWS}/`))))).status);
     });
 
     it("with a longer expiry", async () => {
@@ -64,25 +67,25 @@ describe("signed upload links", () => {
 
 describe("anonymous access", () => {
   it("can't upload to either bucket", async () => {
-    refused((await fetch(`${ENDPOINT}/masters/${folder}/anon.wav`, { method: "PUT", body: BODY })).status);
-    refused((await fetch(`${ENDPOINT}/previews/${folder}/anon.mp3`, { method: "PUT", body: BODY })).status);
+    refused((await fetch(`${ENDPOINT}/${MASTERS}/${folder}/anon.wav`, { method: "PUT", body: BODY })).status);
+    refused((await fetch(`${ENDPOINT}/${PREVIEWS}/${folder}/anon.mp3`, { method: "PUT", body: BODY })).status);
   });
 
   it("can't download or delete a master", async () => {
-    refused((await fetch(`${ENDPOINT}/masters/${key("good")}`)).status);
-    refused((await fetch(`${ENDPOINT}/masters/${key("good")}`, { method: "DELETE" })).status);
+    refused((await fetch(`${ENDPOINT}/${MASTERS}/${key("good")}`)).status);
+    refused((await fetch(`${ENDPOINT}/${MASTERS}/${key("good")}`, { method: "DELETE" })).status);
     expect(await getObjectInfo("masters", key("good"))).not.toBeNull();
   });
 
   it("can't list either bucket", async () => {
-    refused((await fetch(`${ENDPOINT}/masters/`)).status);
-    refused((await fetch(`${ENDPOINT}/previews/`)).status);
+    refused((await fetch(`${ENDPOINT}/${MASTERS}/`)).status);
+    refused((await fetch(`${ENDPOINT}/${PREVIEWS}/`)).status);
   });
 });
 
 describe("CORS", () => {
   const preflight = (origin: string) =>
-    fetch(`${ENDPOINT}/masters/${key("cors")}`, {
+    fetch(`${ENDPOINT}/${MASTERS}/${key("cors")}`, {
       method: "OPTIONS",
       headers: { origin, "access-control-request-method": "PUT", "access-control-request-headers": "content-type" },
     }).then((r) => r.headers.get("access-control-allow-origin"));

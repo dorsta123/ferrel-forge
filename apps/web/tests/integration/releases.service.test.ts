@@ -4,7 +4,7 @@ import { db, eq, tracks } from "@ferrel/db";
 import { createUploadUrl, getObjectInfo, newMasterKey } from "@ferrel/storage";
 import { changeReleaseStatus, createRelease, updateRelease } from "@/features/releases/service";
 import type { ReleaseFormValues } from "@/features/releases/types";
-import { createUsers, removeUsers, type TestUser } from "./support";
+import { createUsers, removeCreatedUsers, type TestUser } from "./support";
 
 const form = (patch: Partial<ReleaseFormValues> = {}): ReleaseFormValues => ({
   title: "Midnight Run", slug: "", description: "", genre: "electronic", bpm: "", musicalKey: "", totalSupply: "100", price: "12.50", ...patch,
@@ -28,7 +28,7 @@ let firstPublishedAt: Date | null = null;
 beforeAll(async () => {
   [A, B] = await createUsers(["rela", "relb"]);
 });
-afterAll(() => removeUsers([A.id, B.id]));
+afterAll(removeCreatedUsers);
 
 describe("create", () => {
   it("stores a valid draft with a slug from the title and the price in cents", async () => {

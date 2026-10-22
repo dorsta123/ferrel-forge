@@ -1,8 +1,9 @@
 // Public catalog queries: what anyone can see, no private columns, filters and paging.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db, tracks } from "@ferrel/db";
+import { EXPLORE_PAGE_SIZE } from "@/features/catalog/params";
 import { creatorReleases, explorePage, getPublicCreator, getPublicTrack, latestReleases } from "@/features/catalog/queries";
-import { ago, createUsers, removeUsers, type TestUser } from "./support";
+import { ago, createUsers, removeCreatedUsers, type TestUser } from "./support";
 
 let A: TestUser, B: TestUser, C: TestUser;
 const live = (creatorId: string, slug: string, minutesAgo: number, extra: object = {}) => ({
@@ -19,7 +20,7 @@ beforeAll(async () => {
     live(B.id, "b-live", 1),
   ]);
 });
-afterAll(() => removeUsers([A.id, B.id, C.id]));
+afterAll(removeCreatedUsers);
 
 describe("lists", () => {
   it("show published releases from every creator, newest first, never drafts or archived", async () => {
@@ -43,14 +44,15 @@ describe("lists", () => {
     expect(lofi.rows.every((r) => r.genre === "lo-fi")).toBe(true);
   });
 
-  it("page 24 at a time without overlap, and an out-of-range page is just empty", async () => {
-    await db.insert(tracks).values(Array.from({ length: 30 }, (_, i) => live(C.id, `c-${String(i).padStart(2, "0")}`, 0.5 - i * 0.001)));
+  it(`page ${EXPLORE_PAGE_SIZE} at a time without overlap, and an out-of-range page is just empty`, async () => {
+    const extra = EXPLORE_PAGE_SIZE + 6;
+    await db.insert(tracks).values(Array.from({ length: extra }, (_, i) => live(C.id, `c-${String(i).padStart(2, "0")}`, 0.5 - i * 0.001)));
     const p1 = await explorePage({ genre: null, page: 1 });
     const p2 = await explorePage({ genre: null, page: 2 });
-    expect(p1.rows).toHaveLength(24);
+    expect(p1.rows).toHaveLength(EXPLORE_PAGE_SIZE);
     expect(p2.rows.length).toBeGreaterThanOrEqual(6);
     expect(p2.rows.some((r) => p1.rows.some((q) => q.id === r.id))).toBe(false);
-    expect(p1.total).toBeGreaterThanOrEqual(32);
+    expect(p1.total).toBeGreaterThanOrEqual(extra + 2);
     const far = await explorePage({ genre: null, page: 9999 });
     expect(far).toEqual({ rows: [], total: p1.total });
   });

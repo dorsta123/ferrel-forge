@@ -4,7 +4,8 @@ import { expect, test, PHONE } from "../helpers/fixtures";
 import { fitsWidth } from "../helpers/page";
 
 test("a visitor signs up, signs out and signs back in", async ({ open }) => {
-  const page = await open({ viewport: { width: 1100, height: 750 } });
+  // The wrong-password attempt below answers 401, which the browser logs as an error.
+  const page = await open({ viewport: { width: 1100, height: 750 }, allow: [/status of 401/] });
   const header = page.locator("header");
   const alert = page.locator("form").getByRole("alert");
   const email = testEmail("auth");

@@ -9,8 +9,3 @@ export const main = (page: Page): Locator => page.locator("main:visible");
 
 /** True when the page has no sideways scrolling. */
 export const fitsWidth = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
-
-export async function settle(page: Page) {
-  await page.waitForLoadState("networkidle");
-  await page.waitForTimeout(300);
-}

@@ -5,6 +5,8 @@ import { expect, test, PHONE } from "../helpers/fixtures";
 import { fitsWidth, main } from "../helpers/page";
 
 const BOT = "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)";
+/** Must equal EXPLORE_PAGE_SIZE in apps/web/src/features/catalog/params.ts. */
+const PAGE_SIZE = 24;
 const SECRET_FOLDER = "secret-folder";
 
 type Release = { title: string; slug: string; genre: string; supply?: number; price?: number; sold?: number; minutesAgo?: number; status?: string; bpm?: number; key?: string; description?: string };
@@ -37,9 +39,13 @@ test("anyone can browse published releases, and only those", async ({ open }) =>
   const bobSlug = testSlug("bob");
   const [{ id: bobId }] = await sql<{ id: string }[]>`insert into users (id, name, email) values (gen_random_uuid(), 'Bob', ${testEmail("bob")}) returning id`;
   await sql`insert into creator_profiles (user_id, artist_name, slug) values (${bobId}, 'Bob Beats', ${bobSlug})`;
-  for (let i = 0; i < 26; i++) {
-    await addRelease(bobId, { title: `Bob Track ${String(i).padStart(2, "0")}`, slug: `bob-track-${i}`, genre: "rock", minutesAgo: 60 + i });
-  }
+  // Enough for a second Explore page, in one insert.
+  const bobTracks = Array.from({ length: PAGE_SIZE + 2 }, (_, i) => ({
+    creator_id: bobId, title: `Bob Track ${String(i).padStart(2, "0")}`, slug: `bob-track-${i}`, genre: "rock",
+    total_supply: 50, base_price_cents: 1250, status: "published", published_at: new Date(Date.now() - (60 + i) * 60_000),
+    audio_key: `${bobId}/x/bob-track-${i}.wav`, audio_size_bytes: 10, audio_format: "wav",
+  }));
+  await sql`insert into tracks ${sql(bobTracks)}`;
   // Counted from the database, so real releases already there don't break the test.
   const count = async (genre?: string) =>
     Number((await sql`select count(*) from tracks where status = 'published' and (${genre ?? null}::track_genre is null or genre = ${genre ?? null})`)[0].count);
@@ -58,15 +64,16 @@ test("anyone can browse published releases, and only those", async ({ open }) =>
     await expect(latest.nth(1)).toHaveText("Sold Out Song");
   });
 
-  await test.step("Explore lists everything published, 24 per page", async () => {
+  await test.step(`Explore lists everything published, ${PAGE_SIZE} per page`, async () => {
+    const pages = Math.ceil(published / PAGE_SIZE);
     await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Explore" }).click();
     await page.waitForURL("/explore");
     await expect(m.getByText(`${published} releases`)).toBeVisible();
-    await expect(cards).toHaveCount(24);
+    await expect(cards).toHaveCount(PAGE_SIZE);
     await m.getByRole("link", { name: "Older" }).click();
     await page.waitForURL("**/explore?page=2");
-    await expect(m.getByText("Page 2 of 2")).toBeVisible();
-    await expect(cards).toHaveCount(published - 24);
+    await expect(m.getByText(`Page 2 of ${pages}`)).toBeVisible();
+    await expect(cards).toHaveCount(Math.min(PAGE_SIZE, published - PAGE_SIZE));
     await m.getByRole("link", { name: "Newer" }).click();
     await page.waitForURL("/explore");
   });
@@ -79,7 +86,7 @@ test("anyone can browse published releases, and only those", async ({ open }) =>
     for (const card of await cards.all()) await expect(card).toContainText("Lo-fi");
     await expect(m.getByRole("link", { name: "Lo-fi" })).toHaveAttribute("aria-current", "page");
     await page.goto("/explore?genre=polka&page=abc");
-    await expect(cards).toHaveCount(24);
+    await expect(cards).toHaveCount(PAGE_SIZE);
     await page.goto("/explore?page=50");
     await expect(m.getByText("This page is empty")).toBeVisible();
     await expect(m.getByRole("link", { name: "Back to the first page" })).toHaveCount(1);

@@ -17,9 +17,6 @@ type OpenOptions = {
   allow?: RegExp[];
 };
 
-// Failed sign-ins answer 401, which browsers log as an error.
-const ALWAYS_ALLOWED = [/status of 401/];
-
 export const test = base.extend<{ open: (options?: OpenOptions) => Promise<Page> }>({
   open: async ({ browser }, use, testInfo) => {
     const contexts: BrowserContext[] = [];
@@ -34,9 +31,8 @@ export const test = base.extend<{ open: (options?: OpenOptions) => Promise<Page>
       contexts.push(context);
       if (theme) await context.addInitScript((t) => localStorage.setItem("theme", t), theme);
       const page = await context.newPage();
-      const allowed = [...ALWAYS_ALLOWED, ...allow];
       page.on("console", (m) => {
-        if (m.type() === "error" && !allowed.some((re) => re.test(m.text()))) errors.push(m.text());
+        if (m.type() === "error" && !allow.some((re) => re.test(m.text()))) errors.push(m.text());
       });
       page.on("pageerror", (e) => errors.push(String(e)));
       return page;

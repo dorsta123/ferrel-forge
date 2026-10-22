@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db, eq, tracks } from "@ferrel/db";
 import { getObjectInfo, newMasterKey } from "@ferrel/storage";
 import { confirmAudioUpload, requestAudioUpload } from "@/features/audio-upload/service";
-import { createUsers, removeUsers, type TestUser } from "./support";
+import { createUsers, removeCreatedUsers, type TestUser } from "./support";
 
 const WAV = { name: "song.wav", size: 1000, type: "audio/wav" };
 const error = (r: { ok: boolean; error?: string }) => (r.ok ? "ok" : r.error);
@@ -22,7 +22,7 @@ beforeAll(async () => {
     ])
     .returning({ id: tracks.id });
 });
-afterAll(() => removeUsers([A.id, B.id]));
+afterAll(removeCreatedUsers);
 
 describe("requestAudioUpload", () => {
   it("answers 'not found' for someone else's track", async () => {
