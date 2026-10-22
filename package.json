@@ -12,7 +12,9 @@
     "db:generate": "pnpm --filter @ferrel/db generate",
     "db:migrate": "pnpm --filter @ferrel/db migrate",
     "db:studio": "pnpm --filter @ferrel/db studio",
-    "storage:setup": "pnpm --filter @ferrel/storage run setup-buckets"
+    "storage:setup": "pnpm --filter @ferrel/storage run setup-buckets",
+    "test:integration": "pnpm --filter @ferrel/web run test:integration",
+    "e2e": "pnpm --filter @ferrel/e2e run e2e"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

@@ -1,0 +1,19 @@
+{
+  "name": "@ferrel/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "e2e": "playwright test",
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ferrel/storage": "workspace:*",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "^20"
+  }
+}
