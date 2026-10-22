@@ -1,0 +1,36 @@
+name: Set up ferrel-forge
+description: Install dependencies, write .env, start Docker services, migrate the database and create storage buckets.
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4 # version comes from "packageManager" in package.json
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: pnpm
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Write .env from the example, with a fresh auth secret
+      shell: bash
+      run: |
+        cp .env.example .env
+        sed -i "s|^BETTER_AUTH_SECRET=.*|BETTER_AUTH_SECRET=$(openssl rand -hex 32)|" .env
+
+    - name: Start Postgres, Redis and RustFS
+      shell: bash
+      run: |
+        docker compose up -d
+        for i in $(seq 1 60); do docker compose exec -T postgres pg_isready -U ferrel -q && break; sleep 1; done
+        for i in $(seq 1 60); do curl -s -o /dev/null http://127.0.0.1:9000/ && break; sleep 1; done
+        docker compose ps
+
+    - name: Migrate database and create buckets
+      shell: bash
+      run: |
+        pnpm db:migrate
+        pnpm storage:setup
