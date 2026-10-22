@@ -1,5 +1,5 @@
 name: Set up ferrel-forge
-description: Install dependencies, write .env, start Docker services, migrate the database and create storage buckets.
+description: Install dependencies and write .env. Services are started separately (./.github/actions/services) so checks that don't need them run first.
 
 runs:
   using: composite
@@ -20,17 +20,3 @@ runs:
       run: |
         cp .env.example .env
         sed -i "s|^BETTER_AUTH_SECRET=.*|BETTER_AUTH_SECRET=$(openssl rand -hex 32)|" .env
-
-    - name: Start Postgres, Redis and RustFS
-      shell: bash
-      run: |
-        docker compose up -d
-        for i in $(seq 1 60); do docker compose exec -T postgres pg_isready -U ferrel -q && break; sleep 1; done
-        for i in $(seq 1 60); do curl -s -o /dev/null http://127.0.0.1:9000/ && break; sleep 1; done
-        docker compose ps
-
-    - name: Migrate database and create buckets
-      shell: bash
-      run: |
-        pnpm db:migrate
-        pnpm storage:setup

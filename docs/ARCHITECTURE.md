@@ -34,12 +34,13 @@ flowchart LR
   SA -- SQL --> PG
   A -- upload audio via<br/>5-minute signed link --> S3M
   SA -- verify bytes, sign links --> S3M
-  SA -- jobs --> R
+  SA -. jobs &#40;4&#41; .-> R
   R --> W
   W -. FFmpeg previews &#40;4&#41; .-> S3P
   W -. daily exposure &#40;6&#41; .-> SIM
   W -. monthly invoices,<br/>split payouts &#40;7&#41; .-> ST
-  SA -. quotes .-> PR
+  P -- prices on cards & demo<br/>&#40;old copies curve, replaced<br/>in the realignment&#41; --> PR
+  SA -. rate quotes &#40;5, 8&#41; .-> PR
   ML -. features .-> PR
 
   classDef planned stroke-dasharray: 5 5,color:#888
@@ -52,8 +53,8 @@ flowchart LR
 | **Web app** | Every page, plus the server code that checks who you are and whether the request is allowed. Browsers never talk to the database directly. | `apps/web` (feature modules in `src/features/`, decision [013](decisions/013-feature-modules.md)) |
 | **Postgres** | The source of truth: accounts, artist profiles, tracks. The database itself refuses invalid data (check constraints), as a backstop to the app. | `packages/db` |
 | **Storage** (RustFS locally, S3-compatible) | Audio files. **Masters are private**; uploads go straight from the browser using a short signed link, then the server checks the file's bytes. Previews will be public. | `packages/storage`, decision [012](decisions/012-direct-browser-uploads.md) |
-| **Redis + worker** | Slow or scheduled jobs off the request path: audio previews (4), daily exposure metering (6), monthly billing and payouts (7). | `apps/worker` |
-| **Pricing engine** | A pure function: inputs in, rate out, with an explanation. No database or network access, so every quote can be replayed. | `packages/pricing`, decision [018](decisions/018-pricing-model.md) |
+| **Redis + worker** | Slow or scheduled jobs off the request path: audio previews (4), daily exposure metering (6), monthly billing and payouts (7). Today the worker runs but nothing sends it work yet; the web app starts queueing jobs in phase 4. | `apps/worker` |
+| **Pricing engine** | A pure function: inputs in, price out. No database or network access, so every quote can be replayed. Today it still holds the old "price rises as copies sell" curve, used by cards, release pages and the homepage demo; the realignment replaces it with a rate quote placeholder ([018](decisions/018-pricing-model.md)). | `packages/pricing` |
 
 ## Where money will flow (phases 5–7, test mode only)
 Advertiser's saved card → monthly invoice (exposure × locked rate) → payment succeeds → platform fee → split by the license's locked contributor percentages → ledger entries → Stripe Connect transfers to each contributor (held if they haven't joined). Decisions [016](decisions/016-metered-exposure-licensing.md) and [019](decisions/019-contributor-splits.md).
