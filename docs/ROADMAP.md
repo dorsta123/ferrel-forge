@@ -24,4 +24,4 @@
 
 ## Git conventions
 
-- One branch per phase/topic off `main`; commit at the end of the phase; merge with `--no-ff`; delete the branch after merging. The user approves every commit/push/merge.
+- From 2026-10-23: see [WORKFLOW.md](WORKFLOW.md). A plan in `docs/plans/`, a branch per piece of work, a commit per working step, a PR with CI and independent review, and the user merges on GitHub. (Phases 1–3 used one commit per phase, merged locally.)
