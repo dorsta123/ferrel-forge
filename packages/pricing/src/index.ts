@@ -26,7 +26,8 @@ export interface RateQuote {
 }
 
 export function quoteRate({ baseRateCents }: RateInput): RateQuote {
-  if (!Number.isInteger(baseRateCents) || baseRateCents <= 0) {
+  // Safe integers only: anything larger can't be stored or multiplied exactly later.
+  if (!Number.isSafeInteger(baseRateCents) || baseRateCents <= 0) {
     throw new Error("Base rate must be a positive whole number of cents");
   }
   return { rateCents: baseRateCents, factors: [] };

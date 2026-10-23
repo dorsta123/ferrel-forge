@@ -10,7 +10,7 @@ describe("quoteRate (placeholder until the pricing model)", () => {
     expect(quoteRate({ baseRateCents: 999 })).toEqual(quoteRate({ baseRateCents: 999 }));
   });
 
-  it.each([0, -100, 12.5, Number.NaN])("refuses a base rate of %s", (baseRateCents) => {
+  it.each([0, -100, 12.5, Number.NaN, 1e300, Number.MAX_SAFE_INTEGER + 1])("refuses a base rate of %s", (baseRateCents) => {
     expect(() => quoteRate({ baseRateCents })).toThrow();
   });
 });

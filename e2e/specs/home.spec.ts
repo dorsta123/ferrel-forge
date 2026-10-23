@@ -21,7 +21,7 @@ test("the homepage explains exposure licensing, without prices", async ({ open }
     await expect(example).toContainText("120,000");
     await expect(example).toContainText("1,080,000 exposure-seconds");
     const shares = await example.getByRole("list", { name: "Contributor shares" }).getByRole("listitem").allTextContents();
-    const total = shares.map((s) => Number(s.match(/(\d+)%/)?.[1])).reduce((a, b) => a + b, 0);
+    const total = shares.map((s) => Number(s.match(/([\d.]+)%/)?.[1])).reduce((a, b) => a + b, 0);
     expect(total).toBe(100);
   });
 
@@ -30,8 +30,11 @@ test("the homepage explains exposure licensing, without prices", async ({ open }
     await expect(steps).toHaveText(["Artists list tracks", "Advertisers license them", "Exposure is measured", "Everyone gets paid"]);
   });
 
-  await test.step("nothing on the page describes copies or shows a price", async () => {
-    await expect(m).not.toContainText(/copies|sold out|rarer|\$\d/i);
+  await test.step("our own copy never describes copies or shows a price", async () => {
+    // Only the page's own sections: the Latest releases strip shows live track titles.
+    for (const section of [m.locator("section").first(), page.locator("#how"), page.locator("#creators")]) {
+      await expect(section).not.toContainText(/copies|sold out|rarer|\$\d/i);
+    }
   });
 });
 

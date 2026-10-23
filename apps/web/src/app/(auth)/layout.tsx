@@ -1,7 +1,6 @@
 import { Waveform } from "@/components/brand/waveform";
-import { EXAMPLE, exampleExposureSeconds } from "@/components/home/exposure-example";
-
-const n = (value: number) => value.toLocaleString("en-US");
+import { EXAMPLE, exampleExposureSeconds } from "@/components/home/example-campaign";
+import { formatCount } from "@/lib/format-number";
 
 // Split screen for /sign-in and /sign-up: form left, ember artwork right.
 export default function AuthLayout({ children }: LayoutProps<"/">) {
@@ -26,11 +25,11 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
           <dl className="flex gap-8 text-sm">
             <div>
               <dt className="text-muted-foreground">Example views</dt>
-              <dd className="font-mono text-lg font-medium">{n(EXAMPLE.views)}</dd>
+              <dd className="font-mono text-lg font-medium">{formatCount(EXAMPLE.views)}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Exposure-seconds</dt>
-              <dd className="font-mono text-lg font-medium text-brand-text">{n(exampleExposureSeconds)}</dd>
+              <dd className="font-mono text-lg font-medium text-brand-text">{formatCount(exampleExposureSeconds)}</dd>
             </div>
           </dl>
         </div>

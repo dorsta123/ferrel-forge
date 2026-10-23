@@ -8,6 +8,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { CreatorReleases } from "@/features/creator-tracks/creator-releases";
 import { parseTrackFilter } from "@/features/creator-tracks/filters";
 import { creatorTrackStats } from "@/features/creator-tracks/queries";
+import { formatCount } from "@/lib/format-number";
 import { getCurrentUser } from "@/lib/session";
 
 export const metadata = { title: "Dashboard · ferrel-forge" };
@@ -91,7 +92,7 @@ function Stat({ label, value, hint }: { label: string; value: number; hint?: str
   return (
     <div className="flex flex-col gap-1 rounded-2xl border bg-card p-3 sm:p-5" data-testid={`stat-${label.toLowerCase().replace(/\s+/g, "-")}`}>
       <span className="text-xs text-muted-foreground sm:text-sm">{label}</span>
-      <span className="text-xl font-semibold tracking-tight tabular-nums sm:text-3xl">{value.toLocaleString("en-US")}</span>
+      <span className="text-xl font-semibold tracking-tight tabular-nums sm:text-3xl">{formatCount(value)}</span>
       {hint && <span className="hidden text-xs text-muted-foreground sm:block">{hint}</span>}
     </div>
   );

@@ -27,4 +27,4 @@ Phase 3 was built for limited copies whose price rises with each sale. Under met
 ## Consequences
 - Phase 5 must add license-based rules to `status.ts` and the service's guarded updates, the same way the sale lock worked.
 - Phase 4's audio processing fills `duration_ms`.
-- Until PR B, the homepage demo still uses the old pricing curve (`quotePrice`).
+- Until PR B, the homepage demo still uses the old pricing curve (`quotePrice`). *Resolved in PR B: the demo and `quotePrice` are gone, and `packages/pricing` offers the `quoteRate` placeholder.*

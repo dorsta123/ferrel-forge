@@ -45,8 +45,8 @@ export default function Home() {
               Pay for the music people actually <span className="text-molten">hear</span>.
             </h1>
             <p className="max-w-xl text-lg text-pretty text-muted-foreground">
-              License tracks from independent artists for your Instagram, TikTok and YouTube ads. You pay each month for
-              the exposure your ad gets, and everyone who made the track is paid their share automatically.
+              License tracks from independent artists for your Instagram, TikTok and YouTube ads. You&apos;ll pay each month
+              for the exposure your ad gets, and everyone who made the track is paid their share automatically.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link href="/explore" className={buttonVariants({ size: "lg", className: "h-11 px-5 text-base font-semibold" })}>
@@ -59,6 +59,9 @@ export default function Home() {
                 Become a creator
               </Link>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Licensing opens soon. A non-commercial demo: ad platforms are simulated and payments will run in Stripe test mode.
+            </p>
           </div>
 
           <div className="relative rounded-3xl border bg-card/70 p-6 shadow-2xl shadow-ember/10 backdrop-blur sm:p-8">
