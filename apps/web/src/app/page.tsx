@@ -1,33 +1,35 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { BadgeCheckIcon, DiscAlbumIcon, TrendingUpIcon } from "lucide-react";
-import { quotePrice } from "@ferrel/pricing";
+import { DiscAlbumIcon, GaugeIcon, HandCoinsIcon, MegaphoneIcon } from "lucide-react";
 import { Waveform } from "@/components/brand/waveform";
-import { PriceCurve } from "@/components/price-curve";
+import { ExposureExample } from "@/components/home/exposure-example";
 import { buttonVariants } from "@/components/ui/button";
 import { LatestReleases } from "@/features/catalog/latest-releases";
 
+// How the product works (decisions 016–019). Wording only: no prices, because
+// rates aren't decided yet (PRODUCT.md question 15).
 const STEPS = [
   {
     icon: DiscAlbumIcon,
-    title: "Creators release a limited run",
-    body: "Each track gets a fixed number of license copies and a starting price. When they're gone, they're gone.",
+    title: "Artists list tracks",
+    body: "Upload a track, set a base rate, and agree how earnings split between everyone who made it.",
   },
   {
-    icon: TrendingUpIcon,
-    title: "Every sale raises the price",
-    body: "The fewer copies left, the more the next one costs. Early supporters pay the least.",
+    icon: MegaphoneIcon,
+    title: "Advertisers license them",
+    body: "Pick a track for an Instagram, TikTok or YouTube ad. The rate is fixed for the whole license.",
   },
   {
-    icon: BadgeCheckIcon,
-    title: "Buyers own a real license",
-    body: "Each purchase is a numbered license tied to your account, separate from the audio file itself.",
+    icon: GaugeIcon,
+    title: "Exposure is measured",
+    body: "We read the ad's stats (views × seconds watched) and never touch the ad itself.",
+  },
+  {
+    icon: HandCoinsIcon,
+    title: "Everyone gets paid",
+    body: "A monthly bill for the real exposure, split automatically between every contributor by their agreed share.",
   },
 ];
-
-// Real engine output for the hero stat strip.
-const first = quotePrice({ basePriceCents: 1000, totalSupply: 100, remainingSupply: 100 });
-const last = quotePrice({ basePriceCents: 1000, totalSupply: 100, remainingSupply: 1 });
 
 export default function Home() {
   return (
@@ -37,18 +39,18 @@ export default function Home() {
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-20 sm:px-6 md:py-28 lg:grid-cols-[1.1fr_1fr]">
           <div className="flex animate-rise flex-col gap-6">
             <span className="w-fit rounded-full border bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
-              Limited-edition music licenses
+              Music licensing for ads
             </span>
             <h1 className="font-display text-5xl leading-[1.02] font-bold tracking-tight text-balance sm:text-6xl lg:text-7xl">
-              Music that gets <span className="text-molten">rarer</span> as it sells.
+              Pay for the music people actually <span className="text-molten">hear</span>.
             </h1>
             <p className="max-w-xl text-lg text-pretty text-muted-foreground">
-              Creators release a fixed number of licenses for every track. Each sale makes the next copy cost a
-              little more, so the earliest fans pay the least.
+              License tracks from independent artists for your Instagram, TikTok and YouTube ads. You pay each month for
+              the exposure your ad gets, and everyone who made the track is paid their share automatically.
             </p>
             <div className="flex flex-wrap gap-3">
-              <Link href="/sign-up" className={buttonVariants({ size: "lg", className: "h-11 px-5 text-base font-semibold" })}>
-                Get started
+              <Link href="/explore" className={buttonVariants({ size: "lg", className: "h-11 px-5 text-base font-semibold" })}>
+                Explore tracks
               </Link>
               <Link
                 href="/become-creator"
@@ -60,21 +62,8 @@ export default function Home() {
           </div>
 
           <div className="relative rounded-3xl border bg-card/70 p-6 shadow-2xl shadow-ember/10 backdrop-blur sm:p-8">
-            <div className="mb-6 flex items-center justify-between text-sm">
-              <span className="font-medium">Example release · 100 copies</span>
-              <span className="rounded-full bg-secondary px-2 py-0.5 font-mono text-xs text-muted-foreground">demo</span>
-            </div>
-            <Waveform className="h-40" />
-            <div className="mt-6 grid grid-cols-2 gap-4 border-t pt-5 text-sm">
-              <div>
-                <p className="text-muted-foreground">First copy</p>
-                <p className="text-2xl font-semibold">${(first / 100).toFixed(2)}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-muted-foreground">Last copy</p>
-                <p className="text-2xl font-semibold text-brand-text">${(last / 100).toFixed(2)}</p>
-              </div>
-            </div>
+            <Waveform className="mb-6 h-20" />
+            <ExposureExample />
           </div>
         </div>
       </section>
@@ -84,28 +73,18 @@ export default function Home() {
         <LatestReleases />
       </Suspense>
 
-      {/* Pricing demo */}
+      {/* How it works */}
       <section id="how" className="scroll-mt-20 border-b">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
-          <div className="flex flex-col gap-4">
-            <p className="text-sm font-medium text-brand-text">How pricing works</p>
-            <h2 className="font-display text-4xl font-bold tracking-tight text-balance">Watch the price move.</h2>
+        <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+          <div className="mb-10 flex max-w-2xl flex-col gap-3">
+            <p className="text-sm font-medium text-brand-text">How it works</p>
+            <h2 className="font-display text-4xl font-bold tracking-tight text-balance">Priced by reach, not a guess.</h2>
             <p className="text-pretty text-muted-foreground">
-              Drag the slider to sell copies of a 100-copy release that starts at $10. This chart runs the same pricing
-              engine the marketplace uses, so what you see is exactly how prices will behave.
+              A flat fee ignores whether an ad takes off. Here the bill follows the exposure, so a quiet local campaign
+              costs little and a viral one pays the artists more.
             </p>
           </div>
-          <div className="rounded-2xl border bg-card p-5 sm:p-8">
-            <PriceCurve />
-          </div>
-        </div>
-      </section>
-
-      {/* Steps */}
-      <section className="border-b">
-        <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-          <h2 className="mb-10 font-display text-3xl font-bold tracking-tight">Three steps, no surprises.</h2>
-          <ol className="grid gap-4 md:grid-cols-3">
+          <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map(({ icon: Icon, title, body }, i) => (
               <li key={title} className="flex flex-col gap-4 rounded-2xl border bg-card p-6">
                 <div className="flex items-center justify-between">
@@ -119,6 +98,9 @@ export default function Home() {
               </li>
             ))}
           </ol>
+          <p className="mt-6 text-xs text-muted-foreground">
+            A non-commercial project: ad platforms are simulated and payments run in Stripe test mode. Licensing opens soon.
+          </p>
         </div>
       </section>
 
@@ -127,24 +109,24 @@ export default function Home() {
         <div className="mx-auto grid max-w-6xl gap-4 px-4 py-20 sm:px-6 md:grid-cols-2">
           <Audience
             eyebrow="For creators"
-            title="Turn demand into value."
+            title="Paid for every second you're heard."
             points={[
-              "Choose how many copies exist and where the price starts.",
-              "Every sale lifts the price of what's left.",
+              "Upload a track and set your base rate.",
+              "Split earnings with everyone who made it, paid automatically.",
               "A public profile page for your releases.",
             ]}
             cta={{ href: "/become-creator", label: "Become a creator" }}
             featured
           />
           <Audience
-            eyebrow="For buyers"
-            title="Get in early, pay less."
+            eyebrow="For advertisers"
+            title="Pay for reach, not a flat fee."
             points={[
-              "See the full price curve before you buy.",
-              "A license that's yours, with a fixed copy number.",
-              "One account to buy from every creator.",
+              "License tracks for Instagram, TikTok and YouTube ads.",
+              "Pay monthly for real exposure: views × seconds watched.",
+              "Your rate stays fixed for the whole license.",
             ]}
-            cta={{ href: "/sign-up", label: "Create an account" }}
+            cta={{ href: "/explore", label: "Explore tracks" }}
           />
         </div>
       </section>
@@ -153,7 +135,7 @@ export default function Home() {
       <section className="grain ember-glow overflow-hidden">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 py-24 text-center sm:px-6">
           <h2 className="max-w-2xl font-display text-4xl font-bold tracking-tight text-balance sm:text-5xl">
-            Ready to forge your first release?
+            Ready to put your music in front of an audience?
           </h2>
           <Link href="/become-creator" className={buttonVariants({ size: "lg", className: "h-11 px-6 text-base font-semibold" })}>
             Become a creator
