@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { quotePrice } from "./index";
+import { quoteRate } from "./index";
 
-describe("quotePrice", () => {
-  it("charges the base price at full supply", () => {
-    expect(quotePrice({ basePriceCents: 1000, totalSupply: 100, remainingSupply: 100 })).toBe(1000);
+describe("quoteRate (placeholder until the pricing model)", () => {
+  it("returns the artist's base rate with no adjustments", () => {
+    expect(quoteRate({ baseRateCents: 1250 })).toEqual({ rateCents: 1250, factors: [] });
   });
 
-  it("rises as supply runs out", () => {
-    expect(quotePrice({ basePriceCents: 1000, totalSupply: 100, remainingSupply: 50 })).toBe(1500);
+  it("is pure: the same input always gives the same quote", () => {
+    expect(quoteRate({ baseRateCents: 999 })).toEqual(quoteRate({ baseRateCents: 999 }));
   });
 
-  it("throws when sold out", () => {
-    expect(() => quotePrice({ basePriceCents: 1000, totalSupply: 100, remainingSupply: 0 })).toThrow();
+  it.each([0, -100, 12.5, Number.NaN])("refuses a base rate of %s", (baseRateCents) => {
+    expect(() => quoteRate({ baseRateCents })).toThrow();
   });
 });
