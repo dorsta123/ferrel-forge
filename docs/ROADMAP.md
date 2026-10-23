@@ -2,7 +2,7 @@
 
 **ferrel-forge** — a non-commercial music licensing marketplace for advertisers. Artists list tracks; advertisers license them for paid ads on Instagram, TikTok and Google/YouTube and pay monthly for metered **exposure** (views × seconds watched) at a rate set by a pricing model and locked per license. Ad platforms and market data are simulated. Must cost $0 to run (see [decision 001](decisions/001-non-commercial-zero-cost.md)). Full product definition: [PRODUCT.md](PRODUCT.md). The product was redefined on 2026-10-20 ([decision 016](decisions/016-metered-exposure-licensing.md)); phases 1–3 were built for the earlier "limited copies" model and mostly carry over.
 
-**Current:** Phase 3 realignment ([plan](plans/2026-10-23-phase-3-realignment.md)). PR A removes copies and supply ([021](decisions/021-phase-3-realignment.md)); PR B adds the pricing placeholder and the new homepage. Then Phase 4 — Audio. Working rules and CI are in place since PR #2 ([WORKFLOW.md](WORKFLOW.md)).
+**Current:** Phase 3 realignment ([plan](plans/2026-10-23-phase-3-realignment.md)). PR A (#3) removes copies and supply ([021](decisions/021-phase-3-realignment.md)); PR B adds the `quoteRate` placeholder and the new homepage. Once both are merged, phase 3 is complete. Next: Phase 4 — Audio. Working rules and CI are in place since PR #2 ([WORKFLOW.md](WORKFLOW.md)).
 
 | Phase | Scope | Status |
 |---|---|---|

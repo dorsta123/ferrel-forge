@@ -39,7 +39,6 @@ flowchart LR
   W -. FFmpeg previews &#40;4&#41; .-> S3P
   W -. daily exposure &#40;6&#41; .-> SIM
   W -. monthly invoices,<br/>split payouts &#40;7&#41; .-> ST
-  P -- prices on cards & demo<br/>&#40;old copies curve, replaced<br/>in the realignment&#41; --> PR
   SA -. rate quotes &#40;5, 8&#41; .-> PR
   ML -. features .-> PR
 
@@ -54,7 +53,7 @@ flowchart LR
 | **Postgres** | The source of truth: accounts, artist profiles, tracks. The database itself refuses invalid data (check constraints), as a backstop to the app. | `packages/db` |
 | **Storage** (RustFS locally, S3-compatible) | Audio files. **Masters are private**; uploads go straight from the browser using a short signed link, then the server checks the file's bytes. Previews will be public. | `packages/storage`, decision [012](decisions/012-direct-browser-uploads.md) |
 | **Redis + worker** | Slow or scheduled jobs off the request path: audio previews (4), daily exposure metering (6), monthly billing and payouts (7). Today the worker runs but nothing sends it work yet; the web app starts queueing jobs in phase 4. | `apps/worker` |
-| **Pricing engine** | A pure function: inputs in, price out. No database or network access, so every quote can be replayed. Today it still holds the old "price rises as copies sell" curve, used by cards, release pages and the homepage demo; the realignment replaces it with a rate quote placeholder ([018](decisions/018-pricing-model.md)). | `packages/pricing` |
+| **Pricing engine** | A pure function: inputs in, rate out, with the factors that moved it. No database or network access, so every quote can be replayed. Today `quoteRate` is a placeholder that returns the artist's base rate; nothing calls it yet. Licensing (5) will, and the model (8) adds factors ([018](decisions/018-pricing-model.md), [021](decisions/021-phase-3-realignment.md)). | `packages/pricing` |
 
 ## Where money will flow (phases 5–7, test mode only)
 Advertiser's saved card → monthly invoice (exposure × locked rate) → payment succeeds → platform fee → split by the license's locked contributor percentages → ledger entries → Stripe Connect transfers to each contributor (held if they haven't joined). Decisions [016](decisions/016-metered-exposure-licensing.md) and [019](decisions/019-contributor-splits.md).

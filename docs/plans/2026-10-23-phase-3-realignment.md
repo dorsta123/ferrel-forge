@@ -33,12 +33,12 @@
 Not in scope: licenses, contributors, real pricing, audio previews.
 
 ## Acceptance criteria
-- [ ] No page shows copies, "left", "sold out", a supply bar or a public price.
-- [ ] Release pages show "Licensing opens soon"; archived ones still say "No longer for sale".
-- [ ] Artists can still set and edit their base rate in the dashboard, and see it on their rows.
-- [ ] Published releases can be unpublished; drafts can be deleted (no sale-based locks).
-- [ ] The database has no `total_supply`/`copies_sold`; `duration_ms` exists. Existing tracks survive the migration.
-- [ ] The homepage explains the new model, with no copies demo.
+- [x] No page shows copies, "left", "sold out", a supply bar or a public price.
+- [x] Release pages show "Licensing opens soon"; archived ones still say "No longer for sale".
+- [x] Artists can still set and edit their base rate in the dashboard, and see it on their rows.
+- [x] Published releases can be unpublished; drafts can be deleted (no sale-based locks).
+- [x] The database has no `total_supply`/`copies_sold`; `duration_ms` exists. Existing tracks survive the migration.
+- [x] The homepage explains the new model, with no copies demo.
 - [ ] All test layers pass in CI.
 
 ## Risks
