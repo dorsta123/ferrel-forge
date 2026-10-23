@@ -11,7 +11,7 @@ export const audioFormat = pgEnum("audio_format", AUDIO_FORMATS);
 
 /**
  * A release a creator sells licenses for. One license type per track (phase 3).
- * Prices are integer cents. `copiesSold` is only ever changed by checkout (phase 5).
+ * `basePriceCents` is the artist's placeholder rate until pricing is decided (PRODUCT.md question 15).
  */
 export const tracks = pgTable(
   "tracks",
@@ -29,13 +29,13 @@ export const tracks = pgTable(
     bpm: smallint("bpm"),
     musicalKey: musicalKey("musical_key"),
     status: trackStatus("status").notNull().default("draft"),
-    totalSupply: integer("total_supply").notNull(),
     basePriceCents: integer("base_price_cents").notNull(),
-    copiesSold: integer("copies_sold").notNull().default(0),
     // Master file in the private bucket. All three set together, or none.
     audioKey: text("audio_key"),
     audioSizeBytes: bigint("audio_size_bytes", { mode: "number" }),
     audioFormat: audioFormat("audio_format"),
+    // Track length, read from the audio in phase 4. Null until then.
+    durationMs: integer("duration_ms"),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     ...timestamps,
   },
@@ -52,9 +52,8 @@ export const tracks = pgTable(
     ),
     check("tracks_description_len", sql`${t.description} is null or char_length(${t.description}) <= ${lit(L.descriptionMax)}`),
     check("tracks_bpm_range", sql`${t.bpm} is null or ${t.bpm} between ${lit(L.bpmMin)} and ${lit(L.bpmMax)}`),
-    check("tracks_supply_range", sql`${t.totalSupply} between ${lit(L.supplyMin)} and ${lit(L.supplyMax)}`),
     check("tracks_price_range", sql`${t.basePriceCents} between ${lit(L.priceMinCents)} and ${lit(L.priceMaxCents)}`),
-    check("tracks_copies_sold_range", sql`${t.copiesSold} between 0 and ${t.totalSupply}`),
+    check("tracks_duration_range", sql`${t.durationMs} is null or ${t.durationMs} between 1 and ${lit(L.durationMaxMs)}`),
     check(
       "tracks_audio_all_or_none",
       sql`(${t.audioKey} is null) = (${t.audioSizeBytes} is null) and (${t.audioKey} is null) = (${t.audioFormat} is null)`,

@@ -8,10 +8,11 @@ import { exploreHref, pageCount, parseExploreParams } from "@/features/catalog/p
 import { explorePage } from "@/features/catalog/queries";
 import { ReleaseGrid } from "@/features/catalog/release-grid";
 import { genreLabel } from "@/features/releases/labels";
+import { formatCount } from "@/lib/format-number";
 
 export const metadata = {
   title: "Explore · ferrel-forge",
-  description: "Limited-run music licenses. Every sale raises the price of the next copy.",
+  description: "Tracks you can license for Instagram, TikTok and YouTube ads, paying for the exposure they get.",
 };
 
 export default function Page({ searchParams }: PageProps<"/explore">) {
@@ -21,7 +22,7 @@ export default function Page({ searchParams }: PageProps<"/explore">) {
         <p className="text-sm font-medium text-brand-text">Marketplace</p>
         <h1 className="font-display text-4xl font-bold tracking-tight">Explore releases</h1>
         <p className="text-pretty text-muted-foreground">
-          Every release is a limited run. The fewer copies left, the more the next one costs.
+          Tracks you can license for your Instagram, TikTok and YouTube ads. You pay for the exposure they get.
         </p>
       </header>
       <Suspense fallback={<div className="h-96 rounded-2xl border border-dashed" />}>
@@ -41,7 +42,7 @@ async function Results({ searchParams }: { searchParams: PageProps<"/explore">["
     <div className="flex flex-col gap-6">
       <GenreFilter active={params.genre} />
       <p className="text-sm text-muted-foreground" aria-live="polite">
-        {total === 0 ? "No releases" : `${total.toLocaleString("en-US")} release${total === 1 ? "" : "s"}`}
+        {total === 0 ? "No releases" : `${formatCount(total)} release${total === 1 ? "" : "s"}`}
         {params.genre && ` in ${genreLabel(params.genre)}`}
       </p>
       {rows.length > 0 ? (

@@ -1,11 +1,10 @@
 // Release logic, independent of Next.js: callers pass an already-authenticated
 // creator id. Every write re-checks ownership and repeats its rules inside the
-// UPDATE/DELETE itself, so a request racing another (or a sale) can't slip past.
+// UPDATE/DELETE itself, so a request racing another can't slip past.
 import { and, db, eq, sql, tracks } from "@ferrel/db";
 import { deleteObject } from "@ferrel/storage";
 import { PG_UNIQUE_VIOLATION, pgError } from "@/lib/pg-error";
 import { getOwnedTrack } from "../tracks/track-access";
-import { centsToInput } from "./money";
 import { validateRelease } from "./rules";
 import { firstFreeSlug } from "./slug";
 import { RELEASE_ACTIONS, checkAction, releaseFacts, releaseLocks, type ReleaseAction } from "./status";
@@ -50,7 +49,6 @@ export async function updateRelease(creatorId: string, trackId: string, input: R
   const check = validateRelease({
     ...input,
     ...(locks.slug && { slug: track.slug }),
-    ...(locks.sale && { totalSupply: String(track.totalSupply), price: centsToInput(track.basePriceCents) }),
   });
   if (!check.ok) return check;
   const v = check.value;
@@ -64,9 +62,8 @@ export async function updateRelease(creatorId: string, trackId: string, input: R
           eq(tracks.id, trackId),
           eq(tracks.creatorId, creatorId),
           sql`${tracks.status} <> 'archived'`,
-          // The same locks, enforced by the database row as it is right now.
+          // The URL lock, enforced by the database row as it is right now.
           sql`(${tracks.publishedAt} is null or ${tracks.slug} = ${v.slug})`,
-          sql`(${tracks.copiesSold} = 0 or (${tracks.totalSupply} = ${v.totalSupply} and ${tracks.basePriceCents} = ${v.basePriceCents}))`,
         ),
       )
       .returning({ id: tracks.id });
@@ -87,7 +84,6 @@ export async function changeReleaseStatus(creatorId: string, trackId: string, ac
   if (!check.ok) return check;
 
   const owned = and(eq(tracks.id, trackId), eq(tracks.creatorId, creatorId));
-  const unsold = eq(tracks.copiesSold, 0);
   let changed: unknown[];
 
   switch (action) {
@@ -103,7 +99,8 @@ export async function changeReleaseStatus(creatorId: string, trackId: string, ac
       changed = await db
         .update(tracks)
         .set({ status: "draft" })
-        .where(and(owned, eq(tracks.status, "published"), unsold))
+        // PHASE 5: also require "no active licenses" here, matching checkAction (decision 021).
+        .where(and(owned, eq(tracks.status, "published")))
         .returning({ id: tracks.id });
       break;
     case "archive":
@@ -116,7 +113,8 @@ export async function changeReleaseStatus(creatorId: string, trackId: string, ac
     case "delete": {
       const [gone] = await db
         .delete(tracks)
-        .where(and(owned, eq(tracks.status, "draft"), unsold))
+        // PHASE 5: also require "no licenses" here, matching checkAction (decision 021).
+        .where(and(owned, eq(tracks.status, "draft")))
         .returning({ audioKey: tracks.audioKey });
       if (gone?.audioKey) await deleteObject("masters", gone.audioKey);
       changed = gone ? [gone] : [];

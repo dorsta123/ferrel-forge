@@ -9,7 +9,7 @@ import { getCurrentUser } from "@/lib/session";
 
 export const metadata = { title: "New release · ferrel-forge" };
 
-const NO_LOCKS = { readOnly: false, slug: false, sale: false };
+const NO_LOCKS = { readOnly: false, slug: false };
 
 export default function Page() {
   return (
@@ -21,7 +21,7 @@ export default function Page() {
         <p className="text-sm font-medium text-brand-text">New release</p>
         <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Forge a new release</h1>
         <p className="max-w-2xl text-pretty text-muted-foreground">
-          Set the details and the limited run. It stays a private draft until you upload the audio and publish.
+          Set the details and your base rate. It stays a private draft until you upload the audio and publish.
         </p>
       </header>
       <Suspense fallback={<div className="h-[36rem] rounded-2xl border bg-card" />}>
@@ -45,7 +45,7 @@ async function NewRelease() {
       creatorSlug={user.creator.slug}
       artistName={user.creator.artistName}
       coverSeed="new-release"
-      copiesSold={0}
+      durationMs={null}
     />
   );
 }

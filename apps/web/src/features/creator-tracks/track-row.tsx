@@ -43,11 +43,11 @@ export function TrackRow({ track, now }: { track: CreatorTrackRow; now: Date }) 
         </div>
 
         <div className="hidden shrink-0 flex-col items-end gap-0.5 text-right sm:flex">
-          <span className="font-semibold tabular-nums">{view.priceLabel}</span>
-          <span className="text-xs text-muted-foreground tabular-nums">{view.supplyLabel}</span>
+          <span className="font-semibold tabular-nums">{view.rateLabel}</span>
+          <span className="text-xs text-muted-foreground tabular-nums">{view.lengthLabel ? `base rate · ${view.lengthLabel}` : "base rate"}</span>
         </div>
         {/* Phones: one compact line instead of the column. */}
-        <span className="shrink-0 text-sm font-semibold tabular-nums sm:hidden">{view.priceLabel}</span>
+        <span className="shrink-0 text-sm font-semibold tabular-nums sm:hidden">{view.rateLabel}</span>
         <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
       </Link>
     </li>

@@ -1,8 +1,6 @@
-import { quotePrice } from "@ferrel/pricing";
 import { Waveform } from "@/components/brand/waveform";
-
-const first = quotePrice({ basePriceCents: 1000, totalSupply: 100, remainingSupply: 100 });
-const half = quotePrice({ basePriceCents: 1000, totalSupply: 100, remainingSupply: 50 });
+import { EXAMPLE, exampleExposureSeconds } from "@/components/home/example-campaign";
+import { formatCount } from "@/lib/format-number";
 
 // Split screen for /sign-in and /sign-up: form left, ember artwork right.
 export default function AuthLayout({ children }: LayoutProps<"/">) {
@@ -18,20 +16,20 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
       </div>
 
       <aside className="grain ember-glow relative hidden flex-col justify-between overflow-hidden border-l p-12 lg:flex">
-        <p className="font-mono text-xs text-muted-foreground">ferrel-forge / limited runs</p>
+        <p className="font-mono text-xs text-muted-foreground">ferrel-forge / music for ads</p>
         <div className="flex flex-col gap-8">
           <Waveform className="h-48" />
           <blockquote className="max-w-md font-display text-3xl leading-tight font-semibold text-balance">
-            Every sale makes the next copy <span className="text-molten">rarer</span>.
+            Paid for every second your music is <span className="text-molten">heard</span>.
           </blockquote>
           <dl className="flex gap-8 text-sm">
             <div>
-              <dt className="text-muted-foreground">Copy #1</dt>
-              <dd className="font-mono text-lg font-medium">${(first / 100).toFixed(2)}</dd>
+              <dt className="text-muted-foreground">Example views</dt>
+              <dd className="font-mono text-lg font-medium">{formatCount(EXAMPLE.views)}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Copy #51</dt>
-              <dd className="font-mono text-lg font-medium text-brand-text">${(half / 100).toFixed(2)}</dd>
+              <dt className="text-muted-foreground">Exposure-seconds</dt>
+              <dd className="font-mono text-lg font-medium text-brand-text">{formatCount(exampleExposureSeconds)}</dd>
             </div>
           </dl>
         </div>

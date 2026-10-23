@@ -12,7 +12,7 @@ const BUTTONS: Record<ReleaseAction, { label: string; icon: typeof RocketIcon; v
     label: "Archive",
     icon: ArchiveIcon,
     variant: "outline",
-    confirm: "Archiving is final. Buyers keep their licenses, but nobody can buy new copies.",
+    confirm: "Archiving is final. The release leaves the marketplace and can no longer be licensed.",
   },
   delete: {
     label: "Delete draft",
@@ -25,7 +25,7 @@ const BUTTONS: Record<ReleaseAction, { label: string; icon: typeof RocketIcon; v
 const EXPLAIN: Record<ReleaseFacts["status"], string> = {
   draft: "Only you can see this draft.",
   published: "Live on the marketplace.",
-  archived: "Archived: no longer for sale. Buyers keep their licenses.",
+  archived: "Archived: no longer offered for licensing.",
 };
 
 export function ReleaseActions({ trackId, facts }: { trackId: string; facts: ReleaseFacts }) {

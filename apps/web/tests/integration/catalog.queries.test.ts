@@ -7,14 +7,14 @@ import { ago, createUsers, removeCreatedUsers, type TestUser } from "./support";
 
 let A: TestUser, B: TestUser, C: TestUser;
 const live = (creatorId: string, slug: string, minutesAgo: number, extra: object = {}) => ({
-  creatorId, title: slug, slug, genre: "pop" as const, totalSupply: 10, basePriceCents: 500,
+  creatorId, title: slug, slug, genre: "pop" as const, basePriceCents: 500,
   status: "published" as const, publishedAt: ago(minutesAgo), audioKey: `${creatorId}/x/${slug}.wav`, audioSizeBytes: 10, audioFormat: "wav" as const, ...extra,
 });
 
 beforeAll(async () => {
   [A, B, C] = await createUsers(["pa", "pb", "pc"]);
   await db.insert(tracks).values([
-    { creatorId: A.id, title: "a-draft", slug: "a-draft", genre: "pop", totalSupply: 10, basePriceCents: 500 },
+    { creatorId: A.id, title: "a-draft", slug: "a-draft", genre: "pop", basePriceCents: 500 },
     live(A.id, "a-live", 2, { genre: "lo-fi" }),
     live(A.id, "a-gone", 3, { status: "archived" }),
     live(B.id, "b-live", 1),
@@ -31,10 +31,10 @@ describe("lists", () => {
     expect(titles.indexOf("b-live")).toBeLessThan(titles.indexOf("a-live"));
   });
 
-  it("select display columns only: no audio location, no owner id", async () => {
+  it("select display columns only: no audio location, owner id or the artist's rate", async () => {
     const [first] = await latestReleases(1);
     expect(Object.keys(first).sort()).toEqual(
-      ["artistName", "basePriceCents", "bpm", "copiesSold", "creatorSlug", "genre", "id", "musicalKey", "slug", "title", "totalSupply"],
+      ["artistName", "bpm", "creatorSlug", "durationMs", "genre", "id", "musicalKey", "slug", "title"],
     );
   });
 

@@ -9,16 +9,16 @@ const BOT = "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.
 const PAGE_SIZE = 24;
 const SECRET_FOLDER = "secret-folder";
 
-type Release = { title: string; slug: string; genre: string; supply?: number; price?: number; sold?: number; minutesAgo?: number; status?: string; bpm?: number; key?: string; description?: string };
+type Release = { title: string; slug: string; genre: string; price?: number; minutesAgo?: number; status?: string; bpm?: number; key?: string; description?: string; durationMs?: number };
 
 async function addRelease(creatorId: string, r: Release, audioKey = `${creatorId}/x/${r.slug}.wav`) {
   const draft = r.status === "draft";
   const [{ id }] = await sql<{ id: string }[]>`
-    insert into tracks (creator_id, title, slug, genre, total_supply, base_price_cents, status, copies_sold, published_at,
-                        audio_key, audio_size_bytes, audio_format, bpm, musical_key, description)
-    values (${creatorId}, ${r.title}, ${r.slug}, ${r.genre}, ${r.supply ?? 50}, ${r.price ?? 1250}, ${r.status ?? "published"}, ${r.sold ?? 0},
+    insert into tracks (creator_id, title, slug, genre, base_price_cents, status, published_at,
+                        audio_key, audio_size_bytes, audio_format, bpm, musical_key, description, duration_ms)
+    values (${creatorId}, ${r.title}, ${r.slug}, ${r.genre}, ${r.price ?? 1250}, ${r.status ?? "published"},
             ${draft ? null : new Date(Date.now() - (r.minutesAgo ?? 0) * 60_000)},
-            ${draft ? null : audioKey}, ${draft ? null : 10}, ${draft ? null : "wav"}, ${r.bpm ?? null}, ${r.key ?? null}, ${r.description ?? null})
+            ${draft ? null : audioKey}, ${draft ? null : 10}, ${draft ? null : "wav"}, ${r.bpm ?? null}, ${r.key ?? null}, ${r.description ?? null}, ${r.durationMs ?? null})
     returning id`;
   return id;
 }
@@ -30,10 +30,10 @@ test("anyone can browse published releases, and only those", async ({ open }) =>
   const aliceId = await userIdByEmail(alice.email);
   const liveId = await addRelease(
     aliceId,
-    { title: "Midnight Run", slug: "midnight-run", genre: "electronic", sold: 2, minutesAgo: 1, bpm: 124, key: "Am", description: "A late drive through neon." },
+    { title: "Midnight Run", slug: "midnight-run", genre: "electronic", minutesAgo: 1, bpm: 124, key: "Am", description: "A late drive through neon.", durationMs: 222_000 },
     `${aliceId}/${SECRET_FOLDER}/master.wav`,
   );
-  await addRelease(aliceId, { title: "Sold Out Song", slug: "sold-out-song", genre: "lo-fi", supply: 5, sold: 5, minutesAgo: 2 });
+  await addRelease(aliceId, { title: "Quiet Song", slug: "quiet-song", genre: "lo-fi", minutesAgo: 2 });
   await addRelease(aliceId, { title: "Golden Hour", slug: "golden-hour", genre: "pop", status: "draft" });
   await addRelease(aliceId, { title: "Old Tape", slug: "old-tape", genre: "ambient", status: "archived", minutesAgo: 500 });
   const bobSlug = testSlug("bob");
@@ -42,7 +42,7 @@ test("anyone can browse published releases, and only those", async ({ open }) =>
   // Enough for a second Explore page, in one insert.
   const bobTracks = Array.from({ length: PAGE_SIZE + 2 }, (_, i) => ({
     creator_id: bobId, title: `Bob Track ${String(i).padStart(2, "0")}`, slug: `bob-track-${i}`, genre: "rock",
-    total_supply: 50, base_price_cents: 1250, status: "published", published_at: new Date(Date.now() - (60 + i) * 60_000),
+    base_price_cents: 1250, status: "published", published_at: new Date(Date.now() - (60 + i) * 60_000),
     audio_key: `${bobId}/x/bob-track-${i}.wav`, audio_size_bytes: 10, audio_format: "wav",
   }));
   await sql`insert into tracks ${sql(bobTracks)}`;
@@ -61,7 +61,7 @@ test("anyone can browse published releases, and only those", async ({ open }) =>
     const latest = m.getByRole("list", { name: "Latest releases" }).getByTestId("release-card").locator("h3");
     await expect(latest).toHaveCount(4);
     await expect(latest.nth(0)).toHaveText("Midnight Run");
-    await expect(latest.nth(1)).toHaveText("Sold Out Song");
+    await expect(latest.nth(1)).toHaveText("Quiet Song");
   });
 
   await test.step(`Explore lists everything published, ${PAGE_SIZE} per page`, async () => {
@@ -82,7 +82,7 @@ test("anyone can browse published releases, and only those", async ({ open }) =>
     await m.getByRole("navigation", { name: "Filter by genre" }).getByRole("link", { name: "Lo-fi" }).click();
     await page.waitForURL("**/explore?genre=lo-fi");
     await expect(m.getByText(`${lofi} release${lofi === 1 ? "" : "s"} in Lo-fi`)).toBeVisible();
-    await expect(cards.filter({ hasText: "Sold Out Song" })).toHaveCount(1);
+    await expect(cards.filter({ hasText: "Quiet Song" })).toHaveCount(1);
     for (const card of await cards.all()) await expect(card).toContainText("Lo-fi");
     await expect(m.getByRole("link", { name: "Lo-fi" })).toHaveAttribute("aria-current", "page");
     await page.goto("/explore?genre=polka&page=abc");
@@ -92,15 +92,17 @@ test("anyone can browse published releases, and only those", async ({ open }) =>
     await expect(m.getByRole("link", { name: "Back to the first page" })).toHaveCount(1);
   });
 
-  await test.step("a release page shows the live price, details, and a disabled Buy", async () => {
+  await test.step("a release page shows details and 'Licensing opens soon', but no price", async () => {
     await page.goto("/explore");
     await cards.filter({ hasText: "Midnight Run" }).click();
     await page.waitForURL(`**/creators/${alice.slug}/midnight-run`);
     await expect(m.getByRole("heading", { name: "Midnight Run", level: 1 })).toBeVisible();
-    const panel = m.getByTestId("price-panel");
-    for (const text of ["$13.00", "48 of 50 left", "Started at $12.50"]) await expect(panel).toContainText(text);
-    await expect(m.getByRole("button", { name: "Buying opens soon" })).toBeDisabled();
-    for (const text of ["124", "A minor", "A late drive through neon."]) await expect(m).toContainText(text);
+    await expect(m.getByTestId("license-panel")).toContainText("License this track for your ads");
+    await expect(m.getByRole("button", { name: "Licensing opens soon" })).toBeDisabled();
+    for (const text of ["124", "A minor", "3:42", "A late drive through neon."]) await expect(m).toContainText(text);
+    // The artist's rate ($12.50) is private until pricing is decided; nothing about copies either.
+    await expect(m).not.toContainText("$12.50");
+    await expect(m).not.toContainText(/copies|of \d+ left|sold out/i);
     await expect(page).toHaveTitle("Midnight Run by Alice Music · ferrel-forge");
     const html = await page.content();
     expect(html).not.toContain(SECRET_FOLDER);
@@ -111,17 +113,15 @@ test("anyone can browse published releases, and only those", async ({ open }) =>
     await m.getByRole("link", { name: "Alice Music" }).first().click();
     await page.waitForURL(`**/creators/${alice.slug}`);
     await expect(m.getByRole("heading", { name: "Alice Music", level: 1 })).toBeVisible();
-    await expect(cards.locator("h3")).toHaveText(["Midnight Run", "Sold Out Song"]);
+    await expect(cards.locator("h3")).toHaveText(["Midnight Run", "Quiet Song"]);
     await expect(m.getByText("Late-night synth records.")).toHaveCount(1);
     await expect(page).toHaveTitle("Alice Music · ferrel-forge");
   });
 
-  await test.step("archived pages still open, not for sale; sold-out says so", async () => {
+  await test.step("archived pages still open, marked as no longer for sale", async () => {
     await page.goto(`/creators/${alice.slug}/old-tape`);
     await expect(m.getByText("No longer for sale")).toBeVisible();
-    await expect(m.getByRole("button", { name: /Buying/ })).toHaveCount(0);
-    await page.goto(`/creators/${alice.slug}/sold-out-song`);
-    await expect(m.getByRole("button", { name: "Sold out" })).toBeDisabled();
+    await expect(m.getByRole("button", { name: /Licensing/ })).toHaveCount(0);
   });
 
   await test.step("drafts, mismatched and malformed URLs are not found; crawlers get a real 404", async () => {
@@ -143,7 +143,7 @@ test("anyone can browse published releases, and only those", async ({ open }) =>
 
   await test.step("public pages fit a phone in the light theme", async () => {
     const phone = await open({ viewport: PHONE, theme: "light" });
-    for (const [path, ready] of [["/explore", "release-card"], [`/creators/${alice.slug}/midnight-run`, "price-panel"], [`/creators/${alice.slug}`, "release-card"], ["/", "release-card"]]) {
+    for (const [path, ready] of [["/explore", "release-card"], [`/creators/${alice.slug}/midnight-run`, "license-panel"], [`/creators/${alice.slug}`, "release-card"], ["/", "release-card"]]) {
       await phone.goto(path);
       await expect(main(phone).getByTestId(ready).first()).toBeVisible();
       expect(await fitsWidth(phone), path).toBe(true);

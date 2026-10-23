@@ -22,7 +22,7 @@ const display = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   title: "ferrel-forge",
-  description: "Limited-run music licenses, priced by how many copies remain.",
+  description: "Music licensing for ads: pay for the exposure a track actually gets.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

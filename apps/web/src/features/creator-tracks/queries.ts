@@ -13,9 +13,8 @@ export async function listCreatorTracks(creatorId: string, filter: TrackFilter) 
       title: tracks.title,
       status: tracks.status,
       genre: tracks.genre,
-      totalSupply: tracks.totalSupply,
-      copiesSold: tracks.copiesSold,
       basePriceCents: tracks.basePriceCents,
+      durationMs: tracks.durationMs,
       hasAudio: sql<boolean>`${tracks.audioKey} is not null`,
       updatedAt: tracks.updatedAt,
     })
@@ -27,9 +26,9 @@ export async function listCreatorTracks(creatorId: string, filter: TrackFilter) 
 
 export type CreatorTrackRow = Awaited<ReturnType<typeof listCreatorTracks>>[number];
 
-export type CreatorTrackStats = Record<TrackFilter, number> & { copiesSold: number };
+export type CreatorTrackStats = Record<TrackFilter, number>;
 
-/** Counts per status and total copies sold, in one query. */
+/** Counts per status, in one query. */
 export async function creatorTrackStats(creatorId: string): Promise<CreatorTrackStats> {
   const [row] = await db
     .select({
@@ -37,7 +36,6 @@ export async function creatorTrackStats(creatorId: string): Promise<CreatorTrack
       draft: sql<number>`(count(*) filter (where ${tracks.status} = 'draft'))::int`,
       published: sql<number>`(count(*) filter (where ${tracks.status} = 'published'))::int`,
       archived: sql<number>`(count(*) filter (where ${tracks.status} = 'archived'))::int`,
-      copiesSold: sql<number>`coalesce(sum(${tracks.copiesSold}), 0)::int`,
     })
     .from(tracks)
     .where(eq(tracks.creatorId, creatorId));

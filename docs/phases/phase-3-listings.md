@@ -27,6 +27,19 @@ A creator can create a release, upload its audio, and publish it; anyone can fin
 7. ✅ **Tests** — filled the remaining gaps: 30 database-rule checks (invalid rows written directly are refused by each constraint, delete-with-releases is blocked), 17 storage checks (expired, re-pathed, re-bucketed, extended or mismatched upload links refused; anonymous upload/download/delete/listing refused; CORS only for our site), and a 33-check end-to-end journey (create → upload → publish → visitor finds it → edit → sale moves the price → archive) in dark desktop, light desktop and light phone. Final run, twice: 287 browser/data/security checks + 174 unit tests, typecheck, lint, build — all green. *These checks were first written as session scripts; on 2026-10-21 they moved into the repo as `pnpm test:integration` and `pnpm e2e` ([decision 020](../decisions/020-test-layout.md)).*
 8. ✅ **Commit, push, merge** — approved by the user; one commit for the phase, merged into `main` with `--no-ff`, branch deleted.
 
+## Realignment (after the product was redefined, 2026-10-23)
+Steps 4–6 above describe the original "limited copies" model. The realignment ([plan](../plans/2026-10-23-phase-3-realignment.md), [decision 021](../decisions/021-phase-3-realignment.md)) updated them for metered exposure licensing:
+- ✅ **PR A (#3):**
+  - Copies and supply removed (migrations 0004–0005, plus `duration_ms`).
+  - The artist's rate is a private "Base rate".
+  - Public pages say "Licensing opens soon" and show no price.
+  - The after-first-sale lock is gone.
+  - Dashboard stats: Releases · Published · Active licenses.
+- ✅ **PR B:**
+  - The homepage and sign-in panel explain exposure licensing, using a labelled example campaign with no prices.
+  - The price-curve demo is removed.
+  - `packages/pricing` now offers the `quoteRate` placeholder.
+
 ## Learned so far
 - Signed upload URLs only sign `host` + `content-length` by default; content type is enforced only with `signableHeaders` (found by test — step 2 initially accepted HTML through a WAV link).
 - `pnpm setup` is a pnpm built-in that edits the user PATH; a package script named `setup` triggered it. Script renamed to `setup-buckets`. Its changes (user `PNPM_HOME`, `%PNPM_HOME%\bin` at the front of the user PATH, a second pnpm copy in `AppData\Local\pnpm\bin` + `global`) were undone on 2026-10-20; the pnpm `store` was kept.

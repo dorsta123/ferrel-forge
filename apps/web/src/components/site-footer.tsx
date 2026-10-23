@@ -8,7 +8,7 @@ export function SiteFooter() {
         <div className="flex max-w-sm flex-col gap-3">
           <Logo />
           <p className="text-sm text-muted-foreground">
-            Limited-run music licenses, priced by how many copies remain.
+            Music licensing for ads: pay for the exposure a track actually gets.
           </p>
         </div>
         <nav aria-label="Footer" className="flex gap-10 text-sm">

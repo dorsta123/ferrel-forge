@@ -1,0 +1,2 @@
+ALTER TABLE "tracks" ADD COLUMN "duration_ms" integer;--> statement-breakpoint
+ALTER TABLE "tracks" ADD CONSTRAINT "tracks_duration_range" CHECK ("tracks"."duration_ms" is null or "tracks"."duration_ms" between 1 and 14400000);

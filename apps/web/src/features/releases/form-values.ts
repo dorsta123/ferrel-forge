@@ -10,7 +10,6 @@ export const NEW_RELEASE_VALUES: ReleaseFormValues = {
   genre: "",
   bpm: "",
   musicalKey: "",
-  totalSupply: "100",
   price: "10.00",
 };
 
@@ -22,7 +21,6 @@ export function releaseFormValues(track: {
   genre: Genre;
   bpm: number | null;
   musicalKey: MusicalKey | null;
-  totalSupply: number;
   basePriceCents: number;
 }): ReleaseFormValues {
   return {
@@ -32,7 +30,6 @@ export function releaseFormValues(track: {
     genre: track.genre,
     bpm: track.bpm === null ? "" : String(track.bpm),
     musicalKey: track.musicalKey ?? "",
-    totalSupply: String(track.totalSupply),
     price: centsToInput(track.basePriceCents),
   };
 }
@@ -50,7 +47,6 @@ export function readReleaseForm(formData: FormData): ReleaseFormValues {
     genre: get("genre"),
     bpm: get("bpm"),
     musicalKey: get("musicalKey"),
-    totalSupply: get("totalSupply"),
     price: get("price"),
   };
 }

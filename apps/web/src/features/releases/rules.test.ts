@@ -9,7 +9,6 @@ const valid: ReleaseFormValues = {
   genre: "electronic",
   bpm: "",
   musicalKey: "",
-  totalSupply: "100",
   price: "12.50",
 };
 const run = (patch: Partial<ReleaseFormValues>) => validateRelease({ ...valid, ...patch });
@@ -29,7 +28,6 @@ describe("validateRelease", () => {
         genre: "electronic",
         bpm: null,
         musicalKey: null,
-        totalSupply: 100,
         basePriceCents: 1250,
       },
     });
@@ -58,10 +56,6 @@ describe("validateRelease", () => {
     ["bpm too high", { bpm: "251" }, "bpm"],
     ["fractional bpm", { bpm: "120.5" }, "bpm"],
     ["unknown key", { musicalKey: "H" }, "musicalKey"],
-    ["zero copies", { totalSupply: "0" }, "totalSupply"],
-    ["too many copies", { totalSupply: "1001" }, "totalSupply"],
-    ["empty copies", { totalSupply: "" }, "totalSupply"],
-    ["negative copies", { totalSupply: "-5" }, "totalSupply"],
     ["price below $1", { price: "0.99" }, "price"],
     ["price above $500", { price: "500.01" }, "price"],
     ["price not a number", { price: "ten" }, "price"],
@@ -70,7 +64,7 @@ describe("validateRelease", () => {
   });
 
   it("accepts the limits themselves", () => {
-    expect(run({ bpm: "40", totalSupply: "1", price: "1" }).ok).toBe(true);
-    expect(run({ bpm: "250", totalSupply: "1000", price: "500" }).ok).toBe(true);
+    expect(run({ bpm: "40", price: "1" }).ok).toBe(true);
+    expect(run({ bpm: "250", price: "500" }).ok).toBe(true);
   });
 });

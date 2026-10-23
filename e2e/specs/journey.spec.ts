@@ -1,5 +1,5 @@
-// End to end: a creator publishes, a visitor finds it, a sale moves the price,
-// the creator archives it, and the visitor sees the change. Once per theme/device.
+// End to end: a creator publishes, a visitor finds it, the creator edits and
+// archives it, and the visitor sees each change. Once per theme/device.
 import { newCreator } from "../helpers/accounts";
 import { makeWav } from "../helpers/audio";
 import { sql } from "../helpers/db";
@@ -13,7 +13,7 @@ const VARIANTS = [
 ] as const;
 
 for (const variant of VARIANTS) {
-  test(`publish, discover, sell, archive (${variant.name})`, async ({ open }) => {
+  test(`publish, discover, edit, archive (${variant.name})`, async ({ open }) => {
     const creator = await open({ theme: variant.theme, viewport: variant.viewport });
     const visitor = await open({ theme: variant.theme, viewport: variant.viewport });
     const c = main(creator);
@@ -37,8 +37,7 @@ for (const variant of VARIANTS) {
       await creator.waitForLoadState("networkidle");
       await c.getByLabel("Title", { exact: true }).fill(title);
       await c.getByLabel("Genre").selectOption("cinematic");
-      await c.getByLabel("Copies", { exact: true }).fill("20");
-      await c.getByLabel("Starting price", { exact: true }).fill("8");
+      await c.getByLabel("Base rate", { exact: true }).fill("8");
       await checkWidth(creator, "new release");
       await c.getByRole("button", { name: "Create draft" }).click();
       await creator.waitForURL(/\/dashboard\/tracks\/[0-9a-f-]{36}$/);
@@ -58,8 +57,8 @@ for (const variant of VARIANTS) {
       await checkWidth(visitor, "home");
       await card.click();
       await visitor.waitForURL(`**/creators/${artist.slug}/${trackSlug}`);
-      await expect(v.getByTestId("price-panel")).toContainText("$8.00");
-      await expect(v.getByTestId("price-panel")).toContainText("20 of 20 left");
+      await expect(v.getByTestId("license-panel")).toContainText("Licensing opens soon");
+      await expect(v).not.toContainText("$8.00");
       await checkWidth(visitor, "release");
       await visitor.goto("/explore?genre=cinematic");
       await expect(v.getByTestId("release-card").filter({ hasText: title })).toBeVisible();
@@ -74,16 +73,15 @@ for (const variant of VARIANTS) {
       await expect(v.getByRole("heading", { name: `${title} (Final)`, level: 1 })).toBeVisible();
     });
 
-    await test.step("after 10 of 20 sell (simulated), the price is $12.00 everywhere", async () => {
-      await sql`update tracks set copies_sold = 10 where id = ${trackId}`;
-      await visitor.reload();
-      await expect(v.getByTestId("price-panel")).toContainText("$12.00");
-      await expect(v.getByTestId("price-panel")).toContainText("10 of 20 left");
+    await test.step("the rate stays private: the creator sees it on the dashboard, visitors never do", async () => {
       await creator.goto("/dashboard");
       const row = c.getByTestId("track-row").filter({ hasText: "(Final)" });
-      await expect(row).toContainText("$12.00");
-      await expect(c.getByTestId("stat-copies-sold")).toContainText("10");
+      await expect(row).toContainText("$8.00");
+      await expect(c.getByTestId("stat-active-licenses")).toContainText("0");
       await checkWidth(creator, "dashboard");
+      await visitor.reload();
+      await expect(v.getByTestId("license-panel")).toBeVisible();
+      await expect(v).not.toContainText("$8.00");
     });
 
     await test.step("archiving removes it from Explore but its page still opens", async () => {

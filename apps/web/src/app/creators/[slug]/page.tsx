@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: PageProps<"/creators/[slug]">
   // Crawlers get metadata before streaming starts, so this gives them a real 404 status;
   // browsers get the streamed not-found page with a noindex tag (decision 015).
   if (!creator) notFound();
-  return { title: `${creator.artistName} · ferrel-forge`, description: creator.bio ?? `Limited-run releases by ${creator.artistName}.` };
+  return { title: `${creator.artistName} · ferrel-forge`, description: creator.bio ?? `Tracks by ${creator.artistName}, available to license for ads.` };
 }
 
 export default function Page({ params }: PageProps<"/creators/[slug]">) {
