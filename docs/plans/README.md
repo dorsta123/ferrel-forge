@@ -8,4 +8,5 @@ Every piece of work starts here: a short plan the user approves **before** any c
 
 | Plan | Status |
 |---|---|
-| [2026-10-23 Working rules + CI](2026-10-23-working-rules-ci.md) | Approved |
+| [2026-10-23 Working rules + CI](2026-10-23-working-rules-ci.md) | Done (PR #2) |
+| [2026-10-23 Phase 3 realignment](2026-10-23-phase-3-realignment.md) | Approved |
