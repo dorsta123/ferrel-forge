@@ -14,8 +14,8 @@ test("a creator uploads, replaces and protects a master file", async ({ open }) 
   const alice = await newCreator(page, "Alice");
   const aliceId = await userIdByEmail(alice.email);
   const [{ id: trackId }] = await sql<{ id: string }[]>`
-    insert into tracks (creator_id, title, slug, genre, total_supply, base_price_cents)
-    values (${aliceId}, 'Midnight Run', 'midnight-run', 'electronic', 100, 1000) returning id`;
+    insert into tracks (creator_id, title, slug, genre, base_price_cents)
+    values (${aliceId}, 'Midnight Run', 'midnight-run', 'electronic', 1000) returning id`;
   const stored = async () => (await sql<{ key: string | null; size: string | null; format: string | null }[]>`
     select audio_key as key, audio_size_bytes as size, audio_format as format from tracks where id = ${trackId}`)[0];
 

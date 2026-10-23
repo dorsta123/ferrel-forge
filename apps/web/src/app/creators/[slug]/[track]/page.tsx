@@ -6,10 +6,11 @@ import { Suspense } from "react";
 import { ArrowLeftIcon } from "lucide-react";
 import { TrackCover } from "@/components/track/track-cover";
 import { parseCreatorSlug, parseTrackSlug } from "@/features/catalog/params";
-import { PricePanel } from "@/features/catalog/price-panel";
+import { LicensePanel } from "@/features/catalog/license-panel";
 import { getPublicTrack } from "@/features/catalog/queries";
 import { creatorHref } from "@/features/catalog/track-href";
 import { genreLabel, keyLabel } from "@/features/releases/labels";
+import { formatDuration } from "@/lib/format-duration";
 
 type Params = PageProps<"/creators/[slug]/[track]">["params"];
 
@@ -27,7 +28,7 @@ export async function generateMetadata({ params }: PageProps<"/creators/[slug]/[
   if (!track) notFound();
   return {
     title: `${track.title} by ${track.artistName} · ferrel-forge`,
-    description: track.description?.slice(0, 160) ?? `A limited run of ${track.totalSupply} licenses on ferrel-forge.`,
+    description: track.description?.slice(0, 160) ?? `${track.title} by ${track.artistName}, available to license for ads on ferrel-forge.`,
   };
 }
 
@@ -50,7 +51,7 @@ async function Release({ params }: { params: Params }) {
     ["Genre", genreLabel(track.genre)],
     ["BPM", track.bpm ? String(track.bpm) : null],
     ["Key", track.musicalKey ? keyLabel(track.musicalKey) : null],
-    ["Copies", track.totalSupply.toLocaleString("en-US")],
+    ["Length", track.durationMs ? formatDuration(track.durationMs) : null],
     ["Released", track.publishedAt?.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }) ?? null],
   ].filter((d): d is [string, string] => d[1] !== null);
 
@@ -77,7 +78,7 @@ async function Release({ params }: { params: Params }) {
             </p>
           </header>
 
-          <PricePanel track={track} />
+          <LicensePanel track={track} />
 
           {track.description && <p className="text-pretty break-words whitespace-pre-line text-muted-foreground">{track.description}</p>}
 

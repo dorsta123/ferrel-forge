@@ -1,35 +1,28 @@
 // What one dashboard row shows, worked out from the stored track. Pure.
-import { quotePrice } from "@ferrel/pricing";
 import type { TrackStatus } from "@ferrel/db/constants";
+import { formatDuration } from "@/lib/format-duration";
 import { formatCents } from "../releases/money";
 
 export type RowFacts = {
   status: TrackStatus;
-  totalSupply: number;
-  copiesSold: number;
   basePriceCents: number;
   hasAudio: boolean;
+  durationMs: number | null;
 };
 
 export type RowView = {
-  remaining: number;
-  /** "48 of 50 left" */
-  supplyLabel: string;
-  /** Current price from the pricing engine, or "Sold out". */
-  priceLabel: string;
+  /** The artist's own placeholder rate: shown only to them, on the dashboard. */
+  rateLabel: string;
+  /** "3:42", or null until phase 4 reads the length from the audio. */
+  lengthLabel: string | null;
   /** A draft that can't be published yet. */
   needsAudio: boolean;
 };
 
 export function rowView(t: RowFacts): RowView {
-  const remaining = Math.max(0, t.totalSupply - t.copiesSold);
   return {
-    remaining,
-    supplyLabel: `${remaining.toLocaleString("en-US")} of ${t.totalSupply.toLocaleString("en-US")} left`,
-    priceLabel:
-      remaining === 0
-        ? "Sold out"
-        : formatCents(quotePrice({ basePriceCents: t.basePriceCents, totalSupply: t.totalSupply, remainingSupply: remaining })),
+    rateLabel: formatCents(t.basePriceCents),
+    lengthLabel: t.durationMs === null ? null : formatDuration(t.durationMs),
     needsAudio: t.status === "draft" && !t.hasAudio,
   };
 }

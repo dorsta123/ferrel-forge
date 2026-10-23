@@ -21,35 +21,36 @@ test("a creator takes a release from draft to archive", async ({ open }) => {
     await page.waitForURL("**/dashboard/tracks/new");
     await page.waitForLoadState("networkidle");
     await field("Title").fill("Midnight Run");
-    await field("Starting price").fill("12.50");
-    await field("Copies").fill("50");
+    await field("Base rate").fill("12.50");
+    await expect(m.getByLabel("Copies")).toHaveCount(0);
     await m.getByLabel("Genre").selectOption("electronic");
     await m.getByLabel("BPM (optional)").fill("124");
     await m.getByLabel("Key (optional)").selectOption("Am");
     await expect(field("URL")).toHaveValue("midnight-run");
     const card = m.getByTestId("track-card");
     for (const text of ["Midnight Run", "Electronic", "124 BPM", "Am"]) await expect(card).toContainText(text);
-    await expect(m.getByTestId("card-price")).toHaveText("$12.50");
-    await expect(m.getByTestId("card-supply")).toHaveText("50 of 50 left");
+    // The rate is private: the public card shows no price.
+    await expect(m.getByTestId("card-status")).toHaveText("Licensing opens soon");
+    await expect(card).not.toContainText("$12.50");
   });
 
   await test.step("invalid values show errors next to the fields", async () => {
     await field("Title").fill("");
-    await field("Starting price").fill("0.50");
+    await field("Base rate").fill("0.50");
     await m.getByRole("button", { name: "Create draft" }).click();
     await expect(m.getByText("Give your release a title.")).toBeVisible();
-    await expect(m.getByText(/Price is \$1\.00/)).toHaveCount(1);
+    await expect(m.getByText(/Base rate is \$1\.00/)).toHaveCount(1);
   });
 
   await test.step("a valid draft is saved with exactly what was entered", async () => {
     await field("Title").fill("Midnight Run");
-    await field("Starting price").fill("12.50");
+    await field("Base rate").fill("12.50");
     await m.getByRole("button", { name: "Create draft" }).click();
     await page.waitForURL(TRACK_URL);
     trackId = page.url().split("/").pop()!;
     await expect(m.getByRole("heading", { name: "Midnight Run", level: 1 })).toBeVisible();
-    const [row] = await sql`select status, slug, base_price_cents, total_supply, bpm, musical_key from tracks where id = ${trackId}`;
-    expect(row).toEqual({ status: "draft", slug: "midnight-run", base_price_cents: 1250, total_supply: 50, bpm: 124, musical_key: "Am" });
+    const [row] = await sql`select status, slug, base_price_cents, bpm, musical_key from tracks where id = ${trackId}`;
+    expect(row).toEqual({ status: "draft", slug: "midnight-run", base_price_cents: 1250, bpm: 124, musical_key: "Am" });
     await expect(badge).toHaveText("Draft");
   });
 
@@ -95,15 +96,13 @@ test("a creator takes a release from draft to archive", async ({ open }) => {
     await expect(badge).toHaveText("Published");
   });
 
-  await test.step("after a sale (simulated), copies and price lock and only Archive remains", async () => {
-    await sql`update tracks set copies_sold = 2 where id = ${trackId}`;
-    await page.reload();
-    await expect(field("Copies")).toBeDisabled();
-    await expect(field("Starting price")).toBeDisabled();
-    await expect(m.getByRole("button", { name: "Unpublish" })).toHaveCount(0);
+  await test.step("the base rate stays editable after publishing, and both actions remain", async () => {
+    await field("Base rate").fill("15");
+    await m.getByRole("button", { name: "Save changes" }).click();
+    await expect(m.getByRole("status").filter({ hasText: "Saved." })).toBeVisible();
+    expect((await sql`select base_price_cents from tracks where id = ${trackId}`)[0].base_price_cents).toBe(1500);
+    await expect(m.getByRole("button", { name: "Unpublish" })).toHaveCount(1);
     await expect(m.getByRole("button", { name: "Archive" })).toHaveCount(1);
-    await expect(m.getByTestId("card-supply")).toHaveText("48 of 50 left");
-    await expect(m.getByTestId("card-price")).toHaveText("$13.00");
   });
 
   await test.step("archiving asks for confirmation, then makes the release read-only", async () => {

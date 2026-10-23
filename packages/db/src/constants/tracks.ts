@@ -57,9 +57,8 @@ export const TRACK_LIMITS = {
   descriptionMax: 2000,
   bpmMin: 40,
   bpmMax: 250,
-  supplyMin: 1,
-  supplyMax: 1000,
   priceMinCents: 100, // $1
   priceMaxCents: 50_000, // $500
   audioMaxBytes: 150 * 1024 * 1024, // 150 MB
+  durationMaxMs: 4 * 60 * 60 * 1000, // 4 hours
 } as const;

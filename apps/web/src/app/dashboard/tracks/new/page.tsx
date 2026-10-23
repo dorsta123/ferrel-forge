@@ -9,7 +9,7 @@ import { getCurrentUser } from "@/lib/session";
 
 export const metadata = { title: "New release · ferrel-forge" };
 
-const NO_LOCKS = { readOnly: false, slug: false, sale: false };
+const NO_LOCKS = { readOnly: false, slug: false };
 
 export default function Page() {
   return (
@@ -45,7 +45,7 @@ async function NewRelease() {
       creatorSlug={user.creator.slug}
       artistName={user.creator.artistName}
       coverSeed="new-release"
-      copiesSold={0}
+      durationMs={null}
     />
   );
 }

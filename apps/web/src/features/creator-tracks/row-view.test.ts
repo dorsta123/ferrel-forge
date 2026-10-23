@@ -1,29 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { editedAgo, rowView } from "./row-view";
 
-const base = { status: "published" as const, totalSupply: 50, copiesSold: 0, basePriceCents: 1250, hasAudio: true };
+const base = { status: "published" as const, basePriceCents: 1250, hasAudio: true, durationMs: null };
 
 describe("rowView", () => {
-  it("shows the base price at full supply", () => {
-    expect(rowView(base)).toEqual({ remaining: 50, supplyLabel: "50 of 50 left", priceLabel: "$12.50", needsAudio: false });
+  it("shows the artist's own base rate", () => {
+    expect(rowView(base)).toEqual({ rateLabel: "$12.50", lengthLabel: null, needsAudio: false });
   });
 
-  it("shows the raised price after sales", () => {
-    expect(rowView({ ...base, copiesSold: 2 })).toMatchObject({ remaining: 48, priceLabel: "$13.00" });
-  });
-
-  it("says sold out instead of a price", () => {
-    expect(rowView({ ...base, copiesSold: 50 })).toMatchObject({ remaining: 0, supplyLabel: "0 of 50 left", priceLabel: "Sold out" });
+  it("shows the track length once known", () => {
+    expect(rowView({ ...base, durationMs: 222_000 }).lengthLabel).toBe("3:42");
   });
 
   it("flags drafts without audio only", () => {
     expect(rowView({ ...base, status: "draft", hasAudio: false }).needsAudio).toBe(true);
     expect(rowView({ ...base, status: "draft", hasAudio: true }).needsAudio).toBe(false);
     expect(rowView({ ...base, hasAudio: false }).needsAudio).toBe(false);
-  });
-
-  it("formats big runs with separators", () => {
-    expect(rowView({ ...base, totalSupply: 1000 }).supplyLabel).toBe("1,000 of 1,000 left");
   });
 });
 

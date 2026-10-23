@@ -41,14 +41,10 @@ export function validateRelease(input: ReleaseFormValues): ReleaseCheck {
   const musicalKey = (input.musicalKey || null) as MusicalKey | null;
   if (musicalKey !== null && !MUSICAL_KEYS.includes(musicalKey)) errors.musicalKey = "Choose a key from the list.";
 
-  const totalSupply = optionalInt(input.totalSupply);
-  if (totalSupply === null || totalSupply === undefined || totalSupply < L.supplyMin || totalSupply > L.supplyMax) {
-    errors.totalSupply = `Copies is a whole number from ${L.supplyMin} to ${L.supplyMax.toLocaleString("en-US")}.`;
-  }
-
+  // The artist's base rate: a placeholder until pricing is decided (PRODUCT.md question 15).
   const basePriceCents = parseDollars(input.price);
   if (basePriceCents === null || basePriceCents < L.priceMinCents || basePriceCents > L.priceMaxCents) {
-    errors.price = `Price is ${formatCents(L.priceMinCents)}–${formatCents(L.priceMaxCents)}, e.g. 12.50.`;
+    errors.price = `Base rate is ${formatCents(L.priceMinCents)}–${formatCents(L.priceMaxCents)}, e.g. 12.50.`;
   }
 
   if (Object.keys(errors).length > 0) return { ok: false, errors };
@@ -61,7 +57,6 @@ export function validateRelease(input: ReleaseFormValues): ReleaseCheck {
       genre,
       bpm: bpm ?? null,
       musicalKey,
-      totalSupply: totalSupply!,
       basePriceCents: basePriceCents!,
     },
   };

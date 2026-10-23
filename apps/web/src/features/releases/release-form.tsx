@@ -23,12 +23,13 @@ type Props = {
   creatorSlug: string;
   artistName: string;
   coverSeed: string;
-  copiesSold: number;
+  /** Track length, once phase 4 reads it from the audio. */
+  durationMs: number | null;
 };
 
 const INITIAL_STATE: ReleaseFormState = { errors: {} };
 
-export function ReleaseForm({ mode, action, initial, locks, creatorSlug, artistName, coverSeed, copiesSold }: Props) {
+export function ReleaseForm({ mode, action, initial, locks, creatorSlug, artistName, coverSeed, durationMs }: Props) {
   const [state, formAction, pending] = useActionState(action, INITIAL_STATE);
   const { values, set, errors, preview, dirty } = useReleaseForm(initial, locks, state);
   const saved = mode === "edit" && state.savedAt !== undefined && !dirty && !pending;
@@ -143,36 +144,10 @@ export function ReleaseForm({ mode, action, initial, locks, creatorSlug, artistN
 
           <div className="grid gap-5 sm:grid-cols-2">
             <FormField
-              id="totalSupply"
-              label="Copies"
-              error={errors.totalSupply}
-              hint={locks.sale ? <LockedNote>Fixed after the first sale.</LockedNote> : `${L.supplyMin}–${L.supplyMax.toLocaleString("en-US")} licenses`}
-            >
-              <Input
-                id="totalSupply"
-                name="totalSupply"
-                className="h-10"
-                inputMode="numeric"
-                value={values.totalSupply}
-                maxLength={4}
-                disabled={locks.sale}
-                aria-invalid={!!errors.totalSupply}
-                aria-describedby="totalSupply-hint"
-                onChange={(e) => set("totalSupply", e.target.value)}
-              />
-            </FormField>
-
-            <FormField
               id="price"
-              label="Starting price"
+              label="Base rate"
               error={errors.price}
-              hint={
-                locks.sale ? (
-                  <LockedNote>Fixed after the first sale.</LockedNote>
-                ) : (
-                  `${formatCents(L.priceMinCents)}–${formatCents(L.priceMaxCents)} · each sale raises the next copy's price`
-                )
-              }
+              hint={`${formatCents(L.priceMinCents)}–${formatCents(L.priceMaxCents)} · only you see this. How rates work for advertisers is decided before licensing opens.`}
             >
               <div className="relative">
                 <span aria-hidden="true" className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-sm text-muted-foreground">
@@ -185,7 +160,6 @@ export function ReleaseForm({ mode, action, initial, locks, creatorSlug, artistN
                   inputMode="decimal"
                   value={values.price}
                   maxLength={10}
-                  disabled={locks.sale}
                   aria-invalid={!!errors.price}
                   aria-describedby="price-hint"
                   onChange={(e) => set("price", e.target.value)}
@@ -224,7 +198,7 @@ export function ReleaseForm({ mode, action, initial, locks, creatorSlug, artistN
         values={preview}
         artistName={artistName}
         coverSeed={coverSeed}
-        copiesSold={copiesSold}
+        durationMs={durationMs}
         note={mode === "create" ? "Your cover art is generated from the release when you save it." : undefined}
       />
     </div>

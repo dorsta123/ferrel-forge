@@ -54,11 +54,11 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/dashboard
         </div>
       </section>
 
-      {/* Stats: real counts. Earnings return in phase 5, when there are real sales. */}
+      {/* Stats: real counts. Licenses (and earnings) arrive in phase 5; until then there are none. */}
       <section aria-label="Stats" className="grid grid-cols-3 gap-2 sm:gap-4">
         <Stat label="Releases" value={stats.all} />
         <Stat label="Published" value={stats.published} />
-        <Stat label="Copies sold" value={stats.copiesSold} />
+        <Stat label="Active licenses" value={0} hint="Licensing opens soon" />
       </section>
 
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_20rem]">
@@ -87,11 +87,12 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/dashboard
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value, hint }: { label: string; value: number; hint?: string }) {
   return (
     <div className="flex flex-col gap-1 rounded-2xl border bg-card p-3 sm:p-5" data-testid={`stat-${label.toLowerCase().replace(/\s+/g, "-")}`}>
       <span className="text-xs text-muted-foreground sm:text-sm">{label}</span>
       <span className="text-xl font-semibold tracking-tight tabular-nums sm:text-3xl">{value.toLocaleString("en-US")}</span>
+      {hint && <span className="hidden text-xs text-muted-foreground sm:block">{hint}</span>}
     </div>
   );
 }

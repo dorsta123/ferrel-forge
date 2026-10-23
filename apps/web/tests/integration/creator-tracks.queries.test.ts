@@ -7,14 +7,14 @@ import { ago, createUsers, removeCreatedUsers, type TestUser } from "./support";
 
 let A: TestUser, B: TestUser, C: TestUser;
 const audio = (id: string, n: number) => ({ audioKey: `${id}/x/${n}.wav`, audioSizeBytes: 10, audioFormat: "wav" as const });
-const t = (creatorId: string, slug: string, extra: object = {}) => ({ creatorId, title: slug, slug, genre: "pop" as const, totalSupply: 10, basePriceCents: 500, ...extra });
+const t = (creatorId: string, slug: string, extra: object = {}) => ({ creatorId, title: slug, slug, genre: "pop" as const, basePriceCents: 500, ...extra });
 
 beforeAll(async () => {
   [A, B, C] = await createUsers(["qa", "qb", "qc"]);
   await db.insert(tracks).values([
     t(A.id, "a-draft", { updatedAt: ago(30) }),
-    t(A.id, "a-live", { ...audio(A.id, 1), status: "published", publishedAt: ago(60), copiesSold: 3, updatedAt: ago(10) }),
-    t(A.id, "a-old", { ...audio(A.id, 2), status: "archived", publishedAt: ago(90), copiesSold: 4, updatedAt: ago(50) }),
+    t(A.id, "a-live", { ...audio(A.id, 1), status: "published", publishedAt: ago(60), updatedAt: ago(10) }),
+    t(A.id, "a-old", { ...audio(A.id, 2), status: "archived", publishedAt: ago(90), updatedAt: ago(50) }),
     t(B.id, "b-secret", { updatedAt: ago(1) }),
   ]);
 });
@@ -43,8 +43,8 @@ describe("listCreatorTracks", () => {
 });
 
 describe("creatorTrackStats", () => {
-  it("counts each status and total copies sold", async () => {
-    expect(await creatorTrackStats(A.id)).toEqual({ all: 3, draft: 1, published: 1, archived: 1, copiesSold: 7 });
+  it("counts each status", async () => {
+    expect(await creatorTrackStats(A.id)).toEqual({ all: 3, draft: 1, published: 1, archived: 1 });
   });
 
   it("counts only the creator's own releases", async () => {
@@ -52,6 +52,6 @@ describe("creatorTrackStats", () => {
   });
 
   it("returns zeros for a creator with nothing", async () => {
-    expect(await creatorTrackStats("00000000-0000-4000-8000-000000000000")).toEqual({ all: 0, draft: 0, published: 0, archived: 0, copiesSold: 0 });
+    expect(await creatorTrackStats("00000000-0000-4000-8000-000000000000")).toEqual({ all: 0, draft: 0, published: 0, archived: 0 });
   });
 });

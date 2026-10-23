@@ -7,7 +7,7 @@ import type { ReleaseFormValues } from "@/features/releases/types";
 import { createUsers, removeCreatedUsers, type TestUser } from "./support";
 
 const form = (patch: Partial<ReleaseFormValues> = {}): ReleaseFormValues => ({
-  title: "Midnight Run", slug: "", description: "", genre: "electronic", bpm: "", musicalKey: "", totalSupply: "100", price: "12.50", ...patch,
+  title: "Midnight Run", slug: "", description: "", genre: "electronic", bpm: "", musicalKey: "", price: "12.50", ...patch,
 });
 const row = async (id: string) => (await db.select().from(tracks).where(eq(tracks.id, id)))[0];
 const failure = (r: { ok: boolean; errors?: object; error?: string }) => (r.ok ? "ok" : JSON.stringify(r.errors ?? r.error));
@@ -35,7 +35,7 @@ describe("create", () => {
     const r = await createRelease(A.id, form());
     expect(r.ok).toBe(true);
     id = r.ok ? r.id : "";
-    expect(await row(id)).toMatchObject({ status: "draft", slug: "midnight-run", basePriceCents: 1250, copiesSold: 0 });
+    expect(await row(id)).toMatchObject({ status: "draft", slug: "midnight-run", basePriceCents: 1250, durationMs: null });
   });
 
   it("numbers a repeated title (midnight-run-2)", async () => {
@@ -50,8 +50,8 @@ describe("create", () => {
   });
 
   it("refuses forged values in every field at once", async () => {
-    const r = await createRelease(A.id, form({ price: "0", totalSupply: "5000", genre: "polka", bpm: "9999", musicalKey: "Z" }));
-    expect(r.ok ? {} : Object.keys(r.errors)).toEqual(expect.arrayContaining(["price", "totalSupply", "genre", "bpm", "musicalKey"]));
+    const r = await createRelease(A.id, form({ price: "0", genre: "polka", bpm: "9999", musicalKey: "Z" }));
+    expect(r.ok ? {} : Object.keys(r.errors)).toEqual(expect.arrayContaining(["price", "genre", "bpm", "musicalKey"]));
   });
 
   it.each(["../../admin", "x%"])("refuses the slug %j", async (slug) => {
@@ -113,16 +113,15 @@ describe("publish, unpublish, lock", () => {
   });
 });
 
-describe("after a sale (simulated)", () => {
-  it("ignores forged changes to price and copies", async () => {
-    await db.update(tracks).set({ copiesSold: 2 }).where(eq(tracks.id, id));
-    const before = await row(id);
-    expect((await updateRelease(A.id, id, form({ title: "Renamed", price: "499", totalSupply: "2" }))).ok).toBe(true);
-    expect(await row(id)).toMatchObject({ basePriceCents: before.basePriceCents, totalSupply: 100 });
+describe("base rate (placeholder until pricing is decided)", () => {
+  it("stays editable while published", async () => {
+    expect((await updateRelease(A.id, id, form({ title: "Renamed", price: "499" }))).ok).toBe(true);
+    expect((await row(id)).basePriceCents).toBe(49_900);
   });
 
-  it("refuses to unpublish", async () => {
-    expect(failure(await changeReleaseStatus(A.id, id, "unpublish"))).toContain("can only be archived");
+  it("refuses a forged out-of-range rate", async () => {
+    const r = await updateRelease(A.id, id, form({ title: "Renamed", price: "50000" }));
+    expect(r.ok ? undefined : r.errors.price).toMatch(/^Base rate is/);
   });
 });
 

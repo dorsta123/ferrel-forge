@@ -29,6 +29,20 @@
       "when": 1792491834676,
       "tag": "0003_listings",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792778717442,
+      "tag": "0004_remove_copies",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792778719923,
+      "tag": "0005_track_duration",
+      "breakpoints": true
     }
   ]
 }

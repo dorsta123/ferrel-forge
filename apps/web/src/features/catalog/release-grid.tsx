@@ -23,9 +23,7 @@ export function ReleaseGrid({ releases, label }: { releases: PublicTrackCard[]; 
                 genre: r.genre,
                 bpm: r.bpm,
                 musicalKey: r.musicalKey,
-                basePriceCents: r.basePriceCents,
-                totalSupply: r.totalSupply,
-                copiesSold: r.copiesSold,
+                durationMs: r.durationMs,
               }}
             />
           </Link>

@@ -2,7 +2,8 @@
 // - lists show only published releases;
 // - a release page also opens for archived releases (buyers' links keep working);
 // - drafts are never public;
-// - only display columns are selected — never the audio file location or owner ids.
+// - only display columns are selected — never the audio file location, owner ids,
+//   or the artist's rate (not public until pricing is decided, decision 021).
 import { cache } from "react";
 import { and, creatorProfiles, db, eq, sql, tracks } from "@ferrel/db";
 import type { Genre } from "@ferrel/db/constants";
@@ -15,9 +16,7 @@ const cardColumns = {
   genre: tracks.genre,
   bpm: tracks.bpm,
   musicalKey: tracks.musicalKey,
-  totalSupply: tracks.totalSupply,
-  copiesSold: tracks.copiesSold,
-  basePriceCents: tracks.basePriceCents,
+  durationMs: tracks.durationMs,
   creatorSlug: creatorProfiles.slug,
   artistName: creatorProfiles.artistName,
 };

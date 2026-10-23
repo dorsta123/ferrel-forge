@@ -8,7 +8,7 @@ import { createUsers, pgError, removeCreatedUsers, type TestUser } from "./suppo
 let A: TestUser, B: TestUser, buyer: TestUser;
 type TrackRow = typeof tracks.$inferInsert;
 
-const valid = (): TrackRow => ({ creatorId: A.id, title: "Valid", slug: "valid", genre: "pop", totalSupply: 10, basePriceCents: 500 });
+const valid = (): TrackRow => ({ creatorId: A.id, title: "Valid", slug: "valid", genre: "pop", basePriceCents: 500 });
 // Built when the test table is collected (before users exist), so no user ids here.
 const audio = () => ({ audioKey: "db-rules/t/x.wav", audioSizeBytes: 100, audioFormat: "wav" as const });
 const insert = (patch: Record<string, unknown>) =>
@@ -42,12 +42,10 @@ describe("tracks table", () => {
     ["description over 2000 chars", { description: "a".repeat(2001) }, "tracks_description_len"],
     ["bpm below 40", { bpm: 39 }, "tracks_bpm_range"],
     ["bpm above 250", { bpm: 251 }, "tracks_bpm_range"],
-    ["zero copies", { totalSupply: 0 }, "tracks_supply_range"],
-    ["1001 copies", { totalSupply: 1001 }, "tracks_supply_range"],
     ["price under $1", { basePriceCents: 99 }, "tracks_price_range"],
     ["price over $500", { basePriceCents: 50_001 }, "tracks_price_range"],
-    ["more copies sold than exist", { copiesSold: 11 }, "tracks_copies_sold_range"],
-    ["negative copies sold", { copiesSold: -1 }, "tracks_copies_sold_range"],
+    ["zero-length track", { durationMs: 0 }, "tracks_duration_range"],
+    ["track over 4 hours", { durationMs: 4 * 60 * 60 * 1000 + 1 }, "tracks_duration_range"],
     ["audio key without size and format", { audioKey: "k.wav" }, "tracks_audio_all_or_none"],
     ["empty audio file", { ...audio(), audioSizeBytes: 0 }, "tracks_audio_size"],
     ["audio over 150 MB", { ...audio(), audioSizeBytes: 150 * 1024 * 1024 + 1 }, "tracks_audio_size"],
@@ -70,7 +68,7 @@ describe("tracks table", () => {
   });
 
   it("refuses later updates that break the rules", async () => {
-    await expectRefused(() => db.update(tracks).set({ copiesSold: 11 }).where(eq(tracks.creatorId, A.id)), "tracks_copies_sold_range");
+    await expectRefused(() => db.update(tracks).set({ basePriceCents: 0 }).where(eq(tracks.creatorId, A.id)), "tracks_price_range");
     const [t] = await insert({ ...audio(), status: "published", publishedAt: new Date() }).returning({ id: tracks.id });
     await expectRefused(
       () => db.update(tracks).set({ audioKey: null, audioSizeBytes: null, audioFormat: null }).where(eq(tracks.id, t.id)),

@@ -86,7 +86,7 @@ async function TrackEditor({ params }: { params: Promise<{ id: string }> }) {
           creatorSlug={user.creator.slug}
           artistName={user.creator.artistName}
           coverSeed={track.id}
-          copiesSold={track.copiesSold}
+          durationMs={track.durationMs}
         />
       </section>
     </>
