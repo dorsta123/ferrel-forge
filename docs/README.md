@@ -12,6 +12,7 @@ The project's memory: what we're building, where we are, how we work, and why th
 | [plans/](plans/) | Starting a piece of work: its approved plan and acceptance criteria |
 | [phases/](phases/) | Working on a phase: step checklist and what was learned |
 | [decisions/](decisions/) | Wondering "why is it built this way?": one record per decision |
+| [performance.md](performance.md) | Asking "how much traffic can it take?": load-test results and what scaling would need |
 | [security.md](security.md) | Touching auth, uploads, money, or deployment |
 
 ## How these docs stay current
