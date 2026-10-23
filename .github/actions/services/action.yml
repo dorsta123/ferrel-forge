@@ -1,0 +1,31 @@
+name: Start services
+description: Start Postgres, Redis and RustFS with docker compose, wait until they really answer, then migrate the database and create storage buckets.
+
+runs:
+  using: composite
+  steps:
+    - name: Start Postgres, Redis and RustFS
+      shell: bash
+      run: |
+        docker compose up -d
+
+        # Wait for a check to pass; fail loudly (with logs) if it never does.
+        wait_for() {
+          local name="$1"; shift
+          for _ in $(seq 1 90); do "$@" >/dev/null 2>&1 && { echo "$name is ready"; return 0; }; sleep 1; done
+          echo "::error::$name did not become ready within 90 seconds"
+          docker compose logs "$name"
+          exit 1
+        }
+        # Over TCP, like the app: during first start-up Postgres runs a temporary
+        # server that only answers on its local socket, so a socket check passes too early.
+        wait_for postgres docker compose exec -T postgres pg_isready -h 127.0.0.1 -U ferrel
+        wait_for redis docker compose exec -T redis redis-cli ping
+        wait_for rustfs curl -s -o /dev/null http://127.0.0.1:9000/
+        docker compose ps
+
+    - name: Migrate database and create buckets
+      shell: bash
+      run: |
+        pnpm db:migrate
+        pnpm storage:setup
