@@ -21,7 +21,7 @@ export type TrackCardData = {
  */
 export function TrackCard({ data, className }: { data: TrackCardData; className?: string }) {
   const { title, artistName, genre, bpm, musicalKey, durationMs } = data;
-  const details = [genre && genreLabel(genre), bpm && `${bpm} BPM`, musicalKey && keyShort(musicalKey), durationMs && formatDuration(durationMs)].filter(Boolean);
+  const details = [genre && genreLabel(genre), bpm && `${bpm} BPM`, musicalKey && keyShort(musicalKey), durationMs !== null && formatDuration(durationMs)].filter(Boolean);
 
   return (
     <article className={cn("flex flex-col overflow-hidden rounded-2xl border bg-card", className)} data-testid="track-card">

@@ -21,7 +21,7 @@ export default function Page() {
         <p className="text-sm font-medium text-brand-text">New release</p>
         <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Forge a new release</h1>
         <p className="max-w-2xl text-pretty text-muted-foreground">
-          Set the details and the limited run. It stays a private draft until you upload the audio and publish.
+          Set the details and your base rate. It stays a private draft until you upload the audio and publish.
         </p>
       </header>
       <Suspense fallback={<div className="h-[36rem] rounded-2xl border bg-card" />}>

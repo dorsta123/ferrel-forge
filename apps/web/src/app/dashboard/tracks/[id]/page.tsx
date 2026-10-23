@@ -69,7 +69,7 @@ async function TrackEditor({ params }: { params: Promise<{ id: string }> }) {
           <h2 id="audio-heading" className="font-display text-lg font-semibold">
             Audio
           </h2>
-          <p className="text-sm text-muted-foreground">The full-quality master. It stays private; buyers get it after purchase.</p>
+          <p className="text-sm text-muted-foreground">The full-quality master. It stays private; licensed advertisers get it once licensing opens.</p>
         </div>
         <AudioUploadField trackId={track.id} current={current} editable={track.status === "draft"} />
       </section>

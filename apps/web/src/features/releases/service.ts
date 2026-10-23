@@ -99,6 +99,7 @@ export async function changeReleaseStatus(creatorId: string, trackId: string, ac
       changed = await db
         .update(tracks)
         .set({ status: "draft" })
+        // PHASE 5: also require "no active licenses" here, matching checkAction (decision 021).
         .where(and(owned, eq(tracks.status, "published")))
         .returning({ id: tracks.id });
       break;
@@ -112,6 +113,7 @@ export async function changeReleaseStatus(creatorId: string, trackId: string, ac
     case "delete": {
       const [gone] = await db
         .delete(tracks)
+        // PHASE 5: also require "no licenses" here, matching checkAction (decision 021).
         .where(and(owned, eq(tracks.status, "draft")))
         .returning({ audioKey: tracks.audioKey });
       if (gone?.audioKey) await deleteObject("masters", gone.audioKey);

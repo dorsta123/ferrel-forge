@@ -6,7 +6,7 @@ import { ReleaseGrid } from "./release-grid";
 
 /** Homepage strip of the newest published releases. Renders nothing until there are any. */
 export async function LatestReleases() {
-  await connection(); // prices change with every sale: always fresh
+  await connection(); // public pages render fresh per request (decision 015)
   const releases = await latestReleases(4);
   if (releases.length === 0) return null;
 

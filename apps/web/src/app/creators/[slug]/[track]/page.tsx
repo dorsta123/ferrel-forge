@@ -51,7 +51,7 @@ async function Release({ params }: { params: Params }) {
     ["Genre", genreLabel(track.genre)],
     ["BPM", track.bpm ? String(track.bpm) : null],
     ["Key", track.musicalKey ? keyLabel(track.musicalKey) : null],
-    ["Length", track.durationMs ? formatDuration(track.durationMs) : null],
+    ["Length", track.durationMs !== null ? formatDuration(track.durationMs) : null],
     ["Released", track.publishedAt?.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }) ?? null],
   ].filter((d): d is [string, string] => d[1] !== null);
 
