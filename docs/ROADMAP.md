@@ -2,7 +2,7 @@
 
 **ferrel-forge** — a non-commercial music licensing marketplace for advertisers. Artists list tracks; advertisers license them for paid ads on Instagram, TikTok and Google/YouTube and pay monthly for metered **exposure** (views × seconds watched) at a rate set by a pricing model and locked per license. Ad platforms and market data are simulated. Must cost $0 to run (see [decision 001](decisions/001-non-commercial-zero-cost.md)). Full product definition: [PRODUCT.md](PRODUCT.md). The product was redefined on 2026-10-20 ([decision 016](decisions/016-metered-exposure-licensing.md)); phases 1–3 were built for the earlier "limited copies" model and mostly carry over.
 
-**Current:** Phase 3 realignment ([plan](plans/2026-10-23-phase-3-realignment.md)). PR A (#3) removes copies and supply ([021](decisions/021-phase-3-realignment.md)); PR B adds the `quoteRate` placeholder and the new homepage. Once both are merged, phase 3 is complete. Next: Phase 4 — Audio. Working rules and CI are in place since PR #2 ([WORKFLOW.md](WORKFLOW.md)).
+**Current:** Phase 4 — Audio ([plan](plans/2026-10-25-phase-4-audio.md), [decision 022](decisions/022-audio-previews.md)), built in 12 small slices. Next: slice 1, an FFmpeg spike. Phase 3, including its realignment, is complete.
 
 | Phase | Scope | Status |
 |---|---|---|
@@ -10,7 +10,7 @@
 | 2 | [Auth](phases/phase-2-auth.md) — sign-up/in/out, creator profiles, creators-only dashboard | ✅ Done 2026-10-19 |
 | — | [UI redesign + security fixes](phases/interlude-redesign-and-security.md) — Ember Forge theme; localhost-only services, input validation | ✅ Done 2026-10-20 |
 | 3 | [Listings](phases/phase-3-listings.md) — tracks table, storage, secure upload, create/publish releases, explore + public pages | ✅ Done 2026-10-20 |
-| 4 | Audio — worker + FFmpeg watermarked previews, waveform player, cleanup of abandoned uploads | Not started |
+| 4 | Audio — 15 s watermarked previews (creator picks the start; optional), waveform player, track length, listen links, cleanup of abandoned uploads | ⏳ In progress |
 | 5 | Licensing — contributors and percentage splits (invite links, everyone accepts); advertiser accounts; license flow (track, platforms, cities, term); rate and split locked per license (artist base rate until phase 8); card saved in Stripe test mode; license records; master download; replace phase 3's copies/supply with the new model | Not started |
 | 6 | Ad simulator + metering — simulated Instagram/TikTok/Google behind a real adapter interface; campaigns linked to licenses; daily exposure-seconds by city | Not started |
 | 7 | Billing + settlement — monthly invoices from exposure × locked rate, Stripe test-mode charges, double-entry ledger, automatic split to every contributor as each invoice is paid (Stripe Connect test-mode transfers), held balances, earnings pages | Not started |
