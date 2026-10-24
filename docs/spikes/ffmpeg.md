@@ -72,4 +72,4 @@ ffmpeg -nostdin -hide_banner -y -protocol_whitelist file \
 | B. Pin one build ourselves | Set `FFMPEG_BIN` to the same version on each machine (e.g. download matching 7.0.x builds) | Truly one version | We maintain downloads per platform; more setup |
 | C. Run the worker in Docker | The worker always runs Linux (FFmpeg 7.0.2), locally too | Dev = CI = server | Slower edit-and-retry loop for worker code; Docker always on (already needed for the database) |
 
-**Recommendation: A** for now. Every behaviour we rely on matched on both builds within tolerance. Move to C if a real difference ever appears.
+**Decided: A** ([decision 023](../decisions/023-ffmpeg-versions.md)). Every behaviour we rely on matched on both builds within tolerance. Move to C if a real difference ever appears.
