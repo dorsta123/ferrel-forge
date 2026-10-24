@@ -25,6 +25,7 @@ One file per decision, numbered in order. To reverse a decision, add a new recor
 | [019](019-contributor-splits.md) | Contributor splits: basis points, everyone accepts, locked per license, settled automatically as each invoice is paid | Accepted |
 | [020](020-test-layout.md) | Three test layers in the repo: unit, integration (DB + storage), end-to-end (Playwright) | Accepted |
 | [021](021-phase-3-realignment.md) | Phase 3 realignment: no copies, private placeholder rate, "Licensing opens soon", no sale locks (amends 014, 015) | Accepted |
+| [022](022-audio-previews.md) | Audio previews: 15 s, creator-chosen start (default 25%), one mid-preview watermark, optional, listen links, ffmpeg-static | Accepted |
 
 ## Template
 
