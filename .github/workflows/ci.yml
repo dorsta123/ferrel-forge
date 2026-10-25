@@ -29,6 +29,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
+        with:
+          ffmpeg: true # the audio unit tests run real FFmpeg
       # Fast checks first: no services needed. (typecheck also covers the test
       # packages, which the build below doesn't, so both stay.)
       - run: pnpm typecheck
