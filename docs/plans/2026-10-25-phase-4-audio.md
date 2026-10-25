@@ -28,7 +28,7 @@ Two-strike rule: if the same fix fails twice, stop and rethink.
 | # | Slice | Done when |
 |---|---|---|
 | 1 ✅ | **Spike (throwaway):** [findings](../spikes/ffmpeg.md); FFmpeg on Windows and Linux: read length, cut 15 s from a chosen start, mix one tone at 7.5 s, compute waveform peaks, for WAV/MP3/FLAC | A findings note with the exact working commands; no app code kept |
-| 2 | **FFmpeg in the project:** `ffmpeg-static` pinned, plus a small `probeDuration()` helper | Tests pass locally and in CI |
+| 2 ✅ | **FFmpeg in the project:** (fetched ourselves, [decision 024](../decisions/024-fetch-ffmpeg-ourselves.md)) `ffmpeg-static` pinned, plus a small `probeDuration()` helper | Tests pass locally and in CI |
 | 3 | **Database:** `audio_status` (none/processing/ready/failed), `audio_error`, `preview_key`, `preview_start_ms`, `preview_enabled` (default on), `waveform`, `listen_url` | Migration plus database-rule tests (e.g. the start must fit inside the track) |
 | 4 | **Web → worker connection:** a shared queue package; a verified upload queues `audio:process` with the exact master key; the worker logs it | An upload makes the worker log the job; integration test |
 | 5 | **Worker reads the length:** saves `duration_ms`, status ready/failed | **The length appears on cards and pages** |

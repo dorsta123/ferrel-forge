@@ -20,6 +20,7 @@ Run from the repo root (pnpm + Turborepo):
 pnpm install
 pnpm db:up            # docker compose: Postgres :5432, Redis :6379, RustFS (S3-compatible) :9000 (console :9001) — all bound to 127.0.0.1, images pinned
 pnpm db:migrate       # apply Drizzle migrations
+pnpm audio:fetch      # download the pinned FFmpeg into .cache/ffmpeg (SHA-256 verified; skips if present) — needed for audio tests and the worker
 pnpm storage:setup    # create RustFS buckets (masters private, previews public-read) + upload CORS; idempotent
 pnpm dev              # web on :3000 + worker, in parallel
 pnpm test             # unit tests (vitest), no services needed
@@ -45,6 +46,7 @@ apps/web         Next.js 16 (App Router, Tailwind v4) — pages + API routes
 apps/worker      BullMQ worker (Node, run with tsx) — slow/scheduled jobs off Redis queues
 packages/db      Drizzle schema (src/schema/, one domain per file), shared domain constants (src/constants/: genres, keys, limits for DB checks, validation and UI), db client
 packages/pricing Pure pricing engine
+packages/audio   FFmpeg tooling: pinned + verified binary, runFfmpeg (safe runner), analyzeAudio (length + waveform) — docs/decisions/022–024
 packages/storage S3 client for RustFS (config, client, buckets, policies, setup); used by web uploads and the worker
 ```
 
@@ -81,4 +83,4 @@ This Next.js version differs from older training data — read `apps/web/AGENTS.
 - Public pages (`features/catalog/`) select display columns only (never `audio_key`, owner ids or `base_price_cents`), validate URL input in `params.ts`, and render fresh per request — see docs/decisions/015. `notFound()` inside Suspense can't set a 404 status; also call it in `generateMetadata` so crawlers get a real 404.
 - Next 16 keeps visited pages mounted (hidden) after client navigation: in Playwright use `locator("main:visible")`.
 - If styles look stale or unstyled in dev after changing `globals.css` or adding CSS imports, Turbopack's persistent dev cache is serving old CSS: stop the dev server and delete `apps/web/.next/dev`.
-- Windows dev machine; FFmpeg is not installed yet (needed from phase 4).
+- Windows dev machine. FFmpeg comes from `pnpm audio:fetch` (pinned release, SHA-256 in `packages/audio/src/ffmpeg-release.ts`), not from the system or the `ffmpeg-static` npm package (decision 024). Windows gets FFmpeg 6.1.1, Linux/CI 7.0.2 — Linux is the reference; tests allow ±50 ms (decision 023). Always run FFmpeg through `runFfmpeg` with `localInput(file)` for every input; never build a shell command string.
