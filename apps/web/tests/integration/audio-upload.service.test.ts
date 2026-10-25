@@ -77,10 +77,36 @@ describe("confirmAudioUpload", () => {
     expect(await getObjectInfo("masters", link.key)).toBeNull();
   });
 
+  // A replaced song must not keep the old song's length, waveform, start point or error.
+  it.each([
+    ["a processed song", { audioStatus: "ready" as const, durationMs: 30_000, previewStartMs: 5_000, waveform: Array<number>(200).fill(500) }],
+    ["a failed song", { audioStatus: "failed" as const, audioError: "That file isn't valid audio." }],
+  ])("replacing %s clears its old results and marks the new one as processing", async (_, before) => {
+    await db
+      .update(tracks)
+      .set({ audioKey: newMasterKey(A.id, draftId, "wav"), audioSizeBytes: 10, audioFormat: "wav", ...before })
+      .where(eq(tracks.id, draftId));
+
+    const wav = Buffer.alloc(44);
+    wav.write("RIFF", 0);
+    wav.write("WAVE", 8);
+    const link = await requestAudioUpload(A.id, draftId, { name: "new.wav", size: wav.length, type: "audio/wav" });
+    if (!link.ok) throw new Error(link.error);
+    const put = await fetch(link.uploadUrl, { method: "PUT", body: wav, headers: { "content-type": link.contentType } });
+    expect(put.status).toBe(200);
+    expect(error(await confirmAudioUpload(A.id, draftId, link.key))).toBe("ok");
+
+    const [row] = await db
+      .select({ key: tracks.audioKey, status: tracks.audioStatus, error: tracks.audioError, durationMs: tracks.durationMs, start: tracks.previewStartMs, waveform: tracks.waveform })
+      .from(tracks)
+      .where(eq(tracks.id, draftId));
+    expect(row).toEqual({ key: link.key, status: "processing", error: null, durationMs: null, start: null, waveform: null });
+  });
+
   it("refuses audio changes once a track is published", async () => {
     await db
       .update(tracks)
-      .set({ audioKey: newMasterKey(A.id, otherId, "wav"), audioSizeBytes: 10, audioFormat: "wav", status: "published", publishedAt: new Date() })
+      .set({ audioKey: newMasterKey(A.id, otherId, "wav"), audioSizeBytes: 10, audioFormat: "wav", audioStatus: "processing", status: "published", publishedAt: new Date() })
       .where(eq(tracks.id, otherId));
     expect(error(await requestAudioUpload(A.id, otherId, WAV))).toContain("only be changed while the track is a draft");
   });

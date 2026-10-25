@@ -17,7 +17,7 @@ async function attachAudio(creatorId: string, trackId: string) {
   const key = newMasterKey(creatorId, trackId, "wav");
   const url = await createUploadUrl({ bucket: "masters", key, contentType: "audio/wav", contentLength: 12 });
   await fetch(url, { method: "PUT", body: "RIFF0000WAVE", headers: { "content-type": "audio/wav" } });
-  await db.update(tracks).set({ audioKey: key, audioSizeBytes: 12, audioFormat: "wav" }).where(eq(tracks.id, trackId));
+  await db.update(tracks).set({ audioKey: key, audioSizeBytes: 12, audioFormat: "wav", audioStatus: "processing" }).where(eq(tracks.id, trackId));
   return key;
 }
 
