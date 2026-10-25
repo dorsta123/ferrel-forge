@@ -192,7 +192,7 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 |---|---|---|
 | `users`, `sessions`, `accounts`, `verifications` | Logins (managed by Better Auth) | [schema/auth.ts](../packages/db/src/schema/auth.ts) |
 | `creator_profiles` | Artist name, URL slug, bio. *Having a row = being a creator.* | [schema/creators.ts](../packages/db/src/schema/creators.ts) |
-| `tracks` | Title, slug, genre, BPM, key, status, the private base rate, audio file location, length | [schema/tracks.ts](../packages/db/src/schema/tracks.ts) |
+| `tracks` | Title, slug, genre, BPM, key, status, the private base rate, audio file location, length, audio processing results (status, error, preview file and start, preview on/off, waveform — [decision 025](decisions/025-audio-result-columns.md)) | [schema/tracks.ts](../packages/db/src/schema/tracks.ts) |
 
 - **Limits** (title length, BPM range…) live once in [constants/tracks.ts](../packages/db/src/constants/tracks.ts) and are used by the database, the server *and* the browser.
 - **Changing a table:**

@@ -29,7 +29,7 @@ Two-strike rule: if the same fix fails twice, stop and rethink.
 |---|---|---|
 | 1 ✅ | **Spike (throwaway):** [findings](../spikes/ffmpeg.md); FFmpeg on Windows and Linux: read length, cut 15 s from a chosen start, mix one tone at 7.5 s, compute waveform peaks, for WAV/MP3/FLAC | A findings note with the exact working commands; no app code kept |
 | 2 ✅ | **FFmpeg in the project:** `packages/audio`: pinned FFmpeg fetched and SHA-256-verified by us ([decision 024](../decisions/024-fetch-ffmpeg-ourselves.md)), a safe runner (`runFfmpeg` + `localInput(file, format)`) and `analyzeAudio()` (exact length + waveform peaks) | Tests pass locally and in CI |
-| 3 | **Database:** `audio_status` (none/processing/ready/failed), `audio_error`, `preview_key`, `preview_start_ms`, `preview_enabled` (default on), `waveform`, `listen_url` | Migration plus database-rule tests (e.g. the start must fit inside the track) |
+| 3 ✅ | **Database:** `audio_status` (none/processing/ready/failed), `audio_error`, `preview_key`, `preview_start_ms`, `preview_enabled` (default on), `waveform` (200 whole numbers 0–1000, so the database can check its shape); a new upload resets the old results; existing uploads are cleared (published ones go back to draft) so every track starts fresh in the pipeline (user, 2026-10-25). `listen_url` moved to slice 11 | Migration plus database-rule tests (e.g. the start must fit inside the track) |
 | 4 | **Web → worker connection:** a shared queue package; a verified upload queues `audio:process` with the exact master key; the worker logs it | An upload makes the worker log the job; integration test |
 | 5 | **Worker reads the length:** saves `duration_ms`, status ready/failed | **The length appears on cards and pages** |
 | 6 | **Preview:** 15 s from the start point (default 25%), one tone at 7.5 s, uploaded to the public bucket; a stale job (audio replaced) writes nothing; the old preview is deleted | A preview in storage; replacement-race test |
@@ -37,7 +37,7 @@ Two-strike rule: if the same fix fails twice, stop and rethink.
 | 8 | **Creator status in the editor:** Processing → Ready / Failed · Try again, updating itself | Visible live after an upload |
 | 9 | **Start-point picker and preview on/off:** drag a 15 s window on the waveform; changing it regenerates the preview; a switch turns the preview off (and deletes the file) | Changing the start produces a new preview |
 | 10 | **The player:** waveform play/pause on release pages and in the editor, preview only; nothing shown when the preview is off or not ready | **A visitor presses play**; the master is never requested |
-| 11 | **Listen link:** an optional field, only `youtube.com`, `youtu.be`, `open.spotify.com` or `soundcloud.com` over https; shown as "Listen to the full song" | Forged and hostile links refused (integration tests) |
+| 11 | **Listen link:** the `listen_url` column (moved here from slice 3) and an optional field, only `youtube.com`, `youtu.be`, `open.spotify.com` or `soundcloud.com` over https; shown as "Listen to the full song" | Forged and hostile links refused (integration tests) |
 | 12 | **Cleanup and hardening:** a daily job deletes abandoned uploads and orphaned previews; `/security-review` of the pipeline; the e2e journey "upload → process → pick start → publish → visitor plays"; docs | Leftovers disappear; journey green |
 
 ## Acceptance criteria (whole phase)

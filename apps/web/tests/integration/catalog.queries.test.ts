@@ -8,7 +8,7 @@ import { ago, createUsers, removeCreatedUsers, type TestUser } from "./support";
 let A: TestUser, B: TestUser, C: TestUser;
 const live = (creatorId: string, slug: string, minutesAgo: number, extra: object = {}) => ({
   creatorId, title: slug, slug, genre: "pop" as const, basePriceCents: 500,
-  status: "published" as const, publishedAt: ago(minutesAgo), audioKey: `${creatorId}/x/${slug}.wav`, audioSizeBytes: 10, audioFormat: "wav" as const, ...extra,
+  status: "published" as const, publishedAt: ago(minutesAgo), audioKey: `${creatorId}/x/${slug}.wav`, audioSizeBytes: 10, audioFormat: "wav" as const, audioStatus: "processing" as const, ...extra,
 });
 
 beforeAll(async () => {

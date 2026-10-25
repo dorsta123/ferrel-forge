@@ -54,13 +54,26 @@ export async function confirmAudioUpload(creatorId: string, trackId: string, key
 
   const updated = await db
     .update(tracks)
-    .set({ audioKey: key, audioSizeBytes: info.size, audioFormat: detected })
+    // A new file starts over: the old song's length, waveform, start point, error and
+    // preview no longer apply (the old preview must never play for the new song).
+    .set({
+      audioKey: key,
+      audioSizeBytes: info.size,
+      audioFormat: detected,
+      audioStatus: "processing",
+      audioError: null,
+      durationMs: null,
+      waveform: null,
+      previewStartMs: null,
+      previewKey: null,
+    })
     .where(and(eq(tracks.id, trackId), eq(tracks.creatorId, creatorId), eq(tracks.status, "draft")))
     .returning({ id: tracks.id });
   if (updated.length === 0) return reject(key, NOT_DRAFT.error); // published in the meantime
 
   // Only now remove the file it replaced.
   if (track.audioKey && track.audioKey !== key) await deleteObject("masters", track.audioKey);
+  if (track.previewKey) await deleteObject("previews", track.previewKey);
   return { ok: true, format: detected, sizeBytes: info.size };
 }
 
