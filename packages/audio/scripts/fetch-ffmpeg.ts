@@ -1,7 +1,7 @@
-// `pnpm audio:fetch`: put the pinned FFmpeg build in .cache/ffmpeg, verified.
+// `pnpm audio:fetch`: put the pinned FFmpeg build in .cache/ffmpeg, verified (decision 024).
 // Skips the download when a verified copy is already there (CI caches the folder).
-// Unlike ffmpeg-static's installer it has a stall timeout and retries, and it
-// refuses any file whose SHA-256 doesn't match the pinned one.
+// Each attempt downloads, unpacks and checks the SHA-256 before anything is installed;
+// a stalled or cut-off download is retried, a missing asset (404) fails at once.
 import { chmodSync, existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { gunzipSync } from "node:zlib";
@@ -11,6 +11,8 @@ import { sha256File } from "../src/sha256";
 
 const STALL_MS = 60_000; // abort an attempt if no bytes arrive for a minute
 const ATTEMPTS = 5;
+
+class PermanentError extends Error {}
 
 const key = platformKey();
 if (!key) {
@@ -26,34 +28,29 @@ if (existsSync(target) && (await sha256File(target)) === expected) {
 }
 
 const url = downloadUrl(key);
-let gz: Buffer | null = null;
-for (let attempt = 1; attempt <= ATTEMPTS && !gz; attempt++) {
-  try {
-    console.log(`Downloading ${url} (attempt ${attempt}/${ATTEMPTS})…`);
-    gz = await download(url);
-  } catch (err) {
-    console.warn(`  failed: ${(err as Error).message}`);
-    await new Promise((r) => setTimeout(r, 3_000 * attempt));
-  }
-}
-if (!gz) {
-  console.error("Could not download FFmpeg. Check the connection and run `pnpm audio:fetch` again.");
-  process.exit(1);
-}
-
-// Write to a temporary name, verify, then move into place: a bad file never sits at the real path.
 mkdirSync(dirname(target), { recursive: true });
 const temp = `${target}.download`;
-writeFileSync(temp, gunzipSync(gz));
-const actual = await sha256File(temp);
-if (actual !== expected) {
-  rmSync(temp, { force: true });
-  console.error(`SHA-256 mismatch for FFmpeg ${FFMPEG_RELEASE} (${key}).\n  expected ${expected}\n  got      ${actual}\nRefusing to install it.`);
-  process.exit(1);
+
+for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+  try {
+    console.log(`Downloading ${url} (attempt ${attempt}/${ATTEMPTS})…`);
+    // Unpack and verify inside the attempt: a truncated or corrupted download is retried.
+    writeFileSync(temp, gunzipSync(await download(url)));
+    const actual = await sha256File(temp);
+    if (actual !== expected) throw new Error(`SHA-256 mismatch (expected ${expected}, got ${actual})`);
+    chmodSync(temp, 0o755);
+    renameSync(temp, target);
+    console.log(`FFmpeg ${FFMPEG_RELEASE} (${key}) installed and verified at ${target}`);
+    process.exit(0);
+  } catch (err) {
+    rmSync(temp, { force: true });
+    console.warn(`  failed: ${(err as Error).message}`);
+    if (err instanceof PermanentError) break;
+    if (attempt < ATTEMPTS) await new Promise((r) => setTimeout(r, 3_000 * attempt));
+  }
 }
-chmodSync(temp, 0o755);
-renameSync(temp, target);
-console.log(`FFmpeg ${FFMPEG_RELEASE} (${key}) installed and verified at ${target}`);
+console.error("Could not install FFmpeg. Check the connection (or the pinned release) and run `pnpm audio:fetch` again.");
+process.exit(1);
 
 /** Fetch the whole file, aborting if the stream goes quiet for STALL_MS. */
 async function download(from: string): Promise<Buffer> {
@@ -61,6 +58,7 @@ async function download(from: string): Promise<Buffer> {
   let stall = setTimeout(() => controller.abort(new Error("download stalled")), STALL_MS);
   try {
     const res = await fetch(from, { signal: controller.signal, redirect: "follow" });
+    if (res.status >= 400 && res.status < 500) throw new PermanentError(`HTTP ${res.status} for ${from}`);
     if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
     const chunks: Uint8Array[] = [];
     for await (const chunk of res.body) {

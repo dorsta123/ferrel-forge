@@ -5,6 +5,9 @@
 // To upgrade: change the release, run `pnpm audio:fetch` on each platform to get
 // the new hashes from the official assets, update them below, and open a PR.
 
+// The release is *named* b6.1.1 by ffmpeg-static, but its assets come from different
+// builders per platform: the Windows file is FFmpeg 6.1.1 and the Linux file 7.0.2
+// (checked with `ffmpeg -version` in the phase 4 spike). Linux is the reference (decision 023).
 export const FFMPEG_RELEASE = "b6.1.1";
 
 export const FFMPEG_BUILDS = {

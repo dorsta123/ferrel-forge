@@ -1,6 +1,12 @@
 name: Set up ferrel-forge
 description: Install dependencies and write .env. Services are started separately (./.github/actions/services) so checks that don't need them run first.
 
+inputs:
+  ffmpeg:
+    description: Also restore/fetch the pinned FFmpeg (only jobs that run the audio tests or the worker need it)
+    required: false
+    default: "false"
+
 runs:
   using: composite
   steps:
@@ -18,12 +24,14 @@ runs:
     # The pinned FFmpeg (packages/audio): cached between runs, keyed on the pinned
     # release and fingerprints, so it's downloaded once per change, not every run.
     - name: Cache FFmpeg
+      if: inputs.ffmpeg == 'true'
       uses: actions/cache@v4
       with:
         path: .cache/ffmpeg
         key: ffmpeg-${{ runner.os }}-${{ hashFiles('packages/audio/src/ffmpeg-release.ts') }}
 
     - name: Fetch and verify FFmpeg (skips when the cached copy verifies)
+      if: inputs.ffmpeg == 'true'
       shell: bash
       run: pnpm audio:fetch
 

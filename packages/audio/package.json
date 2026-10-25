@@ -8,6 +8,7 @@
   },
   "scripts": {
     "fetch-ffmpeg": "tsx scripts/fetch-ffmpeg.ts",
+    "pretest": "tsx scripts/fetch-ffmpeg.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

@@ -131,7 +131,8 @@ packages/db/                database: tables, constants, migrations
 packages/storage/           file storage: upload links, file checks, buckets
 packages/pricing/           pure rate engine (placeholder until phase 8)
 packages/audio/             FFmpeg: pinned + SHA-256-verified binary (pnpm audio:fetch → .cache/ffmpeg),
-                            runFfmpeg() (safe runner), analyzeAudio() (exact length + waveform); used by the worker
+                            runFfmpeg() + localInput(file, format) (safe runner), analyzeAudio() (exact length + waveform);
+                            used by the worker. Server/worker only (FERREL_FFMPEG_DIR overrides the cache path)
 e2e/                        browser tests: specs/ (tests), helpers/ (shared setup)
 docs/                       product, roadmap, workflow, plans, decisions, this map
 .github/                    CI workflow and PR template

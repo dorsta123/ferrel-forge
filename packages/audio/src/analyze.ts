@@ -3,7 +3,7 @@
 // and keep the loudest sample of every 50 ms window. Streams, so a 4-hour file
 // needs a few MB of memory, not hundreds.
 import { AudioToolError } from "./errors";
-import { localInput, runFfmpeg } from "./run-ffmpeg";
+import { localInput, runFfmpeg, type InputFormat } from "./run-ffmpeg";
 
 export const PEAK_COUNT = 200;
 const SAMPLE_RATE = 8_000;
@@ -16,7 +16,14 @@ export type AudioAnalysis = {
   peaks: number[];
 };
 
-export async function analyzeAudio(file: string, { timeoutMs = 120_000 }: { timeoutMs?: number } = {}): Promise<AudioAnalysis> {
+/**
+ * `format` is the upload's byte-checked format (phase 3), passed through so FFmpeg
+ * never guesses. The length is the audio that actually decodes: a cut-off MP3 is a
+ * valid shorter track, and damage FFmpeg can skip over shortens the result slightly
+ * (length is display-only; billing uses ad-platform exposure). Uploads arriving
+ * incomplete are caught earlier by the storage byte-size check.
+ */
+export async function analyzeAudio(file: string, format: InputFormat, { timeoutMs = 120_000 }: { timeoutMs?: number } = {}): Promise<AudioAnalysis> {
   const windows: number[] = [];
   let windowMax = 0;
   let inWindow = 0;
@@ -39,7 +46,13 @@ export async function analyzeAudio(file: string, { timeoutMs = 120_000 }: { time
     carry = usable < buf.length ? buf.subarray(usable) : null;
   };
 
-  await runFfmpeg([...localInput(file), "-map", "0:a:0", "-ac", "1", "-ar", String(SAMPLE_RATE), "-f", "s16le", "pipe:1"], { timeoutMs, onStdout });
+  // -xerror: stop on any error FFmpeg reports. (Damage FFmpeg can resync past, e.g.
+  // a corrupted stretch inside a FLAC or MP3, is skipped silently at every log level;
+  // the length then reflects the audio that really decodes. Verified in slice 2.)
+  await runFfmpeg(["-xerror", ...localInput(file, format), "-map", "0:a:0", "-ac", "1", "-ar", String(SAMPLE_RATE), "-f", "s16le", "pipe:1"], {
+    timeoutMs,
+    onStdout,
+  });
   if (inWindow > 0) windows.push(windowMax);
   if (samples === 0) throw new AudioToolError("NO_AUDIO", "The file contains no audio.");
 

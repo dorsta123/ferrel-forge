@@ -23,7 +23,7 @@ pnpm db:migrate       # apply Drizzle migrations
 pnpm audio:fetch      # download the pinned FFmpeg into .cache/ffmpeg (SHA-256 verified; skips if present) — needed for audio tests and the worker
 pnpm storage:setup    # create RustFS buckets (masters private, previews public-read) + upload CORS; idempotent
 pnpm dev              # web on :3000 + worker, in parallel
-pnpm test             # unit tests (vitest), no services needed
+pnpm test             # unit tests (vitest), no services needed; the audio tests fetch the pinned FFmpeg first if missing (needs internet once)
 pnpm test:integration # services/queries with forged input, DB constraints, storage security (needs pnpm db:up)
 pnpm e2e              # Playwright browser journeys with the installed Chrome (needs pnpm db:up; starts dev server if not running)
 pnpm typecheck        # runs `next typegen` first for the web app
@@ -83,4 +83,4 @@ This Next.js version differs from older training data — read `apps/web/AGENTS.
 - Public pages (`features/catalog/`) select display columns only (never `audio_key`, owner ids or `base_price_cents`), validate URL input in `params.ts`, and render fresh per request — see docs/decisions/015. `notFound()` inside Suspense can't set a 404 status; also call it in `generateMetadata` so crawlers get a real 404.
 - Next 16 keeps visited pages mounted (hidden) after client navigation: in Playwright use `locator("main:visible")`.
 - If styles look stale or unstyled in dev after changing `globals.css` or adding CSS imports, Turbopack's persistent dev cache is serving old CSS: stop the dev server and delete `apps/web/.next/dev`.
-- Windows dev machine. FFmpeg comes from `pnpm audio:fetch` (pinned release, SHA-256 in `packages/audio/src/ffmpeg-release.ts`), not from the system or the `ffmpeg-static` npm package (decision 024). Windows gets FFmpeg 6.1.1, Linux/CI 7.0.2 — Linux is the reference; tests allow ±50 ms (decision 023). Always run FFmpeg through `runFfmpeg` with `localInput(file)` for every input; never build a shell command string.
+- Windows dev machine. FFmpeg comes from `pnpm audio:fetch` (pinned release, SHA-256 in `packages/audio/src/ffmpeg-release.ts`), not from the system or the `ffmpeg-static` npm package (decision 024). Windows gets FFmpeg 6.1.1, Linux/CI 7.0.2 — Linux is the reference; tests allow ±50 ms (decision 023). Always run FFmpeg through `runFfmpeg` with `localInput(file, format)` for every input (local files only **and** the byte-checked format, so a file can't act as a playlist/concat script that reads other files — proven in slice 2); never build a shell command string. FFmpeg silently skips damage it can resync past, so lengths reflect the audio that really decodes.

@@ -20,6 +20,7 @@ FFmpeg processes untrusted uploads, so an unverified 80 MB native program is the
 - **At runtime**, `ffmpegPath()` re-checks the fingerprint once per process and refuses a missing or mismatching file with a clear message.
 - **CI** caches `.cache/ffmpeg` keyed on the pinned-release file and runs the fetch in its shared setup.
 - The `ffmpeg-static` npm package is **not** a dependency.
+- Every input names its format (`localInput(file, format)`): with the format left to FFmpeg, a 37-byte `ffconcat` file named `evil.wav` made it read a neighbouring file (found by review in slice 2, now a test).
 
 ## Alternatives considered
 - **Use `ffmpeg-static` as-is:** simplest, but no cache, no timeout, no verification.
