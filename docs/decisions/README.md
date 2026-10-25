@@ -27,6 +27,7 @@ One file per decision, numbered in order. To reverse a decision, add a new recor
 | [021](021-phase-3-realignment.md) | Phase 3 realignment: no copies, private placeholder rate, "Licensing opens soon", no sale locks (amends 014, 015) | Accepted |
 | [022](022-audio-previews.md) | Audio previews: 15 s, creator-chosen start (default 25%), one mid-preview watermark, optional, listen links, ffmpeg-static | Accepted |
 | [023](023-ffmpeg-versions.md) | FFmpeg versions differ by platform (6.1.1 Windows, 7.0.2 Linux); Linux is the reference, tests allow small tolerances | Accepted |
+| [024](024-fetch-ffmpeg-ourselves.md) | Fetch the pinned FFmpeg builds ourselves (`pnpm audio:fetch`): stall timeout, retries, SHA-256 verified, CI-cached | Accepted |
 
 ## Template
 

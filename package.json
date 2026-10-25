@@ -14,7 +14,8 @@
     "db:studio": "pnpm --filter @ferrel/db studio",
     "storage:setup": "pnpm --filter @ferrel/storage run setup-buckets",
     "test:integration": "pnpm --filter @ferrel/web run test:integration",
-    "e2e": "pnpm --filter @ferrel/e2e run e2e"
+    "e2e": "pnpm --filter @ferrel/e2e run e2e",
+    "audio:fetch": "pnpm --filter @ferrel/audio run fetch-ffmpeg"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

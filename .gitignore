@@ -6,3 +6,6 @@ dist
 .env.local
 *.log
 coverage
+
+# Downloaded tools (e.g. the pinned FFmpeg, see packages/audio)
+.cache/

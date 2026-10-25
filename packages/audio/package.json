@@ -1,0 +1,19 @@
+{
+  "name": "@ferrel/audio",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "fetch-ffmpeg": "tsx scripts/fetch-ffmpeg.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsx": "^4.23.15",
+    "vitest": "^5.0.5"
+  }
+}

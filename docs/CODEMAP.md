@@ -18,7 +18,7 @@ Postgres (database)             RustFS (file storage: audio)
                                        │  browser uploads audio straight here
 apps/worker ── background jobs (phase 4 makes it do real work) ── Redis (job queue)
 
-packages/  ── shared code used by web and worker: db, storage, pricing
+packages/  ── shared code used by web and worker: db, storage, pricing, audio
 e2e/       ── browser tests
 docs/      ── what, why, how we work
 ```
@@ -130,6 +130,8 @@ packages/db/                database: tables, constants, migrations
 └── drizzle/                migrations: numbered SQL files, applied in order
 packages/storage/           file storage: upload links, file checks, buckets
 packages/pricing/           pure rate engine (placeholder until phase 8)
+packages/audio/             FFmpeg: pinned + SHA-256-verified binary (pnpm audio:fetch → .cache/ffmpeg),
+                            runFfmpeg() (safe runner), analyzeAudio() (exact length + waveform); used by the worker
 e2e/                        browser tests: specs/ (tests), helpers/ (shared setup)
 docs/                       product, roadmap, workflow, plans, decisions, this map
 .github/                    CI workflow and PR template
@@ -223,6 +225,8 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 | Upload fails | Browser Network tab (the PUT to `localhost:9000`); use `localhost:3000`, **not** `127.0.0.1`; [audio-upload/service.ts](../apps/web/src/features/audio-upload/service.ts) |
 | Sign-in / sign-up error | [components/auth/auth-errors.ts](../apps/web/src/components/auth/auth-errors.ts) maps error codes to messages; server side in [lib/auth.ts](../apps/web/src/lib/auth.ts) |
 | Database "violates check constraint …" | The constraint name says which rule: see [schema/tracks.ts](../packages/db/src/schema/tracks.ts) |
+| "FFmpeg isn't installed" / FFMPEG_MISSING | Run `pnpm audio:fetch` (downloads the pinned build into `.cache/ffmpeg`); see [packages/audio](../packages/audio/src/) |
+| FFMPEG_TAMPERED | The file in `.cache/ffmpeg` doesn't match its pinned SHA-256: delete the folder and run `pnpm audio:fetch` |
 | Styles look broken or old | Stop the dev server, delete `apps/web/.next/dev`, start again |
 | Strange errors right after `pnpm install` | Restart the dev server (a stale one once produced false errors) |
 | A test fails in CI but not locally | Open the PR's "Checks" tab; e2e failures attach a Playwright report |
