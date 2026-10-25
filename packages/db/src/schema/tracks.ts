@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
-import { bigint, check, index, integer, pgEnum, pgTable, smallint, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
-import { AUDIO_FORMATS, GENRES, MUSICAL_KEYS, TRACK_LIMITS as L, TRACK_STATUSES } from "../constants/tracks";
+import { bigint, boolean, check, index, integer, pgEnum, pgTable, smallint, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { AUDIO_FORMATS, AUDIO_STATUSES, GENRES, MUSICAL_KEYS, TRACK_LIMITS as L, TRACK_STATUSES } from "../constants/tracks";
 import { lit, timestamps } from "./columns";
 import { creatorProfiles } from "./creators";
 
@@ -8,6 +8,7 @@ export const trackStatus = pgEnum("track_status", TRACK_STATUSES);
 export const trackGenre = pgEnum("track_genre", GENRES);
 export const musicalKey = pgEnum("musical_key", MUSICAL_KEYS);
 export const audioFormat = pgEnum("audio_format", AUDIO_FORMATS);
+export const audioStatus = pgEnum("audio_status", AUDIO_STATUSES);
 
 /**
  * A release a creator sells licenses for. One license type per track (phase 3).
@@ -36,6 +37,13 @@ export const tracks = pgTable(
     audioFormat: audioFormat("audio_format"),
     // Track length, read from the audio in phase 4. Null until then.
     durationMs: integer("duration_ms"),
+    // Processing results (phase 4). A new upload resets them and sets "processing".
+    audioStatus: audioStatus("audio_status").notNull().default("none"),
+    audioError: text("audio_error"), // shown to the artist; only when "failed"
+    previewKey: text("preview_key"), // 15 s preview in the public bucket
+    previewStartMs: integer("preview_start_ms"), // null = the default, about 25% in
+    previewEnabled: boolean("preview_enabled").notNull().default(true),
+    waveform: smallint("waveform").array(), // exactly 200 bars, each 0–1000
     publishedAt: timestamp("published_at", { withTimezone: true }),
     ...timestamps,
   },
@@ -59,6 +67,29 @@ export const tracks = pgTable(
       sql`(${t.audioKey} is null) = (${t.audioSizeBytes} is null) and (${t.audioKey} is null) = (${t.audioFormat} is null)`,
     ),
     check("tracks_audio_size", sql`${t.audioSizeBytes} is null or ${t.audioSizeBytes} between 1 and ${lit(L.audioMaxBytes)}`),
+    // Audio processing results (phase 4 slice 3).
+    check("tracks_audio_status_matches_file", sql`(${t.audioKey} is null) = (${t.audioStatus} = 'none')`),
+    check("tracks_audio_ready_has_length", sql`${t.audioStatus} <> 'ready' or ${t.durationMs} is not null`),
+    check(
+      "tracks_audio_error",
+      sql`(${t.audioStatus} = 'failed') = (${t.audioError} is not null)
+        and (${t.audioError} is null or char_length(btrim(${t.audioError})) between 1 and ${lit(L.audioErrorMax)})`,
+    ),
+    check("tracks_audio_results_need_file", sql`${t.audioKey} is not null or (${t.previewKey} is null and ${t.waveform} is null)`),
+    check("tracks_preview_off_no_file", sql`${t.previewEnabled} or ${t.previewKey} is null`),
+    // The 15 s preview must fit inside the track; a track shorter than that plays from 0.
+    check(
+      "tracks_preview_start",
+      sql`${t.previewStartMs} is null or (${t.previewStartMs} >= 0
+        and (${t.durationMs} is null or ${t.previewStartMs} <= greatest(${t.durationMs} - ${lit(L.previewMs)}, 0)))`,
+    ),
+    // One row of bars (no grid, no gaps), each 0–1000.
+    check(
+      "tracks_waveform_shape",
+      sql`${t.waveform} is null or (array_ndims(${t.waveform}) = 1 and cardinality(${t.waveform}) = ${lit(L.waveformBars)}
+        and array_position(${t.waveform}, null) is null
+        and 0 <= all(${t.waveform}) and ${lit(L.waveformMax)} >= all(${t.waveform}))`,
+    ),
     // Anything beyond a draft must have audio and a publish time.
     check(
       "tracks_live_needs_audio",
