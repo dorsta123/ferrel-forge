@@ -1,7 +1,7 @@
 // Forged requests against the audio upload service: what a tampered browser could send.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db, eq, tracks } from "@ferrel/db";
-import { getObjectInfo, newMasterKey } from "@ferrel/storage";
+import { createUploadUrl, getObjectInfo, newMasterKey } from "@ferrel/storage";
 import { confirmAudioUpload, requestAudioUpload } from "@/features/audio-upload/service";
 import { createUsers, removeCreatedUsers, type TestUser } from "./support";
 
@@ -101,6 +101,30 @@ describe("confirmAudioUpload", () => {
       .from(tracks)
       .where(eq(tracks.id, draftId));
     expect(row).toEqual({ key: link.key, status: "processing", error: null, durationMs: null, start: null, waveform: null });
+  });
+
+  it("replacing the audio removes the old song's preview, so it can never play for the new one", async () => {
+    // The old preview, really stored in the public bucket.
+    const previewKey = `${A.id}/${draftId}/old-preview.mp3`;
+    const body = Buffer.from("ID3 old preview");
+    const url = await createUploadUrl({ bucket: "previews", key: previewKey, contentType: "audio/mpeg", contentLength: body.length });
+    expect((await fetch(url, { method: "PUT", body, headers: { "content-type": "audio/mpeg" } })).status).toBe(200);
+    await db
+      .update(tracks)
+      .set({ audioKey: newMasterKey(A.id, draftId, "wav"), audioSizeBytes: 10, audioFormat: "wav", audioStatus: "processing", previewKey })
+      .where(eq(tracks.id, draftId));
+
+    const wav = Buffer.alloc(44);
+    wav.write("RIFF", 0);
+    wav.write("WAVE", 8);
+    const link = await requestAudioUpload(A.id, draftId, { name: "new.wav", size: wav.length, type: "audio/wav" });
+    if (!link.ok) throw new Error(link.error);
+    await fetch(link.uploadUrl, { method: "PUT", body: wav, headers: { "content-type": link.contentType } });
+    expect(error(await confirmAudioUpload(A.id, draftId, link.key))).toBe("ok");
+
+    const [row] = await db.select({ previewKey: tracks.previewKey }).from(tracks).where(eq(tracks.id, draftId));
+    expect(row.previewKey).toBeNull();
+    expect(await getObjectInfo("previews", previewKey)).toBeNull();
   });
 
   it("refuses audio changes once a track is published", async () => {

@@ -73,15 +73,19 @@ export const tracks = pgTable(
     check(
       "tracks_audio_error",
       sql`(${t.audioStatus} = 'failed') = (${t.audioError} is not null)
-        and (${t.audioError} is null or char_length(btrim(${t.audioError})) between 1 and ${lit(L.audioErrorMax)})`,
+        and (${t.audioError} is null or (${t.audioError} ~ '[^[:space:]]' and char_length(${t.audioError}) <= ${lit(L.audioErrorMax)}))`,
     ),
-    check("tracks_audio_results_need_file", sql`${t.audioKey} is not null or (${t.previewKey} is null and ${t.waveform} is null)`),
+    check(
+      "tracks_audio_results_need_file",
+      sql`${t.audioKey} is not null or (${t.durationMs} is null and ${t.previewKey} is null and ${t.previewStartMs} is null and ${t.waveform} is null)`,
+    ),
     check("tracks_preview_off_no_file", sql`${t.previewEnabled} or ${t.previewKey} is null`),
-    // The 15 s preview must fit inside the track; a track shorter than that plays from 0.
+    // Chosen on the waveform, so only once the length is known; the 15 s preview must fit
+    // inside the track, and a track shorter than that plays from 0.
     check(
       "tracks_preview_start",
-      sql`${t.previewStartMs} is null or (${t.previewStartMs} >= 0
-        and (${t.durationMs} is null or ${t.previewStartMs} <= greatest(${t.durationMs} - ${lit(L.previewMs)}, 0)))`,
+      sql`${t.previewStartMs} is null or (${t.durationMs} is not null and ${t.previewStartMs} >= 0
+        and ${t.previewStartMs} <= greatest(${t.durationMs} - ${lit(L.previewMs)}, 0))`,
     ),
     // One row of bars (no grid, no gaps), each 0–1000.
     check(

@@ -46,8 +46,8 @@ describe("tracks table", () => {
     ["bpm above 250", { bpm: 251 }, "tracks_bpm_range"],
     ["price under $1", { basePriceCents: 99 }, "tracks_price_range"],
     ["price over $500", { basePriceCents: 50_001 }, "tracks_price_range"],
-    ["zero-length track", { durationMs: 0 }, "tracks_duration_range"],
-    ["track over 4 hours", { durationMs: 4 * 60 * 60 * 1000 + 1 }, "tracks_duration_range"],
+    ["zero-length track", { ...audio(), durationMs: 0 }, "tracks_duration_range"],
+    ["track over 4 hours", { ...audio(), durationMs: 4 * 60 * 60 * 1000 + 1 }, "tracks_duration_range"],
     ["audio key without size and format", { audioKey: "k.wav" }, "tracks_audio_all_or_none"],
     ["empty audio file", { ...audio(), audioSizeBytes: 0 }, "tracks_audio_size"],
     ["audio over 150 MB", { ...audio(), audioSizeBytes: 150 * 1024 * 1024 + 1 }, "tracks_audio_size"],
@@ -61,10 +61,15 @@ describe("tracks table", () => {
     ["'failed' without a reason", { ...audio(), audioStatus: "failed" }, "tracks_audio_error"],
     ["a reason without 'failed'", { ...audio(), audioError: "Not audio" }, "tracks_audio_error"],
     ["a blank reason", { ...audio(), audioStatus: "failed", audioError: "   " }, "tracks_audio_error"],
+    ["a reason that is only line breaks", { ...audio(), audioStatus: "failed", audioError: "\n\t" }, "tracks_audio_error"],
     ["a reason over 500 chars", { ...audio(), audioStatus: "failed", audioError: "a".repeat(501) }, "tracks_audio_error"],
     ["a preview file while previews are off", { ...audio(), previewEnabled: false, previewKey: "p/x.mp3" }, "tracks_preview_off_no_file"],
     ["a preview file without audio", { previewKey: "p/x.mp3" }, "tracks_audio_results_need_file"],
     ["a waveform without audio", { waveform: wave() }, "tracks_audio_results_need_file"],
+    ["a length without audio", { durationMs: 60_000 }, "tracks_audio_results_need_file"],
+    // The start is only chosen on the waveform, once the length is known; otherwise
+    // the worker's later "ready + length" write could be refused and the track stuck.
+    ["a start while the length is still unknown", { ...audio(), previewStartMs: 30_000 }, "tracks_preview_start"],
     ["a negative preview start", { ...audio(), previewStartMs: -1 }, "tracks_preview_start"],
     ["a start leaving under 15 s", { ...audio(), durationMs: 60_000, previewStartMs: 45_001 }, "tracks_preview_start"],
     ["a non-zero start in a track under 15 s", { ...audio(), durationMs: 10_000, previewStartMs: 1 }, "tracks_preview_start"],
@@ -84,7 +89,9 @@ describe("tracks table", () => {
     ["a track under 15 s previewed from 0", { ...audio(), audioStatus: "ready", durationMs: 10_000, previewStartMs: 0 }],
     ["a failed track with a reason", { ...audio(), audioStatus: "failed", audioError: "That file isn't valid audio." }],
     ["previews switched off", { ...audio(), previewEnabled: false }],
-    ["a chosen start while the length is still unknown", { ...audio(), previewStartMs: 30_000 }],
+    // The old preview stays while a new one is made (start changed) or if making it failed.
+    ["a preview kept while a new one is made", { ...audio(), previewKey: "p/x.mp3" }],
+    ["a preview kept after making a new one failed", { ...audio(), audioStatus: "failed", audioError: "Preview failed.", previewKey: "p/x.mp3" }],
     ["a silent waveform and a full-scale one", { ...audio(), waveform: [...wave(100, 0), ...wave(100, 1000)] }],
   ])("accepts %s (control)", async (_, patch) => {
     await expect(insert(patch)).resolves.toBeDefined();
