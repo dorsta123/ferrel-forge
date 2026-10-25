@@ -36,10 +36,14 @@ describe("runFfmpeg", () => {
     expect(readdirSync(tmp.dir).some((n) => /hacked/.test(n) && n !== "a; echo hacked & b.wav")).toBe(false);
   });
 
-  it("refuses to read from the network", async () => {
-    const err = await failure(runFfmpeg([...localInput("http://127.0.0.1:9/track.wav"), "-f", "null", "-"]));
-    expect(err?.code).toBe("FAILED");
-    expect(err?.message).toMatch(/whitelist|protocol/i);
+  it("refuses to read from the network, before trying to connect", async () => {
+    const url = "http://127.0.0.1:9/track.wav";
+    const blocked = await failure(runFfmpeg([...localInput(url), "-f", "null", "-"]));
+    expect(blocked?.code).toBe("FAILED");
+    expect(blocked?.message).toMatch(/Invalid argument|whitelist/i);
+    // Control: without localInput, FFmpeg really attempts the connection (and fails differently).
+    const attempted = await failure(runFfmpeg(["-i", url, "-f", "null", "-"], { timeoutMs: 15_000 }));
+    expect(attempted?.message).not.toMatch(/Invalid argument|whitelist/i);
   });
 
   it("streams output to a callback instead of buffering it", async () => {
