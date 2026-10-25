@@ -15,6 +15,18 @@ runs:
       shell: bash
       run: pnpm install --frozen-lockfile
 
+    # The pinned FFmpeg (packages/audio): cached between runs, keyed on the pinned
+    # release and fingerprints, so it's downloaded once per change, not every run.
+    - name: Cache FFmpeg
+      uses: actions/cache@v4
+      with:
+        path: .cache/ffmpeg
+        key: ffmpeg-${{ runner.os }}-${{ hashFiles('packages/audio/src/ffmpeg-release.ts') }}
+
+    - name: Fetch and verify FFmpeg (skips when the cached copy verifies)
+      shell: bash
+      run: pnpm audio:fetch
+
     - name: Write .env from the example, with a fresh auth secret
       shell: bash
       run: |
