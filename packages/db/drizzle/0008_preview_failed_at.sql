@@ -1,0 +1,1 @@
+ALTER TABLE "tracks" ADD COLUMN "preview_failed_at" timestamp with time zone;

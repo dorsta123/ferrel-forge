@@ -33,3 +33,4 @@ CSRF (cross-origin auth requests → 403), session cookie `HttpOnly` + `SameSite
 - Every write path that creates/updates users goes through Better Auth `databaseHooks`.
 - Master audio is never public; served later only via short-lived signed URLs.
 - Never trust a file's name or declared type — verify size and signature bytes server-side.
+- A preview is public by design (15 s with a watermark tone). Draft releases get one too, readable only by someone holding its exact random URL (`<trackId>/<random>.mp3`; the bucket can't be listed). Every path that drops a release or replaces its song must delete the preview: re-upload (inside the locked update), release delete. Previews left by crashes are cleaned up in phase 4 slice 12 ([decision 028](decisions/028-previews.md)).

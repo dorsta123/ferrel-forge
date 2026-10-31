@@ -1,7 +1,7 @@
 // Forged requests against the release service, following one release through its lifecycle.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db, eq, tracks } from "@ferrel/db";
-import { createUploadUrl, getObjectInfo, newMasterKey } from "@ferrel/storage";
+import { createUploadUrl, getObjectInfo, newMasterKey, newPreviewKey } from "@ferrel/storage";
 import { changeReleaseStatus, createRelease, updateRelease } from "@/features/releases/service";
 import type { ReleaseFormValues } from "@/features/releases/types";
 import { createUsers, removeCreatedUsers, type TestUser } from "./support";
@@ -135,12 +135,18 @@ describe("archive and delete", () => {
     expect(await getObjectInfo("masters", key)).not.toBeNull();
   });
 
-  it("deletes the owner's draft and its audio, but not for other creators", async () => {
+  it("deletes the owner's draft, its audio and its public preview, but not for other creators", async () => {
     const key = await attachAudio(A.id, secondId);
+    const previewKey = newPreviewKey(secondId);
+    const url = await createUploadUrl({ bucket: "previews", key: previewKey, contentType: "audio/mpeg", contentLength: 3 });
+    await fetch(url, { method: "PUT", body: "ID3", headers: { "content-type": "audio/mpeg" } });
+    await db.update(tracks).set({ audioStatus: "ready", durationMs: 60_000, previewKey }).where(eq(tracks.id, secondId));
+
     expect(failure(await changeReleaseStatus(B.id, secondId, "delete"))).toContain("Track not found");
     expect((await changeReleaseStatus(A.id, secondId, "delete")).ok).toBe(true);
     expect(await row(secondId)).toBeUndefined();
     expect(await getObjectInfo("masters", key)).toBeNull();
+    expect(await getObjectInfo("previews", previewKey)).toBeNull();
   });
 
   it("refuses an unknown action", async () => {

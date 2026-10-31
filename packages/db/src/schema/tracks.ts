@@ -44,6 +44,9 @@ export const tracks = pgTable(
     previewStartMs: integer("preview_start_ms"), // null = the default, about 25% in
     previewEnabled: boolean("preview_enabled").notNull().default(true),
     waveform: smallint("waveform").array(), // exactly 200 bars, each 0–1000
+    // Set when the preview failed every attempt, so it isn't retried forever (decision 028).
+    // Cleared by a new upload; slice 9's start change clears it too.
+    previewFailedAt: timestamp("preview_failed_at", { withTimezone: true }),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     ...timestamps,
   },

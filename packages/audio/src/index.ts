@@ -1,3 +1,4 @@
+export { makePreview, PREVIEW_MS, previewWindow, type PreviewWindow } from "./preview";
 export { analyzeAudio, PEAK_COUNT, type AudioAnalysis } from "./analyze";
 export { AudioToolError, type AudioToolErrorCode } from "./errors";
 export { ffmpegPath } from "./ffmpeg-binary";

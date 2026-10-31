@@ -126,9 +126,11 @@ apps/web/src/
 apps/worker/src/            background jobs (BullMQ on Redis)
 ├── index.ts                starts the workers, schedules the 5-minute sweep
 ├── queues.ts               the worker's Redis connection and system queue
-├── audio/                  one uploaded file to process (decision 027):
+├── audio/                  one uploaded file to process (decisions 027, 028):
 │   ├── process-audio.ts    reads the ticket, knows if this is the last attempt
-│   ├── measure-track.ts    download → analyzeAudio → save length + waveform, temp copy always deleted
+│   ├── process-track-audio.ts one download, then only the steps still owed; temp copy always deleted
+│   ├── measure-step.ts     step 1: analyzeAudio → save length + waveform + "ready" (or "failed")
+│   ├── preview-step.ts     step 2: makePreview → upload to the public bucket → attach, or delete if the track changed
 │   ├── track-audio-store.ts the worker's reads/writes, only for the ticket's current file
 │   ├── failure.ts          the file's fault (message for the artist) or ours (retry)
 │   └── waveform-bars.ts    peaks 0–1 → 200 bars 0–1000
@@ -195,7 +197,8 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
    - a fake file is deleted;
    - a real one is attached to the track (status "processing"), and any older file is deleted.
 5. **The worker gets a ticket.** The service sends `{ track, exact file }` to the audio queue ([queues/audio-queue.ts](../packages/queues/src/audio-queue.ts)); the worker picks it up in [process-audio.ts](../apps/worker/src/audio/process-audio.ts). If Redis was down, the 5-minute sweep re-sends it ([queues/requeue-stuck.ts](../packages/queues/src/requeue-stuck.ts), [decision 026](decisions/026-audio-queue.md)).
-6. **The worker measures the song.** [measure-track.ts](../apps/worker/src/audio/measure-track.ts) downloads it to a temp file, runs `analyzeAudio`, and saves the length, waveform and "ready", or "failed" with a reason for the artist ([decision 027](decisions/027-measuring-songs.md)). The length then shows on cards, the release page and the dashboard.
+6. **The worker measures the song.** [process-track-audio.ts](../apps/worker/src/audio/process-track-audio.ts) downloads it to a temp file; [measure-step.ts](../apps/worker/src/audio/measure-step.ts) runs `analyzeAudio` and saves the length, waveform and "ready", or "failed" with a reason for the artist ([decision 027](decisions/027-measuring-songs.md)). The length then shows on cards, the release page and the dashboard.
+7. **The worker makes the preview.** [preview-step.ts](../apps/worker/src/audio/preview-step.ts) cuts 15 s (from the artist's start, or 25% in) with one soft tone at 7.5 s ([audio/preview.ts](../packages/audio/src/preview.ts)), uploads it to the public bucket as `<trackId>/<random>.mp3`, and saves its key, unless the track changed meanwhile ([decision 028](decisions/028-previews.md)).
 
 ---
 
@@ -239,6 +242,7 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 | Upload fails | Browser Network tab (the PUT to `localhost:9000`); use `localhost:3000`, **not** `127.0.0.1`; [audio-upload/service.ts](../apps/web/src/features/audio-upload/service.ts) |
 | Sign-in / sign-up error | [components/auth/auth-errors.ts](../apps/web/src/components/auth/auth-errors.ts) maps error codes to messages; server side in [lib/auth.ts](../apps/web/src/lib/auth.ts) |
 | Database "violates check constraint …" | The constraint name says which rule: see [schema/tracks.ts](../packages/db/src/schema/tracks.ts) |
+| A "ready" track has no preview | Previews switched off (`preview_enabled`)? Otherwise the preview step failed: the worker log shows why, and the sweep retries within ~15 minutes ([decision 028](decisions/028-previews.md)) |
 | A track shows "failed" | The reason is in `audio_error` and comes from [failure.ts](../apps/worker/src/audio/failure.ts): the file isn't audio, is silent, is over 4 hours or took too long. The artist re-uploads a fixed file |
 | A track stays "processing" | Is the worker running (`pnpm dev` starts it)? Its terminal shows `[audio:process] done …` or `failed` with the cause per upload; "FFmpeg isn't installed" there means run `pnpm audio:fetch`. A lost ticket is re-sent by the sweep within ~15 minutes; see [decision 026](decisions/026-audio-queue.md) |
 | "couldn't queue audio for track …" in the web log | Redis was down at upload. Nothing to do: the sweep re-sends it once Redis is back (`pnpm db:up`) |

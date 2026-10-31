@@ -115,8 +115,10 @@ export async function changeReleaseStatus(creatorId: string, trackId: string, ac
         .delete(tracks)
         // PHASE 5: also require "no licenses" here, matching checkAction (decision 021).
         .where(and(owned, eq(tracks.status, "draft")))
-        .returning({ audioKey: tracks.audioKey });
+        .returning({ audioKey: tracks.audioKey, previewKey: tracks.previewKey });
       if (gone?.audioKey) await deleteObject("masters", gone.audioKey);
+      // The preview is public: it must go with the release.
+      if (gone?.previewKey) await deleteObject("previews", gone.previewKey);
       changed = gone ? [gone] : [];
       break;
     }
