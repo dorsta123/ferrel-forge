@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { checkAction, releaseLocks, visibleActions, type ReleaseFacts } from "./status";
 
-const draft: ReleaseFacts = { status: "draft", hasAudio: true, everPublished: false };
-const live: ReleaseFacts = { status: "published", hasAudio: true, everPublished: true };
+const draft: ReleaseFacts = { status: "draft", hasAudio: true, audioFailed: false, everPublished: false };
+const live: ReleaseFacts = { status: "published", hasAudio: true, audioFailed: false, everPublished: true };
 const archived: ReleaseFacts = { ...live, status: "archived" };
 
 describe("checkAction", () => {
@@ -12,6 +12,10 @@ describe("checkAction", () => {
 
   it("refuses to publish without audio", () => {
     expect(checkAction({ ...draft, hasAudio: false }, "publish")).toEqual({ ok: false, error: "Upload the audio file before publishing." });
+  });
+
+  it("refuses to publish while the audio has failed, but not while it's still processing", () => {
+    expect(checkAction({ ...draft, audioFailed: true }, "publish")).toEqual({ ok: false, error: "Fix the audio before publishing: upload a working file or try again." });
   });
 
   it("unpublishes and archives published releases only", () => {
