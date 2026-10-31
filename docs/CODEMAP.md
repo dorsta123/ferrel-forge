@@ -106,6 +106,7 @@ apps/web/src/
 │   └── api/auth/[...all]/    /api/auth/*           login endpoints (Better Auth)
 ├── features/               the logic, one folder per feature (section 2.2)
 │   ├── releases/             create, edit, publish/unpublish/archive/delete
+│   ├── audio-status/         the editor's live audio status and "Try again" (polls every 3 s while unsettled)
 │   ├── audio-upload/         uploading the master audio file
 │   ├── creator-tracks/       the dashboard's release list, filters, stats
 │   ├── catalog/              everything public: Explore, creator & release pages
@@ -162,7 +163,7 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 | `/become-creator` | [app/become-creator/page.tsx](../apps/web/src/app/become-creator/page.tsx) | [its actions.ts](../apps/web/src/app/become-creator/actions.ts), [lib/creator-profile.ts](../apps/web/src/lib/creator-profile.ts) | Signed-in non-creators |
 | `/dashboard` | [app/dashboard/page.tsx](../apps/web/src/app/dashboard/page.tsx) | [features/creator-tracks/](../apps/web/src/features/creator-tracks/) | The creator |
 | `/dashboard/tracks/new` | [app/dashboard/tracks/new/page.tsx](../apps/web/src/app/dashboard/tracks/new/page.tsx) | [features/releases/](../apps/web/src/features/releases/) | Creators |
-| `/dashboard/tracks/<id>` | [app/dashboard/tracks/[id]/page.tsx](../apps/web/src/app/dashboard/tracks/[id]/page.tsx) | [features/releases/](../apps/web/src/features/releases/), [features/audio-upload/](../apps/web/src/features/audio-upload/) | The track's owner only |
+| `/dashboard/tracks/<id>` | [app/dashboard/tracks/[id]/page.tsx](../apps/web/src/app/dashboard/tracks/[id]/page.tsx) | [features/releases/](../apps/web/src/features/releases/), [features/audio-upload/](../apps/web/src/features/audio-upload/), [features/audio-status/](../apps/web/src/features/audio-status/) | The track's owner only |
 | `/explore` | [app/explore/page.tsx](../apps/web/src/app/explore/page.tsx) | [features/catalog/](../apps/web/src/features/catalog/) | Everyone |
 | `/creators/<slug>` | [app/creators/[slug]/page.tsx](../apps/web/src/app/creators/[slug]/page.tsx) | [features/catalog/queries.ts](../apps/web/src/features/catalog/queries.ts) | Everyone |
 | `/creators/<slug>/<track>` | [app/creators/[slug]/[track]/page.tsx](../apps/web/src/app/creators/[slug]/[track]/page.tsx) | [features/catalog/](../apps/web/src/features/catalog/) | Everyone (published or archived only) |
@@ -199,6 +200,7 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 5. **The worker gets a ticket.** The service sends `{ track, exact file }` to the audio queue ([queues/audio-queue.ts](../packages/queues/src/audio-queue.ts)); the worker picks it up in [process-audio.ts](../apps/worker/src/audio/process-audio.ts). If Redis was down, the 5-minute sweep re-sends it ([queues/requeue-stuck.ts](../packages/queues/src/requeue-stuck.ts), [decision 026](decisions/026-audio-queue.md)).
 6. **The worker measures the song.** [process-track-audio.ts](../apps/worker/src/audio/process-track-audio.ts) downloads it to a temp file; [measure-step.ts](../apps/worker/src/audio/measure-step.ts) runs `analyzeAudio` and saves the length, waveform and "ready", or "failed" with a reason for the artist ([decision 027](decisions/027-measuring-songs.md)). The length then shows on cards, the release page and the dashboard.
 7. **The worker makes the preview.** [preview-step.ts](../apps/worker/src/audio/preview-step.ts) cuts 15 s (from the artist's start, or 25% in) with one soft tone at 7.5 s ([audio/preview.ts](../packages/audio/src/preview.ts)), uploads it to the public bucket as `<trackId>/<random>.mp3`, and saves its key, unless the track changed meanwhile ([decision 028](decisions/028-previews.md)).
+8. **The artist sees it happen.** [audio-status-panel.tsx](../apps/web/src/features/audio-status/audio-status-panel.tsx) → [use-audio-status.ts](../apps/web/src/features/audio-status/use-audio-status.ts) asks the server every 3 s while something is in progress: Processing → Ready (length; preview making / ready / off / couldn't be made) or Failed (the reason) with **Try again** ([audio-status/service.ts](../apps/web/src/features/audio-status/service.ts)). Publishing is blocked while Failed ([releases/status.ts](../apps/web/src/features/releases/status.ts)).
 
 ---
 
@@ -242,6 +244,7 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 | Upload fails | Browser Network tab (the PUT to `localhost:9000`); use `localhost:3000`, **not** `127.0.0.1`; [audio-upload/service.ts](../apps/web/src/features/audio-upload/service.ts) |
 | Sign-in / sign-up error | [components/auth/auth-errors.ts](../apps/web/src/components/auth/auth-errors.ts) maps error codes to messages; server side in [lib/auth.ts](../apps/web/src/lib/auth.ts) |
 | Database "violates check constraint …" | The constraint name says which rule: see [schema/tracks.ts](../packages/db/src/schema/tracks.ts) |
+| The editor status never changes | It checks every 3 s only while something is in progress, and stops after 10 minutes: reload the page. Then see "A track stays processing" below |
 | A "ready" track has no preview | Previews switched off (`preview_enabled`)? Otherwise the preview step failed: the worker log shows why, and the sweep retries within ~15 minutes ([decision 028](decisions/028-previews.md)) |
 | A track shows "failed" | The reason is in `audio_error` and comes from [failure.ts](../apps/worker/src/audio/failure.ts): the file isn't audio, is silent, is over 4 hours or took too long. The artist re-uploads a fixed file |
 | A track stays "processing" | Is the worker running (`pnpm dev` starts it)? Its terminal shows `[audio:process] done …` or `failed` with the cause per upload; "FFmpeg isn't installed" there means run `pnpm audio:fetch`. A lost ticket is re-sent by the sweep within ~15 minutes; see [decision 026](decisions/026-audio-queue.md) |
