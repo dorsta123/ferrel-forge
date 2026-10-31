@@ -16,9 +16,10 @@ export type InputFormat = keyof typeof INPUT_FORMATS;
 /**
  * `-i <file>` for an untrusted file: the local file protocol only, and the exact
  * demuxer for its (already byte-checked) format, so FFmpeg never guesses.
+ * `inputOptions` (e.g. `-ss`, `-t`) apply to this input; only pass values we computed.
  */
-export function localInput(file: string, format: InputFormat): string[] {
-  return ["-protocol_whitelist", "file", "-f", INPUT_FORMATS[format], "-i", file];
+export function localInput(file: string, format: InputFormat, inputOptions: readonly string[] = []): string[] {
+  return ["-protocol_whitelist", "file", ...inputOptions, "-f", INPUT_FORMATS[format], "-i", file];
 }
 
 export type RunOptions = {

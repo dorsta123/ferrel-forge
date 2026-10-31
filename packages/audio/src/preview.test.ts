@@ -47,7 +47,7 @@ describe("makePreview", () => {
   it("puts one tone at 7.5 s and nothing else (checked on a silent track)", async () => {
     await makePreview(tmp.file("silence 40s.flac"), "flac", tmp.file("p2.mp3"), previewWindow(40_000, null));
     const { peaks } = await analyzeAudio(tmp.file("p2.mp3"), "mp3"); // 200 peaks over 15 s: 75 ms each
-    const loud = peaks.flatMap((p, i) => (p > 0.05 ? [i] : []));
+    const loud = peaks.flatMap((p, i) => (p > 0.01 ? [i] : [])); // silence is ~0; the tone peaks around 0.03
     expect(loud.length).toBeGreaterThan(0);
     expect(Math.abs(loud[0] - 100)).toBeLessThanOrEqual(2); // starts at 7.5 s
     expect(loud[loud.length - 1]).toBeLessThanOrEqual(110); // lasts about 0.6 s
@@ -58,7 +58,7 @@ describe("makePreview", () => {
     await makePreview(tmp.file("short 8s.wav"), "wav", tmp.file("p3.mp3"), previewWindow(8_000, null));
     const { durationMs, peaks } = await analyzeAudio(tmp.file("p3.mp3"), "mp3");
     expect(Math.abs(durationMs - 8_000)).toBeLessThanOrEqual(TOLERANCE_MS);
-    const firstLoud = peaks.findIndex((p) => p > 0.05);
+    const firstLoud = peaks.findIndex((p) => p > 0.01);
     expect(Math.abs(firstLoud - 100)).toBeLessThanOrEqual(2); // 4 s of 8 s
   });
 });

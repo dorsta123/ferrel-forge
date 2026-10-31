@@ -1,17 +1,25 @@
 // The worker's reads and writes on a track. Every write repeats the ticket's
-// conditions (same track, same file, still "processing"), so an out-of-date ticket
-// (song replaced, or already finished) writes nothing (decision 025).
-import { and, db, eq, tracks } from "@ferrel/db";
-import type { AudioFormat } from "@ferrel/db/constants";
+// conditions (same track, same file, right status), so an out-of-date ticket
+// (song replaced, already finished, previews switched off) writes nothing (decision 025).
+import { and, db, eq, sql, tracks } from "@ferrel/db";
 import type { AudioProcessJob } from "@ferrel/queues";
 
-const current = (t: AudioProcessJob) =>
-  and(eq(tracks.id, t.trackId), eq(tracks.audioKey, t.audioKey), eq(tracks.audioStatus, "processing"));
+const sameFile = (t: AudioProcessJob) => and(eq(tracks.id, t.trackId), eq(tracks.audioKey, t.audioKey));
 
-/** The upload's checked format, or null if the ticket is out of date. */
-export async function formatIfCurrent(ticket: AudioProcessJob): Promise<AudioFormat | null> {
-  const [row] = await db.select({ format: tracks.audioFormat }).from(tracks).where(current(ticket));
-  return row?.format ?? null;
+/** What still needs doing for this ticket's file, or null if the track no longer has that file. */
+export async function audioState(ticket: AudioProcessJob) {
+  const [row] = await db
+    .select({
+      status: tracks.audioStatus,
+      format: tracks.audioFormat,
+      durationMs: tracks.durationMs,
+      previewEnabled: tracks.previewEnabled,
+      previewKey: tracks.previewKey,
+      previewStartMs: tracks.previewStartMs,
+    })
+    .from(tracks)
+    .where(sameFile(ticket));
+  return row?.format ? { ...row, format: row.format } : null;
 }
 
 /** Save the measurements. False if the ticket went out of date meanwhile. */
@@ -19,13 +27,27 @@ export async function saveMeasured(ticket: AudioProcessJob, m: { durationMs: num
   const done = await db
     .update(tracks)
     .set({ audioStatus: "ready", audioError: null, durationMs: m.durationMs, waveform: m.waveform })
-    .where(current(ticket))
+    .where(and(sameFile(ticket), eq(tracks.audioStatus, "processing")))
     .returning({ id: tracks.id });
   return done.length > 0;
 }
 
 /** Mark the track failed with a reason for the artist. False if the ticket went out of date. */
 export async function saveFailed(ticket: AudioProcessJob, reason: string): Promise<boolean> {
-  const done = await db.update(tracks).set({ audioStatus: "failed", audioError: reason }).where(current(ticket)).returning({ id: tracks.id });
+  const done = await db
+    .update(tracks)
+    .set({ audioStatus: "failed", audioError: reason })
+    .where(and(sameFile(ticket), eq(tracks.audioStatus, "processing")))
+    .returning({ id: tracks.id });
+  return done.length > 0;
+}
+
+/** Attach a new preview, only while the track is ready, still wants one and has none. */
+export async function savePreview(ticket: AudioProcessJob, previewKey: string): Promise<boolean> {
+  const done = await db
+    .update(tracks)
+    .set({ previewKey })
+    .where(and(sameFile(ticket), eq(tracks.audioStatus, "ready"), eq(tracks.previewEnabled, true), sql`${tracks.previewKey} is null`))
+    .returning({ id: tracks.id });
   return done.length > 0;
 }

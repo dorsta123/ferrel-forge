@@ -12,6 +12,14 @@ export function newMasterKey(creatorId: string, trackId: string, format: AudioFo
   return `${creatorId}/${trackId}/${randomUUID()}.${format}`;
 }
 
+/**
+ * Preview files live at  <trackId>/<random>.mp3  in the public previews bucket. A new
+ * name for every preview, so browsers never play an old cached copy.
+ */
+export function newPreviewKey(trackId: string): string {
+  return `${trackId}/${randomUUID()}.mp3`;
+}
+
 /** Parse a master key, or null if it isn't one of ours. */
 export function parseMasterKey(key: string): { creatorId: string; trackId: string; format: AudioFormat } | null {
   const match = MASTER_KEY.exec(key);
