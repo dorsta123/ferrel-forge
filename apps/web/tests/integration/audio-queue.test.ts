@@ -28,15 +28,15 @@ afterAll(async () => {
 
 /** Waiting tickets for one track. */
 async function ticketsFor(trackId: string) {
-  const jobs = await getAudioQueue().getJobs(["waiting", "delayed", "prioritized", "paused"]);
+  const jobs = await getAudioQueue().getJobs(["waiting", "delayed", "prioritized"]);
   return jobs.filter((j) => j?.data?.trackId === trackId).map((j) => ({ id: j.id, data: j.data }));
 }
 
 /** Upload `body` to `trackId` through a real signed link and confirm it. */
-async function upload(trackId: string, body: Buffer | string) {
+async function upload(trackId: string, body: Buffer) {
   const link = await requestAudioUpload(A.id, trackId, { name: "song.wav", size: body.length, type: "audio/wav" });
   if (!link.ok) throw new Error(link.error);
-  await fetch(link.uploadUrl, { method: "PUT", body, headers: { "content-type": link.contentType } });
+  await fetch(link.uploadUrl, { method: "PUT", body: new Uint8Array(body), headers: { "content-type": link.contentType } });
   return { key: link.key, result: await confirmAudioUpload(A.id, trackId, link.key) };
 }
 
@@ -61,7 +61,7 @@ describe("audio queue", () => {
   });
 
   it("a rejected upload sends no ticket", async () => {
-    const { result } = await upload(rejectId, "plain text pretending to be a wav file");
+    const { result } = await upload(rejectId, Buffer.from("plain text pretending to be a wav file"));
     expect(result.ok).toBe(false);
     expect(await ticketsFor(rejectId)).toEqual([]);
   });

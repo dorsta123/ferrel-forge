@@ -1,13 +1,9 @@
 import { Queue } from "bullmq";
-import { Redis } from "ioredis";
+import { createConnection, QUEUE_NAMES, queuePrefix } from "@ferrel/queues";
 
-// BullMQ 6 needs an explicit Redis client in ESM. Workers block on Redis,
-// so maxRetriesPerRequest must be null.
-export const connection = new Redis(process.env.REDIS_URL ?? "redis://localhost:6379", {
-  maxRetriesPerRequest: null,
-});
+// Queue names, ticket formats and connection settings live in @ferrel/queues,
+// shared with the web app. Workers wait on Redis, so they use the "worker" client.
+export const connection = createConnection("worker");
+export const prefix = queuePrefix();
 
-// One queue per kind of background work. Phase 4 adds "audio", phase 6 adds "pricing".
-export const QUEUE_NAMES = { system: "system" } as const;
-
-export const systemQueue = new Queue(QUEUE_NAMES.system, { connection });
+export const systemQueue = new Queue(QUEUE_NAMES.system, { connection, prefix });
