@@ -84,3 +84,24 @@ describe("single pages", () => {
     expect(await getPublicCreator("nobody-at-all-here")).toBeNull();
   });
 });
+
+describe("releases whose audio failed after publishing (user choice A, slice 8)", () => {
+  it("are hidden from every public list and page until fixed; processing ones still show", async () => {
+    const [D] = await createUsers(["pd"]);
+    const broken = { audioStatus: "failed" as const, audioError: "This file has no audio in it." };
+    await db.insert(tracks).values([
+      live(D.id, "d-broken", 1, { ...broken, genre: "ambient" }),
+      live(D.id, "d-broken-old", 2, { ...broken, status: "archived" }),
+      live(D.id, "d-ok", 3, { genre: "ambient" }),
+    ]);
+
+    expect((await latestReleases(50)).map((r) => r.title)).not.toContain("d-broken");
+    const ambient = await explorePage({ genre: "ambient", page: 1 });
+    expect(ambient.rows.map((r) => r.title)).toContain("d-ok");
+    expect(ambient.rows.map((r) => r.title)).not.toContain("d-broken");
+    expect((await creatorReleases(D.id)).map((r) => r.title)).toEqual(["d-ok"]);
+    expect(await getPublicTrack(D.slug!, "d-broken")).toBeNull();
+    expect(await getPublicTrack(D.slug!, "d-broken-old")).toBeNull();
+    expect(await getPublicTrack(D.slug!, "d-ok")).not.toBeNull();
+  });
+});
