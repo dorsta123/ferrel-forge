@@ -23,6 +23,7 @@ describe("classifyFailure", () => {
     ["FFmpeg not installed", tool("FFMPEG_MISSING")],
     ["FFmpeg tampered with", tool("FFMPEG_TAMPERED")],
     ["FFmpeg not starting", tool("START_FAILED")],
+    ["FFmpeg killed by the system (e.g. out of memory)", tool("KILLED")],
     ["an unsupported server", tool("UNSUPPORTED_PLATFORM")],
     ["storage or database errors", new Error("ECONNREFUSED")],
   ])("never blames the artist for our problem: %s (retried, even on the last attempt)", (_, err) => {

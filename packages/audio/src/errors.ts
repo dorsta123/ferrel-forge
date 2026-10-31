@@ -4,6 +4,7 @@ export type AudioToolErrorCode =
   | "FFMPEG_TAMPERED" // file doesn't match the pinned SHA-256
   | "START_FAILED" // the operating system couldn't start FFmpeg (our problem, not the file's)
   | "TIMEOUT" // FFmpeg ran past its time limit and was stopped
+  | "KILLED" // FFmpeg was stopped from outside (e.g. out of memory): not the file's fault
   | "FAILED" // FFmpeg exited with an error (e.g. not valid audio)
   | "NO_AUDIO"; // the file decoded to zero samples
 

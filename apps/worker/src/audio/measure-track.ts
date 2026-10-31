@@ -32,7 +32,8 @@ export async function measureTrack(ticket: AudioProcessJob, { lastAttempt, timeo
   const copy = join(tempDir, `ferrel-${randomUUID()}.${format}`);
   try {
     if (!(await downloadObjectToFile("masters", ticket.audioKey, copy))) throw new MissingMasterError();
-    const { durationMs, peaks } = await analyzeAudio(copy, format, { timeoutMs });
+    // Read at most a second past the limit: enough to tell "too long" without decoding all of it.
+    const { durationMs, peaks } = await analyzeAudio(copy, format, { timeoutMs, maxMs: TRACK_LIMITS.durationMaxMs + 1_000 });
     if (durationMs > TRACK_LIMITS.durationMaxMs) throw new TooLongError();
     return (await saveMeasured(ticket, { durationMs, waveform: toWaveformBars(peaks) })) ? "ready" : "skipped";
   } catch (err) {
@@ -40,6 +41,7 @@ export async function measureTrack(ticket: AudioProcessJob, { lastAttempt, timeo
     if (decision.action === "retry") throw err;
     return (await saveFailed(ticket, decision.reason)) ? "failed" : "skipped";
   } finally {
-    await rm(copy, { force: true });
+    // A failed clean-up must not change the result (e.g. Windows briefly locking the file).
+    await rm(copy, { force: true }).catch((err: Error) => console.warn(`[audio] couldn't delete temp file ${copy}: ${err.message}`));
   }
 }

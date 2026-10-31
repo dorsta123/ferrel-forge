@@ -23,7 +23,12 @@ export type AudioAnalysis = {
  * (length is display-only; billing uses ad-platform exposure). Uploads arriving
  * incomplete are caught earlier by the storage byte-size check.
  */
-export async function analyzeAudio(file: string, format: InputFormat, { timeoutMs = 120_000 }: { timeoutMs?: number } = {}): Promise<AudioAnalysis> {
+/** `maxMs`: stop reading after this much audio, so an over-long file is caught without decoding all of it. */
+export async function analyzeAudio(
+  file: string,
+  format: InputFormat,
+  { timeoutMs = 120_000, maxMs }: { timeoutMs?: number; maxMs?: number } = {},
+): Promise<AudioAnalysis> {
   const windows: number[] = [];
   let windowMax = 0;
   let inWindow = 0;
@@ -49,14 +54,17 @@ export async function analyzeAudio(file: string, format: InputFormat, { timeoutM
   // -xerror: stop on any error FFmpeg reports. (Damage FFmpeg can resync past, e.g.
   // a corrupted stretch inside a FLAC or MP3, is skipped silently at every log level;
   // the length then reflects the audio that really decodes. Verified in slice 2.)
-  await runFfmpeg(["-xerror", ...localInput(file, format), "-map", "0:a:0", "-ac", "1", "-ar", String(SAMPLE_RATE), "-f", "s16le", "pipe:1"], {
+  await runFfmpeg(["-xerror", ...localInput(file, format), "-map", "0:a:0", ...(maxMs ? ["-t", String(maxMs / 1000)] : []), "-ac", "1", "-ar", String(SAMPLE_RATE), "-f", "s16le", "pipe:1"], {
     timeoutMs,
     onStdout,
   });
   if (inWindow > 0) windows.push(windowMax);
-  if (samples === 0) throw new AudioToolError("NO_AUDIO", "The file contains no audio.");
+  // Under a millisecond counts as no audio (lengths are stored as at least 1 ms). In practice
+  // FFmpeg's resampler turns such tiny inputs into 0 samples (measured in slice 5).
+  const durationMs = Math.round((samples / SAMPLE_RATE) * 1000);
+  if (durationMs < 1) throw new AudioToolError("NO_AUDIO", "The file contains no audio.");
 
-  return { durationMs: Math.round((samples / SAMPLE_RATE) * 1000), peaks: toPeaks(windows, PEAK_COUNT) };
+  return { durationMs, peaks: toPeaks(windows, PEAK_COUNT) };
 }
 
 /** Group window maxima into `count` peaks (stretching when there are fewer windows), scaled to 0..1. */

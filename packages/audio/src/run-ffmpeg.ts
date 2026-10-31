@@ -81,8 +81,10 @@ export async function runFfmpeg(args: readonly string[], options: RunOptions = {
       stderr = (stderr + chunk.toString()).slice(-STDERR_TAIL);
     });
     child.on("error", (err) => finish(new AudioToolError("START_FAILED", `Couldn't start FFmpeg: ${err.message}`)));
-    child.on("close", (code) => {
+    child.on("close", (code, signal) => {
       if (stopped) return finish(stopped);
+      // Killed by something other than us (e.g. the system running out of memory).
+      if (code === null) return finish(new AudioToolError("KILLED", `FFmpeg was stopped by ${signal ?? "the system"}.`));
       if (code !== 0) return finish(new AudioToolError("FAILED", summarize(stderr) || `FFmpeg exited with code ${code}.`));
       finish(null);
     });

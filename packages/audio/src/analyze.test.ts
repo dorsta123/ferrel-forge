@@ -14,6 +14,8 @@ beforeAll(async () => {
   await generate(tmp.file("tone 40s.flac"), { seconds: 40 });
   await generate(tmp.file("short 8s.wav"), { seconds: 8 });
   await generate(tmp.file("silence 10s.wav"), { seconds: 10, silent: true });
+  // A few samples of real audio, under a millisecond: the database needs a length of at least 1 ms.
+  await generate(tmp.file("blip.wav"), { seconds: 0.0001 });
   // 20 s loud tone followed by 20 s of silence, to check the waveform's shape.
   await generate(tmp.file("loud.wav"), { seconds: 20, volume: 6 });
   await generate(tmp.file("quiet.wav"), { seconds: 20, silent: true });
@@ -73,6 +75,16 @@ describe("analyzeAudio", () => {
     const { durationMs } = await analyzeAudio(tmp.file("first third.mp3"), "mp3");
     expect(durationMs).toBeGreaterThan(10_000);
     expect(durationMs).toBeLessThan(16_000);
+  });
+
+  it("treats a file shorter than a millisecond as no audio", async () => {
+    await expect(analyzeAudio(tmp.file("blip.wav"), "wav")).rejects.toMatchObject({ code: "NO_AUDIO" });
+  });
+
+  it("stops reading at maxMs, so an over-long file is caught without decoding all of it", async () => {
+    const { durationMs, peaks } = await analyzeAudio(tmp.file("tone 40s.wav"), "wav", { maxMs: 5_000 });
+    expect(Math.abs(durationMs - 5_000)).toBeLessThanOrEqual(TOLERANCE_MS);
+    expect(peaks).toHaveLength(PEAK_COUNT);
   });
 
   it("refuses a file that isn't audio", async () => {

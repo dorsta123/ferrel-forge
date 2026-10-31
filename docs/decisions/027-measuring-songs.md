@@ -15,6 +15,14 @@ Each audio ticket (decision 026) must turn an uploaded master into a length and 
   - too slow, only after the last attempt.
 - **Our problems** (FFmpeg missing, tampered or not starting; storage or database errors; anything unexpected): the job throws, BullMQ retries 3 times, and after that the sweep re-sends it every 5 minutes. The track stays "processing" and is never marked failed for something the artist can't fix. FFmpeg failing to start has its own code (`START_FAILED`), so it isn't mistaken for a bad file.
 - The artist-facing messages live in `apps/worker/src/audio/failure.ts` (`AUDIO_FAILURE`).
+- **Hardening (from review):**
+  - The download has a 5-minute limit (a stalled connection would otherwise hang the job forever, and the sweep can't replace a job that is still running).
+  - The download's byte count must match storage's, so a cut-off copy is retried, not measured as a shorter song.
+  - The temporary copy is created fresh and readable only by the worker's user.
+  - Decoding stops one second past the 4-hour limit.
+  - FFmpeg killed from outside (e.g. out of memory) is `KILLED` and retried, not blamed on the file.
+  - A length under 1 ms counts as no audio; FFmpeg's resampler already turns such tiny files into 0 samples (measured: 121 input samples → 0, 124 → 18).
+  - A failed temp-file delete is only logged.
 
 ## Alternatives considered
 - **Measure with a quick header read (ffprobe):** faster, but MP3 headers can lie about length (decision 023: count decoded samples).

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db, eq, tracks } from "@ferrel/db";
+import { deleteObject } from "@ferrel/storage";
 import { runFfmpeg } from "@ferrel/audio";
 import { AUDIO_FAILURE } from "../../src/audio/failure";
 import { measureTrack } from "../../src/audio/measure-track";
@@ -17,6 +18,7 @@ beforeAll(async () => {
   creator = await createCreator("measure");
   await runFfmpeg(["-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=10", "-ac", "1", join(files, "tone 10s.wav")]);
   writeFileSync(join(files, "fake.wav"), "plain text pretending to be a wav file");
+  await runFfmpeg(["-y", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100:duration=0.0001", join(files, "blip.wav")]);
 });
 afterAll(async () => {
   await removeCreated();
@@ -44,6 +46,22 @@ describe("measureTrack", () => {
 
     const row = await trackRow(ticket.trackId);
     expect(row).toMatchObject({ status: "failed", error: AUDIO_FAILURE.unreadable, durationMs: null, waveform: null });
+    expect(readdirSync(work)).toEqual([]);
+  });
+
+  it.each([
+    ["a file under a millisecond long", "blip.wav", AUDIO_FAILURE.noAudio],
+  ])("marks %s 'failed' at once, instead of retrying forever", async (_, name, reason) => {
+    const ticket = await trackWithMaster(creator, join(files, name), "wav");
+    expect(await measureTrack(ticket, { lastAttempt: false, tempDir: work })).toBe("failed");
+    expect(await trackRow(ticket.trackId)).toMatchObject({ status: "failed", error: reason });
+  });
+
+  it("marks a track 'failed' when its master is missing from storage", async () => {
+    const ticket = await trackWithMaster(creator, join(files, "tone 10s.wav"), "wav");
+    await deleteObject("masters", ticket.audioKey);
+    expect(await measureTrack(ticket, { lastAttempt: false, tempDir: work })).toBe("failed");
+    expect(await trackRow(ticket.trackId)).toMatchObject({ status: "failed", error: AUDIO_FAILURE.missing });
     expect(readdirSync(work)).toEqual([]);
   });
 
