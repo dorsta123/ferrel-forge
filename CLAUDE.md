@@ -47,6 +47,7 @@ apps/worker      BullMQ worker (Node, run with tsx) — slow/scheduled jobs off 
 packages/db      Drizzle schema (src/schema/, one domain per file), shared domain constants (src/constants/: genres, keys, limits for DB checks, validation and UI), db client
 packages/pricing Pure pricing engine
 packages/audio   FFmpeg tooling: pinned + verified binary, runFfmpeg (safe runner), analyzeAudio (length + waveform) — docs/decisions/022–024
+packages/queues  BullMQ queue names, job tickets (audio: track + exact file), Redis connections, the stuck-audio sweep — shared by web and worker (docs/decisions/026)
 packages/storage S3 client for RustFS (config, client, buckets, policies, setup); used by web uploads and the worker
 ```
 
@@ -55,7 +56,7 @@ packages/storage S3 client for RustFS (config, client, buckets, policies, setup)
 - **Auth**: server config in `apps/web/src/lib/auth.ts`, browser helpers in `auth-client.ts`. Server code gets the user only via `getCurrentUser()` (`apps/web/src/lib/session.ts`), which reads the session cookie, so callers must sit inside `<Suspense>`. Authorize inside each page/Server Action next to the data, never only in the header. After a Server Action changes something the header shows, call `revalidatePath("/", "layout")` before `redirect()` or the layout stays stale.
 - **User data validation** lives in Better Auth `databaseHooks` in `auth.ts` (sign-up *and* the `/update-user` endpoint both write users). Display names: `lib/display-name.ts` (normalized, 1–60 chars). `image` is forced to null until avatar uploads exist. Hooks are merged as `{ ...request, ...hookData }` — to strip a field, overwrite it (e.g. `image: null`); omitting the key keeps the request value.
 - **Feature modules** (`apps/web/src/features/<name>/`): `rules.ts` (pure, shared browser/server), `types.ts`, data access, `service.ts` (logic given an authenticated id, no Next imports), `actions.ts` (thin `"use server"` wrappers), `use-*.ts` hook, components — see docs/decisions/013. Browser code imports domain constants from `@ferrel/db/constants`, never `@ferrel/db` (which connects to the database).
-- **Web → worker** communication is only through BullMQ queues in Redis. Queue names are defined in `apps/worker/src/queues.ts`; one queue per kind of work.
+- **Web → worker** communication is only through BullMQ queues in Redis. Queue names, ticket formats and connections are defined in `packages/queues` (the web app can't import from the worker); one queue per kind of work. Sending a ticket never blocks or fails a web request (2 s limit); work the database says is owed (e.g. tracks still "processing") is re-sent by a sweep.
 - Planned licensing/money rules (phases 5–8): each license stores its locked rate, the pricing feature snapshot it was quoted from, and the contributor split version in force; splits are integer basis points totalling 10,000, every contributor must accept, and settlement (on invoice paid → fee → split → ledger → Stripe Connect test transfer, held balance if no payout account) must be idempotent with shares summing exactly to the amount paid; exposure is recorded per license per day (per city when available) and invoices are computed from those rows, rounding once per invoice line; every money movement goes in a double-entry ledger table rather than mutating balances; a license is its own record separate from the audio file; master audio stays in a private bucket served only via signed URLs, previews in a public bucket; anything simulated is labelled as such.
 
 ## Next.js 16 specifics
@@ -70,7 +71,7 @@ This Next.js version differs from older training data — read `apps/web/AGENTS.
 
 - pnpm requires explicit approval for dependency install scripts: add them under `allowBuilds` in `pnpm-workspace.yaml` (`true` to allow, `false` to silence) or install fails with `ERR_PNPM_IGNORED_BUILDS`.
 - TypeScript is pinned to `^5` to match Next.js — don't upgrade to 7.
-- BullMQ 6 needs an explicit `ioredis` client instance (see `apps/worker/src/queues.ts`); passing `{ url }` options fails under ESM.
+- BullMQ 6 needs an explicit `ioredis` client instance (see `packages/queues/src/connection.ts`; workers need `maxRetriesPerRequest: null`, the web side gives up after one retry); passing `{ url }` options fails under ESM.
 - MinIO no longer publishes free Docker images; RustFS is the local S3 stand-in.
 - Never name a package script `setup`: `pnpm setup` is a pnpm built-in that edits the user PATH (the storage script is `setup-buckets`). Prefer `pnpm run <script>` in root scripts.
 - Signed upload URLs only sign `host` + `content-length` by default; pass `signableHeaders: new Set(["content-type", "content-length"])` to `getSignedUrl` so storage rejects a different content type.
