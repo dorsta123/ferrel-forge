@@ -92,7 +92,8 @@ export async function changeReleaseStatus(creatorId: string, trackId: string, ac
         .update(tracks)
         // Keep the first publish time: it locks the URL, and re-publishing doesn't jump the queue on Explore.
         .set({ status: "published", publishedAt: sql`coalesce(${tracks.publishedAt}, now())` })
-        .where(and(owned, eq(tracks.status, "draft"), sql`${tracks.audioKey} is not null`))
+        // Repeats checkAction: audio attached, and not failed (decision 014: rules live in the WHERE too).
+        .where(and(owned, eq(tracks.status, "draft"), sql`${tracks.audioKey} is not null and ${tracks.audioStatus} <> 'failed'`))
         .returning({ id: tracks.id });
       break;
     case "unpublish":
