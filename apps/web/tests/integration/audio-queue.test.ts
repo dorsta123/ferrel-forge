@@ -9,14 +9,14 @@ import { confirmAudioUpload, requestAudioUpload } from "@/features/audio-upload/
 import { createUsers, removeCreatedUsers, type TestUser } from "./support";
 
 let A: TestUser;
-let uploadId: string, rejectId: string, freshId: string, readyId: string;
+let uploadId: string, rejectId: string, freshId: string, readyId: string, noPreviewId: string, previewOffId: string;
 
 beforeAll(async () => {
   [A] = await createUsers(["queuea"]);
   const base = { creatorId: A.id, genre: "pop" as const, basePriceCents: 500 };
-  [{ id: uploadId }, { id: rejectId }, { id: freshId }, { id: readyId }] = await db
+  [{ id: uploadId }, { id: rejectId }, { id: freshId }, { id: readyId }, { id: noPreviewId }, { id: previewOffId }] = await db
     .insert(tracks)
-    .values(["upload", "reject", "fresh", "ready"].map((s) => ({ ...base, title: s, slug: `q-${s}` })))
+    .values(["upload", "reject", "fresh", "ready", "no-preview", "preview-off"].map((s) => ({ ...base, title: s, slug: `q-${s}` })))
     .returning({ id: tracks.id });
   await getAudioQueue().drain(true);
 });
@@ -66,13 +66,17 @@ describe("audio queue", () => {
     expect(await ticketsFor(rejectId)).toEqual([]);
   });
 
-  it("the sweep re-sends tickets for tracks stuck in 'processing', and only those", async () => {
+  it("the sweep re-sends tickets for unfinished tracks (processing, or ready without a wanted preview), and only those", async () => {
     await getAudioQueue().drain(true); // as if Redis lost the tickets
-    const audio = (n: string) => ({ audioKey: newMasterKey(A.id, n === "fresh" ? freshId : readyId, "wav"), audioSizeBytes: 10, audioFormat: "wav" as const });
-    await db.update(tracks).set({ ...audio("fresh"), audioStatus: "processing" }).where(eq(tracks.id, freshId));
-    await db.update(tracks).set({ ...audio("ready"), audioStatus: "ready", durationMs: 60_000 }).where(eq(tracks.id, readyId));
-    // Stuck = still processing after 10 minutes. "fresh" was just uploaded; "ready" is done.
-    await db.execute(sql`update tracks set updated_at = now() - interval '20 minutes' where id in (${uploadId}, ${readyId})`);
+    const audio = (id: string) => ({ audioKey: newMasterKey(A.id, id, "wav"), audioSizeBytes: 10, audioFormat: "wav" as const });
+    const done = { audioStatus: "ready" as const, durationMs: 60_000 };
+    await db.update(tracks).set({ ...audio(freshId), audioStatus: "processing" }).where(eq(tracks.id, freshId));
+    await db.update(tracks).set({ ...audio(readyId), ...done, previewKey: `${readyId}/p.mp3` }).where(eq(tracks.id, readyId));
+    await db.update(tracks).set({ ...audio(noPreviewId), ...done }).where(eq(tracks.id, noPreviewId));
+    await db.update(tracks).set({ ...audio(previewOffId), ...done, previewEnabled: false }).where(eq(tracks.id, previewOffId));
+    // Stuck = unfinished 10 minutes after the last change. "fresh" was just uploaded; "ready"
+    // has everything; "preview-off" needs no preview; "no-preview" lost its preview job.
+    await db.execute(sql`update tracks set updated_at = now() - interval '20 minutes' where id in (${uploadId}, ${readyId}, ${noPreviewId}, ${previewOffId})`);
 
     await requeueStuckAudio({ olderThanMs: 10 * 60_000 });
 
@@ -80,6 +84,8 @@ describe("audio queue", () => {
     expect((await ticketsFor(uploadId)).map((t) => t.data)).toEqual([{ trackId: uploadId, audioKey: row.key }]);
     expect(await ticketsFor(freshId)).toEqual([]);
     expect(await ticketsFor(readyId)).toEqual([]);
+    expect(await ticketsFor(previewOffId)).toEqual([]);
+    expect(await ticketsFor(noPreviewId)).toHaveLength(1);
   });
 
   it("a second sweep doesn't add a duplicate while the ticket is still waiting", async () => {

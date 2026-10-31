@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { creatorProfiles, db, eq, sql, tracks, users } from "@ferrel/db";
-import { createUploadUrl, deleteObject, newMasterKey } from "@ferrel/storage";
+import { bucketId, createUploadUrl, deleteObject, newMasterKey, type BucketName } from "@ferrel/storage";
 import type { AudioFormat } from "@ferrel/db/constants";
 
 const run = Date.now().toString(36);
@@ -38,7 +38,7 @@ export async function trackWithMaster(creatorId: string, path: string, format: A
 
 export async function trackRow(id: string) {
   const [row] = await db
-    .select({ status: tracks.audioStatus, error: tracks.audioError, durationMs: tracks.durationMs, waveform: tracks.waveform, key: tracks.audioKey })
+    .select({ status: tracks.audioStatus, error: tracks.audioError, durationMs: tracks.durationMs, waveform: tracks.waveform, key: tracks.audioKey, previewKey: tracks.previewKey })
     .from(tracks)
     .where(eq(tracks.id, id));
   return row;
@@ -49,8 +49,13 @@ export async function removeCreated(): Promise<void> {
   if (ids.length === 0) return;
   const idList = sql.join(ids.map((id) => sql`${id}`), sql`, `);
   const owned = sql`${tracks.creatorId} in (${idList})`;
-  const files = await db.select({ key: tracks.audioKey }).from(tracks).where(owned);
-  await Promise.all(files.map((f) => (f.key ? deleteObject("masters", f.key) : null)));
+  const files = await db.select({ key: tracks.audioKey, preview: tracks.previewKey }).from(tracks).where(owned);
+  await Promise.all(files.flatMap((f) => [f.key && deleteObject("masters", f.key), f.preview && deleteObject("previews", f.preview)]));
   await db.delete(tracks).where(owned);
   await db.delete(users).where(sql`${users.id} in (${idList})`);
+}
+
+/** The address a browser would use, with no credentials (path-style, as RustFS serves it). */
+export function publicUrl(bucket: BucketName, key: string): string {
+  return `${process.env.S3_ENDPOINT ?? "http://localhost:9000"}/${bucketId(bucket)}/${key}`;
 }
