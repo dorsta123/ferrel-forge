@@ -140,6 +140,28 @@ describe("the preview", () => {
     expect(await processTrackAudio(ticket, opts)).toEqual({ measured: "skipped", preview: "made" });
   });
 
+  it("is retried when it fails, then recorded as failed on the last attempt and left alone", async () => {
+    const ticket = await trackWithMaster(creator, join(files, "tone 10s.wav"), "wav");
+    await db.update(tracks).set({ audioStatus: "ready", durationMs: 10_000 }).where(eq(tracks.id, ticket.trackId));
+    await expect(processTrackAudio(ticket, { ...opts, timeoutMs: 1 })).rejects.toThrow();
+    expect((await trackRow(ticket.trackId)).previewFailedAt).toBeNull();
+
+    expect(await processTrackAudio(ticket, { ...opts, lastAttempt: true, timeoutMs: 1 })).toEqual({ measured: "skipped", preview: "failed" });
+    const row = await trackRow(ticket.trackId);
+    expect(row).toMatchObject({ status: "ready", previewKey: null }); // the song itself stays ready
+    expect(row.previewFailedAt).toBeInstanceOf(Date);
+    expect(await processTrackAudio(ticket, opts)).toEqual({ measured: "skipped", preview: "skipped" }); // given up on
+    expect(readdirSync(work)).toEqual([]);
+  });
+
+  it("is given up on the same way when a ready track's master has gone missing", async () => {
+    const ticket = await trackWithMaster(creator, join(files, "tone 10s.wav"), "wav");
+    await db.update(tracks).set({ audioStatus: "ready", durationMs: 10_000 }).where(eq(tracks.id, ticket.trackId));
+    await deleteObject("masters", ticket.audioKey);
+    await expect(processTrackAudio(ticket, opts)).rejects.toThrow();
+    expect((await processTrackAudio(ticket, { ...opts, lastAttempt: true })).preview).toBe("failed");
+  });
+
   it("is deleted again if the track changed while it was being made (song replaced or previews off)", async () => {
     const ticket = await trackWithMaster(creator, join(files, "tone 10s.wav"), "wav");
     await db.update(tracks).set({ audioStatus: "ready", durationMs: 10_000, previewEnabled: false }).where(eq(tracks.id, ticket.trackId));

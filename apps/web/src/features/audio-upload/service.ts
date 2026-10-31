@@ -53,28 +53,36 @@ export async function confirmAudioUpload(creatorId: string, trackId: string, key
   const expected = parseMasterKey(key)!.format;
   if (detected !== expected) return reject(key, "That file isn't valid audio. Use a real WAV, MP3 or FLAC file.");
 
-  const updated = await db
-    .update(tracks)
-    // A new file starts over: the old song's length, waveform, start point, error and
-    // preview no longer apply (the old preview must never play for the new song).
-    .set({
-      audioKey: key,
-      audioSizeBytes: info.size,
-      audioFormat: detected,
-      audioStatus: "processing",
-      audioError: null,
-      durationMs: null,
-      waveform: null,
-      previewStartMs: null,
-      previewKey: null,
-    })
-    .where(and(eq(tracks.id, trackId), eq(tracks.creatorId, creatorId), eq(tracks.status, "draft")))
-    .returning({ id: tracks.id });
-  if (updated.length === 0) return reject(key, NOT_DRAFT.error); // published in the meantime
+  // Read the files being replaced and switch in the same locked step: the worker may attach
+  // a preview of the old song at any moment until then, and that preview must be deleted too.
+  const old = await db.transaction(async (tx) => {
+    const owned = and(eq(tracks.id, trackId), eq(tracks.creatorId, creatorId), eq(tracks.status, "draft"));
+    const [current] = await tx.select({ audioKey: tracks.audioKey, previewKey: tracks.previewKey }).from(tracks).where(owned).for("update");
+    if (!current) return null; // published in the meantime
+    await tx
+      .update(tracks)
+      // A new file starts over: the old song's length, waveform, start point, error and
+      // preview no longer apply (the old preview must never play for the new song).
+      .set({
+        audioKey: key,
+        audioSizeBytes: info.size,
+        audioFormat: detected,
+        audioStatus: "processing",
+        audioError: null,
+        durationMs: null,
+        waveform: null,
+        previewStartMs: null,
+        previewKey: null,
+        previewFailedAt: null,
+      })
+      .where(owned);
+    return current;
+  });
+  if (!old) return reject(key, NOT_DRAFT.error);
 
-  // Only now remove the file it replaced.
-  if (track.audioKey && track.audioKey !== key) await deleteObject("masters", track.audioKey);
-  if (track.previewKey) await deleteObject("previews", track.previewKey);
+  // Only now remove the files it replaced.
+  if (old.audioKey && old.audioKey !== key) await deleteObject("masters", old.audioKey);
+  if (old.previewKey) await deleteObject("previews", old.previewKey);
 
   // Hand the worker its ticket. If Redis is down the upload still counts: the track
   // is saved as "processing" and the worker's sweep re-sends the ticket later.

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { analyzeAudio } from "./analyze";
 import { makePreview, PREVIEW_MS, previewWindow } from "./preview";
+import { runFfmpeg } from "./run-ffmpeg";
 import { generate, makeTempDir } from "./test-fixtures";
 
 const TOLERANCE_MS = 50; // decision 023
@@ -35,8 +36,18 @@ describe("makePreview", () => {
     await generate(tmp.file("tone 40s.mp3"), { seconds: 40, extra: ["-c:a", "libmp3lame", "-q:a", "4"] });
     await generate(tmp.file("silence 40s.flac"), { seconds: 40, silent: true });
     await generate(tmp.file("short 8s.wav"), { seconds: 8, silent: true });
+    // 20 s of silence, then 20 s of loud tone, as a variable-bitrate MP3 with no seek table (hardest to seek in).
+    await generate(tmp.file("quiet.wav"), { seconds: 20, silent: true });
+    await generate(tmp.file("loud.wav"), { seconds: 20, volume: 6 });
+    await runFfmpeg(["-y", "-i", tmp.file("quiet.wav"), "-i", tmp.file("loud.wav"), "-filter_complex", "[0:a][1:a]concat=n=2:v=0:a=1", "-c:a", "libmp3lame", "-q:a", "4", "-write_xing", "0", tmp.file("quiet then loud.mp3")]);
   });
   afterAll(() => tmp.cleanup());
+
+  it("starts exactly at the artist's start, even in a variable-bitrate MP3", async () => {
+    await makePreview(tmp.file("quiet then loud.mp3"), "mp3", tmp.file("p0.mp3"), previewWindow(40_000, 17_000));
+    const { peaks } = await analyzeAudio(tmp.file("p0.mp3"), "mp3"); // 75 ms per peak
+    expect(Math.abs(peaks.findIndex((p) => p > 0.2) - 40)).toBeLessThanOrEqual(2); // loud from 3 s in (20 − 17)
+  });
 
   it(`makes a ${PREVIEW_MS / 1000} s MP3 from a longer track`, async () => {
     await makePreview(tmp.file("tone 40s.mp3"), "mp3", tmp.file("p1.mp3"), previewWindow(40_000, null));

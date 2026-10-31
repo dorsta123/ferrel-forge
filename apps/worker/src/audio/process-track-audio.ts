@@ -10,7 +10,7 @@ import { downloadObjectToFile } from "@ferrel/storage";
 import { MissingMasterError } from "./failure";
 import { measureStep } from "./measure-step";
 import { previewStep } from "./preview-step";
-import { audioState } from "./track-audio-store";
+import { audioState, savePreviewFailed } from "./track-audio-store";
 
 export type ProcessOptions = {
   /** This is BullMQ's last attempt: a slow file now counts as failed. */
@@ -21,7 +21,7 @@ export type ProcessOptions = {
   tempDir?: string;
 };
 
-export type ProcessResult = { measured: "ready" | "failed" | "skipped"; preview: "made" | "skipped" };
+export type ProcessResult = { measured: "ready" | "failed" | "skipped"; preview: "made" | "failed" | "skipped" };
 
 const NOTHING: ProcessResult = { measured: "skipped", preview: "skipped" };
 
@@ -29,7 +29,7 @@ export async function processTrackAudio(ticket: AudioProcessJob, { lastAttempt, 
   const state = await audioState(ticket);
   if (!state) return NOTHING; // the song was replaced
   const needsMeasuring = state.status === "processing";
-  const wantsPreview = state.previewEnabled && state.previewKey === null;
+  const wantsPreview = state.previewEnabled && state.previewKey === null && state.previewFailedAt === null;
   if (!needsMeasuring && !(state.status === "ready" && wantsPreview)) return NOTHING;
 
   // Our own random name: nothing from the upload reaches the file system or FFmpeg's arguments.
@@ -53,8 +53,17 @@ export async function processTrackAudio(ticket: AudioProcessJob, { lastAttempt, 
       durationMs = m.durationMs;
     }
     if (!wantsPreview || durationMs === null) return { measured, preview: "skipped" };
-    const preview = await previewStep(ticket, await master(), state.format, { durationMs, previewStartMs: state.previewStartMs }, { tempDir, timeoutMs });
-    return { measured, preview };
+    try {
+      const preview = await previewStep(ticket, await master(), state.format, { durationMs, previewStartMs: state.previewStartMs }, { tempDir, timeoutMs });
+      return { measured, preview };
+    } catch (err) {
+      // Ours, never the artist's (the song decoded fine): retry, and after the last attempt
+      // record it and stop, so a preview that can't be made isn't retried forever.
+      if (!lastAttempt) throw err;
+      console.error(`[audio] preview for track ${ticket.trackId} failed on the last attempt: ${(err as Error).message}`);
+      await savePreviewFailed(ticket);
+      return { measured, preview: "failed" };
+    }
   } finally {
     // A failed clean-up must not change the result (e.g. Windows briefly locking the file).
     await rm(copy, { force: true }).catch((err: Error) => console.warn(`[audio] couldn't delete temp file ${copy}: ${err.message}`));

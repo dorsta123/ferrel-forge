@@ -11,7 +11,9 @@ Decision 022 set the preview's shape: 15 seconds, the artist's start (about 25% 
 - **The sound:** a 1 kHz sine, 0.6 s with short fades, mixed at about −30 dBFS (FFmpeg's sine is 1/8 scale, at 25% volume). MP3 at 128 kbps stereo, about 240 KB. The level will be tuned by ear once a real preview can be heard.
 - **Public file, new random name:** `previews/<trackId>/<random>.mp3`. A new name every time means browsers never play an old cached copy.
 - **Attached only if nothing changed:** the key is saved only while the track is "ready", still has that master, previews are on and it has no preview yet. Otherwise the just-uploaded file is deleted again, so nothing stray stays public.
-- **Preview failures are ours:** the song already decoded while measuring, so the step throws and is retried, never shown to the artist as "failed". The sweep also re-sends "ready" tracks still missing a wanted preview.
+- **Preview failures are ours:** the song already decoded while measuring, so the step throws and is retried, never shown to the artist as "failed". After the last attempt it records `preview_failed_at` and stops (migration `0008_preview_failed_at`). The sweep re-sends "ready" tracks still missing a wanted preview, except those given up on. A new upload clears the mark.
+- **Old previews are always removed (from review):** a re-upload reads the old preview inside the same locked update (`SELECT … FOR UPDATE`), so one the worker attached a moment earlier is deleted too. Deleting a release deletes its preview.
+- **Seeking:** `-ss`/`-t` on the input were checked on a variable-bitrate MP3 with no seek table. The start was exact (±75 ms), and a test keeps it that way.
 
 ## Alternatives considered
 - **A separate preview job:** cleaner separation, but a second download of up to 150 MB and a second ticket type to keep in step.

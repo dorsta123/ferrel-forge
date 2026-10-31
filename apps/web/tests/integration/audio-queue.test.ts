@@ -74,9 +74,11 @@ describe("audio queue", () => {
     await db.update(tracks).set({ ...audio(readyId), ...done, previewKey: `${readyId}/p.mp3` }).where(eq(tracks.id, readyId));
     await db.update(tracks).set({ ...audio(noPreviewId), ...done }).where(eq(tracks.id, noPreviewId));
     await db.update(tracks).set({ ...audio(previewOffId), ...done, previewEnabled: false }).where(eq(tracks.id, previewOffId));
+    // The rejected upload's track, reused: its preview failed every attempt, so it's given up on.
+    await db.update(tracks).set({ ...audio(rejectId), ...done, previewFailedAt: new Date() }).where(eq(tracks.id, rejectId));
     // Stuck = unfinished 10 minutes after the last change. "fresh" was just uploaded; "ready"
     // has everything; "preview-off" needs no preview; "no-preview" lost its preview job.
-    await db.execute(sql`update tracks set updated_at = now() - interval '20 minutes' where id in (${uploadId}, ${readyId}, ${noPreviewId}, ${previewOffId})`);
+    await db.execute(sql`update tracks set updated_at = now() - interval '20 minutes' where id in (${uploadId}, ${readyId}, ${noPreviewId}, ${previewOffId}, ${rejectId})`);
 
     await requeueStuckAudio({ olderThanMs: 10 * 60_000 });
 
@@ -85,6 +87,7 @@ describe("audio queue", () => {
     expect(await ticketsFor(freshId)).toEqual([]);
     expect(await ticketsFor(readyId)).toEqual([]);
     expect(await ticketsFor(previewOffId)).toEqual([]);
+    expect(await ticketsFor(rejectId)).toEqual([]);
     expect(await ticketsFor(noPreviewId)).toHaveLength(1);
   });
 

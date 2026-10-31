@@ -45,7 +45,7 @@ Two-strike rule: if the same fix fails twice, stop and rethink.
 - [ ] Previews are 15 s, start where the creator chose (or about 25% in), and contain one watermark tone at 7.5 s.
 - [ ] Visitors can play the preview, never the master.
 - [ ] A release can be published before its preview is ready, or with previews switched off; public pages then simply show no player.
-- [ ] Replacing the audio, or changing the start, replaces the preview and deletes the old file.
+- [ ] Replacing the audio, or changing the start, replaces the preview and deletes the old file. Deleting a release deletes its preview.
 - [ ] Corrupt files end as "Preview failed" with a reason and a retry.
 - [ ] Listen links accept only the allowed sites; anything else is refused on the server.
 - [ ] Abandoned uploads are deleted after 24 hours.

@@ -16,6 +16,7 @@ export async function audioState(ticket: AudioProcessJob) {
       previewEnabled: tracks.previewEnabled,
       previewKey: tracks.previewKey,
       previewStartMs: tracks.previewStartMs,
+      previewFailedAt: tracks.previewFailedAt,
     })
     .from(tracks)
     .where(sameFile(ticket));
@@ -40,6 +41,14 @@ export async function saveFailed(ticket: AudioProcessJob, reason: string): Promi
     .where(and(sameFile(ticket), eq(tracks.audioStatus, "processing")))
     .returning({ id: tracks.id });
   return done.length > 0;
+}
+
+/** Give up on this file's preview after its last attempt, so it isn't retried forever. */
+export async function savePreviewFailed(ticket: AudioProcessJob): Promise<void> {
+  await db
+    .update(tracks)
+    .set({ previewFailedAt: new Date() })
+    .where(and(sameFile(ticket), eq(tracks.audioStatus, "ready"), sql`${tracks.previewKey} is null`));
 }
 
 /** Attach a new preview, only while the track is ready, still wants one and has none. */

@@ -38,7 +38,7 @@ export async function trackWithMaster(creatorId: string, path: string, format: A
 
 export async function trackRow(id: string) {
   const [row] = await db
-    .select({ status: tracks.audioStatus, error: tracks.audioError, durationMs: tracks.durationMs, waveform: tracks.waveform, key: tracks.audioKey, previewKey: tracks.previewKey })
+    .select({ status: tracks.audioStatus, error: tracks.audioError, durationMs: tracks.durationMs, waveform: tracks.waveform, key: tracks.audioKey, previewKey: tracks.previewKey, previewFailedAt: tracks.previewFailedAt })
     .from(tracks)
     .where(eq(tracks.id, id));
   return row;

@@ -84,7 +84,7 @@ describe("confirmAudioUpload", () => {
 
   // A replaced song must not keep the old song's length, waveform, start point or error.
   it.each([
-    ["a processed song", { audioStatus: "ready" as const, durationMs: 30_000, previewStartMs: 5_000, waveform: Array<number>(200).fill(500) }],
+    ["a processed song", { audioStatus: "ready" as const, durationMs: 30_000, previewStartMs: 5_000, waveform: Array<number>(200).fill(500), previewFailedAt: new Date() }],
     ["a failed song", { audioStatus: "failed" as const, audioError: "That file isn't valid audio." }],
   ])("replacing %s clears its old results and marks the new one as processing", async (_, before) => {
     await db
@@ -102,10 +102,10 @@ describe("confirmAudioUpload", () => {
     expect(error(await confirmAudioUpload(A.id, draftId, link.key))).toBe("ok");
 
     const [row] = await db
-      .select({ key: tracks.audioKey, status: tracks.audioStatus, error: tracks.audioError, durationMs: tracks.durationMs, start: tracks.previewStartMs, waveform: tracks.waveform })
+      .select({ key: tracks.audioKey, status: tracks.audioStatus, error: tracks.audioError, durationMs: tracks.durationMs, start: tracks.previewStartMs, waveform: tracks.waveform, previewFailedAt: tracks.previewFailedAt })
       .from(tracks)
       .where(eq(tracks.id, draftId));
-    expect(row).toEqual({ key: link.key, status: "processing", error: null, durationMs: null, start: null, waveform: null });
+    expect(row).toEqual({ key: link.key, status: "processing", error: null, durationMs: null, start: null, waveform: null, previewFailedAt: null });
   });
 
   it("replacing the audio removes the old song's preview, so it can never play for the new one", async () => {

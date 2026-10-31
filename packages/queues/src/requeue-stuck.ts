@@ -6,10 +6,10 @@ import { queueAudioProcessing } from "./audio-queue";
 
 const PAGE = 100;
 
-/** Still owed work: not measured yet, or measured but missing a wanted preview. */
+/** Still owed work: not measured yet, or measured but missing a wanted preview that hasn't been given up on. */
 const unfinished = or(
   eq(tracks.audioStatus, "processing"),
-  and(eq(tracks.audioStatus, "ready"), eq(tracks.previewEnabled, true), sql`${tracks.previewKey} is null`),
+  and(eq(tracks.audioStatus, "ready"), eq(tracks.previewEnabled, true), sql`${tracks.previewKey} is null and ${tracks.previewFailedAt} is null`),
 );
 
 /**
