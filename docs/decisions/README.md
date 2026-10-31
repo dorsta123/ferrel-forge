@@ -30,6 +30,7 @@ One file per decision, numbered in order. To reverse a decision, add a new recor
 | [024](024-fetch-ffmpeg-ourselves.md) | Fetch the pinned FFmpeg builds ourselves (`pnpm audio:fetch`): stall timeout, retries, SHA-256 verified, CI-cached | Accepted |
 | [025](025-audio-result-columns.md) | Audio results on `tracks` (status, error, preview, start, waveform as 200 bars 0–1000), guarded by check constraints; new uploads reset them; existing uploads cleared | Accepted |
 | [026](026-audio-queue.md) | Uploads reach the worker as one ticket per file (id from track + file); sending never blocks the upload; a 5-minute sweep re-sends tickets for stuck tracks | Accepted |
+| [027](027-measuring-songs.md) | The worker measures each song once (length + waveform together); the file's problems → "failed" with a message for the artist, ours → retried, never blamed on the artist | Accepted |
 
 ## Template
 

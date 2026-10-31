@@ -1,3 +1,7 @@
+import { createWriteStream } from "node:fs";
+import { stat } from "node:fs/promises";
+import { pipeline } from "node:stream/promises";
+import type { Readable } from "node:stream";
 import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { bucketId, type BucketName } from "./buckets";
 import { getS3Client } from "./client";
@@ -24,6 +28,29 @@ export async function readObjectStart(bucket: BucketName, key: string, length: n
     new GetObjectCommand({ Bucket: bucketId(bucket), Key: key, Range: `bytes=0-${length - 1}` }),
   );
   return res.Body ? new Uint8Array(await res.Body.transformToByteArray()) : new Uint8Array();
+}
+
+/**
+ * Stream a whole object into a new local file (server/worker only), without holding it
+ * in memory. Returns false if the object doesn't exist. Throws if it takes longer than
+ * `timeoutMs` (a stalled connection would otherwise hang forever) or arrives incomplete.
+ * The file is created fresh and readable only by this user.
+ */
+export async function downloadObjectToFile(bucket: BucketName, key: string, path: string, { timeoutMs = 5 * 60_000 } = {}): Promise<boolean> {
+  const signal = AbortSignal.timeout(timeoutMs);
+  try {
+    const res = await getS3Client().send(new GetObjectCommand({ Bucket: bucketId(bucket), Key: key }), { abortSignal: signal });
+    if (!res.Body) return false;
+    await pipeline(res.Body as Readable, createWriteStream(path, { flags: "wx", mode: 0o600 }), { signal });
+    const { size } = await stat(path);
+    if (res.ContentLength !== undefined && size !== res.ContentLength) {
+      throw new Error(`Download incomplete: ${size} of ${res.ContentLength} bytes.`);
+    }
+    return true;
+  } catch (err) {
+    if (statusOf(err) === 404) return false;
+    throw err;
+  }
 }
 
 /** Delete an object. Deleting something that's already gone is not an error. */

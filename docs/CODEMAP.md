@@ -80,7 +80,7 @@ Many fast unit tests at the bottom, fewer slow browser tests at the top ([decisi
 | Layer | Command | Where | Checks |
 |---|---|---|---|
 | Unit | `pnpm test` | `*.test.ts` next to the code | Pure rules |
-| Integration | `pnpm test:integration` | [`apps/web/tests/integration/`](../apps/web/tests/integration/) | Services and queries with *forged* input, database rules, storage security |
+| Integration | `pnpm test:integration` | [`apps/web/tests/integration/`](../apps/web/tests/integration/), [`apps/worker/tests/integration/`](../apps/worker/tests/integration/) | Services and queries with *forged* input, database rules, storage security; the worker measuring real songs with real FFmpeg |
 | End to end | `pnpm e2e` | [`e2e/specs/`](../e2e/specs/) | Real Chrome clicking through journeys |
 
 ### 2.7 How changes are made
@@ -126,7 +126,12 @@ apps/web/src/
 apps/worker/src/            background jobs (BullMQ on Redis)
 ├── index.ts                starts the workers, schedules the 5-minute sweep
 ├── queues.ts               the worker's Redis connection and system queue
-├── audio/process-audio.ts  one uploaded file to process (slice 4: logs the ticket)
+├── audio/                  one uploaded file to process (decision 027):
+│   ├── process-audio.ts    reads the ticket, knows if this is the last attempt
+│   ├── measure-track.ts    download → analyzeAudio → save length + waveform, temp copy always deleted
+│   ├── track-audio-store.ts the worker's reads/writes, only for the ticket's current file
+│   ├── failure.ts          the file's fault (message for the artist) or ours (retry)
+│   └── waveform-bars.ts    peaks 0–1 → 200 bars 0–1000
 └── system/                 housekeeping jobs: ping, re-send stuck audio tickets
 packages/queues/            what web and worker share: queue names, the audio ticket (track + exact
                             file), its duplicate-proof id, sending with a 2 s limit, the stuck-track sweep
@@ -190,6 +195,7 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
    - a fake file is deleted;
    - a real one is attached to the track (status "processing"), and any older file is deleted.
 5. **The worker gets a ticket.** The service sends `{ track, exact file }` to the audio queue ([queues/audio-queue.ts](../packages/queues/src/audio-queue.ts)); the worker picks it up in [process-audio.ts](../apps/worker/src/audio/process-audio.ts). If Redis was down, the 5-minute sweep re-sends it ([queues/requeue-stuck.ts](../packages/queues/src/requeue-stuck.ts), [decision 026](decisions/026-audio-queue.md)).
+6. **The worker measures the song.** [measure-track.ts](../apps/worker/src/audio/measure-track.ts) downloads it to a temp file, runs `analyzeAudio`, and saves the length, waveform and "ready", or "failed" with a reason for the artist ([decision 027](decisions/027-measuring-songs.md)). The length then shows on cards, the release page and the dashboard.
 
 ---
 
@@ -233,7 +239,8 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 | Upload fails | Browser Network tab (the PUT to `localhost:9000`); use `localhost:3000`, **not** `127.0.0.1`; [audio-upload/service.ts](../apps/web/src/features/audio-upload/service.ts) |
 | Sign-in / sign-up error | [components/auth/auth-errors.ts](../apps/web/src/components/auth/auth-errors.ts) maps error codes to messages; server side in [lib/auth.ts](../apps/web/src/lib/auth.ts) |
 | Database "violates check constraint …" | The constraint name says which rule: see [schema/tracks.ts](../packages/db/src/schema/tracks.ts) |
-| A track stays "processing" | Is the worker running (`pnpm dev` starts it)? Its terminal shows `[audio] ticket received …` per upload. A lost ticket is re-sent by the sweep within ~15 minutes; see [decision 026](decisions/026-audio-queue.md) |
+| A track shows "failed" | The reason is in `audio_error` and comes from [failure.ts](../apps/worker/src/audio/failure.ts): the file isn't audio, is silent, is over 4 hours or took too long. The artist re-uploads a fixed file |
+| A track stays "processing" | Is the worker running (`pnpm dev` starts it)? Its terminal shows `[audio:process] done …` or `failed` with the cause per upload; "FFmpeg isn't installed" there means run `pnpm audio:fetch`. A lost ticket is re-sent by the sweep within ~15 minutes; see [decision 026](decisions/026-audio-queue.md) |
 | "couldn't queue audio for track …" in the web log | Redis was down at upload. Nothing to do: the sweep re-sends it once Redis is back (`pnpm db:up`) |
 | "FFmpeg isn't installed" / FFMPEG_MISSING | Run `pnpm audio:fetch` (downloads the pinned build into `.cache/ffmpeg`); see [packages/audio](../packages/audio/src/) |
 | FFMPEG_TAMPERED | The file in `.cache/ffmpeg` doesn't match its pinned SHA-256: delete the folder and run `pnpm audio:fetch` |

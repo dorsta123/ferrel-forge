@@ -254,6 +254,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@ferrel/audio':
+        specifier: workspace:*
+        version: link:../../packages/audio
       '@ferrel/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -263,6 +266,9 @@ importers:
       '@ferrel/queues':
         specifier: workspace:*
         version: link:../../packages/queues
+      '@ferrel/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
       bullmq:
         specifier: ^6.3.15
         version: 6.3.15(ioredis@6.0.0(supports-color@7.2.0))
@@ -273,6 +279,9 @@ importers:
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@26.6.5)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
 
   e2e:
     dependencies:
