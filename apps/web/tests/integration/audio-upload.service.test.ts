@@ -1,6 +1,7 @@
 // Forged requests against the audio upload service: what a tampered browser could send.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db, eq, tracks } from "@ferrel/db";
+import { closeQueues } from "@ferrel/queues";
 import { createUploadUrl, getObjectInfo, newMasterKey } from "@ferrel/storage";
 import { confirmAudioUpload, requestAudioUpload } from "@/features/audio-upload/service";
 import { createUsers, removeCreatedUsers, type TestUser } from "./support";
@@ -22,7 +23,11 @@ beforeAll(async () => {
     ])
     .returning({ id: tracks.id });
 });
-afterAll(removeCreatedUsers);
+// Confirmed uploads send queue tickets; close that connection too.
+afterAll(async () => {
+  await closeQueues();
+  await removeCreatedUsers();
+});
 
 describe("requestAudioUpload", () => {
   it("answers 'not found' for someone else's track", async () => {

@@ -12,8 +12,8 @@ A confirmed upload is saved as "processing" (decision 025), and the slow work (l
 
   The website can't import from inside the worker app, so these can't live there.
 - **One ticket per file (user choice 2):** the job id is a fingerprint of track + file. BullMQ ignores a second ticket with the same id while one is waiting or running. A new file gets a new id. Finished and failed tickets are removed, so the same file can be queued again later; the track row, not Redis, records the outcome.
-- **The upload never waits on Redis (user choice 1):** sending a ticket has a 2-second limit and never throws. The website's Redis client gives up after one retry. If sending fails, the upload still succeeds and the track stays "processing".
-- **The sweep:** every 5 minutes the worker re-sends tickets for tracks still "processing" 10+ minutes after their last change (at most 100 per run). The ticket id stops duplicates of tickets still in the queue.
+- **The upload never waits on Redis (user choice 1):** sending a ticket has a 2-second limit and never throws. If it isn't confirmed in time, the upload still succeeds and the track stays "processing". (The send may still complete once Redis returns; the ticket id makes that harmless.) While Redis is down, connection errors are logged once a minute, not on every reconnect attempt. A test with Redis unreachable proves it.
+- **The sweep:** every 5 minutes the worker re-sends tickets for tracks still "processing" 10+ minutes after their last change. It pages through them by id (up to 5,000 per run), so newer stuck tracks are reached too, not the same first 100 every time. The ticket id stops duplicates of tickets still in the queue. Finished sweep jobs are removed from Redis.
 - **Retries:** 3 attempts with growing waits (10 s, 20 s). A malformed ticket fails at once without retries.
 - **Queue prefix:** keys live under `ferrel`; integration tests use `ferrel-test` (`QUEUE_PREFIX`), so a worker running from `pnpm dev` can't take their tickets.
 
@@ -25,4 +25,6 @@ A confirmed upload is saved as "processing" (decision 025), and the slow work (l
 ## Consequences
 - Until slice 5 the worker only logs tickets. A track never leaves "processing" yet, so the sweep re-sends its ticket every 5 minutes (harmless: it is just logged).
 - Slices 5–7 must check that the ticket's `audioKey` is still the track's file before writing (decision 025).
+- **Slice 5 must mark a track "failed" (with a reason) after the last attempt.** Failed tickets are removed from Redis, so otherwise the sweep would re-send a file that never works every 5 minutes, forever.
+- Re-confirming the same file while its job is still finishing can leave the track "processing" until the next sweep (10–15 minutes). Accepted: it's rare and recovers by itself.
 - Every `pnpm dev` worker also runs the sweep. Running several workers is safe because of the ticket ids.
