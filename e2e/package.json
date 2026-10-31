@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ferrel/db": "workspace:*",
     "@ferrel/storage": "workspace:*",
     "postgres": "^3.4.9"
   },

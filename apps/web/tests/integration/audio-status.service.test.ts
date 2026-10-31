@@ -1,6 +1,7 @@
 // The editor's audio status and "Try again" (phase 4 slice 8), with forged input.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db, eq, tracks } from "@ferrel/db";
+import { AUDIO_FAILURE } from "@ferrel/db/constants";
 import { closeQueues, getAudioQueue } from "@ferrel/queues";
 import { newMasterKey } from "@ferrel/storage";
 import { getAudioStatus, retryAudio } from "@/features/audio-status/service";
@@ -42,6 +43,7 @@ describe("getAudioStatus", () => {
       previewEnabled: true,
       hasPreview: true,
       previewFailed: false,
+      canRetry: false,
     });
   });
 
@@ -53,10 +55,19 @@ describe("getAudioStatus", () => {
 
 describe("retryAudio", () => {
   it("refuses other creators, and changes nothing", async () => {
-    await set({ ...audio(), audioStatus: "failed", audioError: "Took too long.", durationMs: null, previewKey: null });
+    await set({ ...audio(), audioStatus: "failed", audioError: AUDIO_FAILURE.tooSlow, durationMs: null, previewKey: null });
     expect(error(await retryAudio(B.id, trackId))).toBe("Track not found.");
     expect((await row()).audioStatus).toBe("failed");
     expect(await tickets()).toEqual([]);
+  });
+
+  it("doesn't retry a file that can't succeed (the artist must upload a different one)", async () => {
+    await set({ audioError: AUDIO_FAILURE.unreadable });
+    expect((await getAudioStatus(A.id, trackId))?.canRetry).toBe(false);
+    expect(error(await retryAudio(A.id, trackId))).toBe("Nothing to retry.");
+    expect(await tickets()).toEqual([]);
+    await set({ audioError: AUDIO_FAILURE.tooSlow });
+    expect((await getAudioStatus(A.id, trackId))?.canRetry).toBe(true);
   });
 
   it("sends a failed file back to processing with exactly one ticket for its file", async () => {

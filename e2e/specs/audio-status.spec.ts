@@ -1,9 +1,12 @@
 // The editor shows what's happening to the audio and updates by itself (phase 4 slice 8).
 // No worker runs during browser tests, so the test plays the worker's part in the database.
+import { AUDIO_FAILURE } from "@ferrel/db/constants";
 import { newCreator } from "../helpers/accounts";
 import { sql, userIdByEmail } from "../helpers/db";
 import { expect, test } from "../helpers/fixtures";
 import { main } from "../helpers/page";
+
+const TOO_SLOW = AUDIO_FAILURE.tooSlow;
 
 test("the audio status updates without reloading, and a failed file blocks publishing", async ({ open }) => {
   const page = await open();
@@ -31,15 +34,23 @@ test("the audio status updates without reloading, and a failed file blocks publi
     await expect(status).toContainText("Preview ready", { timeout: 10_000 });
   });
 
-  await test.step("a failed file shows its reason, blocks publishing, and can be tried again", async () => {
-    await sql`update tracks set audio_status = 'failed', audio_error = 'This file has no audio in it.', duration_ms = null, preview_key = null where id = ${trackId}`;
+  await test.step("a file that fails while the page is open blocks publishing, without reloading", async () => {
+    await sql`update tracks set audio_status = 'processing', duration_ms = null, preview_key = null where id = ${trackId}`;
     await page.reload();
-    await expect(status).toContainText("Failed");
-    await expect(status).toContainText("This file has no audio in it.");
-    await expect(m.getByRole("button", { name: "Publish" })).toBeDisabled();
+    await expect(status).toContainText("Processing");
+    await expect(m.getByRole("button", { name: "Publish" })).toBeEnabled(); // publishing never waits
+    await sql`update tracks set audio_status = 'failed', audio_error = ${TOO_SLOW} where id = ${trackId}`;
+    await expect(status).toContainText("Failed", { timeout: 10_000 });
+    await expect(status).toContainText(TOO_SLOW);
+    await expect(m.getByRole("button", { name: "Publish" })).toBeDisabled({ timeout: 10_000 });
+  });
 
+  await test.step("a slow file can be tried again; a broken one can't", async () => {
     await status.getByRole("button", { name: "Try again" }).click();
     await expect(status).toContainText("Processing");
-    expect((await sql<{ s: string }[]>`select audio_status as s from tracks where id = ${trackId}`)[0].s).not.toBe("failed");
+    await sql`update tracks set audio_status = 'failed', audio_error = ${AUDIO_FAILURE.noAudio} where id = ${trackId}`;
+    await page.reload();
+    await expect(status).toContainText(AUDIO_FAILURE.noAudio);
+    await expect(status.getByRole("button", { name: "Try again" })).toHaveCount(0);
   });
 });

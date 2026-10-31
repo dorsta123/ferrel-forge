@@ -21,12 +21,12 @@ export function audioStatusView(s: AudioStatusSnapshot): AudioStatusView {
     case "processing":
       return { state: "processing", title: "Processing", detail: "Measuring your track…", preview: null, canRetry: false, settled: false };
     case "failed":
-      return { state: "failed", title: "Failed", detail: s.error, preview: null, canRetry: true, settled: true };
+      return { state: "failed", title: "Failed", detail: s.error, preview: null, canRetry: s.canRetry, settled: true };
     case "ready": {
       const ready = { state: "ready" as const, title: "Ready", detail: s.durationMs === null ? null : formatDuration(s.durationMs) };
       if (!s.previewEnabled) return { ...ready, preview: "Preview off", canRetry: false, settled: true };
       if (s.hasPreview) return { ...ready, preview: "Preview ready", canRetry: false, settled: true };
-      if (s.previewFailed) return { ...ready, preview: "The preview couldn't be made.", canRetry: true, settled: true };
+      if (s.previewFailed) return { ...ready, preview: "The preview couldn't be made.", canRetry: s.canRetry, settled: true };
       return { ...ready, preview: "Making the preview…", canRetry: false, settled: false };
     }
   }

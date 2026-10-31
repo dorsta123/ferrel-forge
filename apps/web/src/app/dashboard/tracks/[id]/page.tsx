@@ -73,8 +73,11 @@ async function TrackEditor({ params }: { params: Promise<{ id: string }> }) {
           </h2>
           <p className="text-sm text-muted-foreground">The full-quality master. It stays private; licensed advertisers get it once licensing opens.</p>
         </div>
-        {/* Keyed by the file, so a new upload starts the live status afresh. */}
-        <AudioStatusPanel key={track.audioKey ?? "none"} trackId={track.id} initial={toSnapshot(track)} />
+        {/* Keyed by the file, so a new upload starts the live status afresh. The live region
+            stays mounted around it, so screen readers announce the first status too. */}
+        <div aria-live="polite">
+          <AudioStatusPanel key={track.audioKey ?? "none"} trackId={track.id} initial={toSnapshot(track)} />
+        </div>
         <AudioUploadField trackId={track.id} current={current} editable={track.status === "draft"} />
       </section>
 

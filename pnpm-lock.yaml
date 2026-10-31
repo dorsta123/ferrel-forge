@@ -285,6 +285,9 @@ importers:
 
   e2e:
     dependencies:
+      '@ferrel/db':
+        specifier: workspace:*
+        version: link:../packages/db
       '@ferrel/storage':
         specifier: workspace:*
         version: link:../packages/storage

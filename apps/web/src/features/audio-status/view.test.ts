@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AudioStatusSnapshot } from "./types";
 import { audioStatusView } from "./view";
 
-const ready: AudioStatusSnapshot = { status: "ready", error: null, durationMs: 222_000, previewEnabled: true, hasPreview: true, previewFailed: false };
+const ready: AudioStatusSnapshot = { status: "ready", error: null, durationMs: 222_000, previewEnabled: true, hasPreview: true, previewFailed: false, canRetry: false };
 
 describe("audioStatusView", () => {
   it("says nothing is uploaded yet when there's no audio, and doesn't keep checking", () => {
@@ -33,7 +33,7 @@ describe("audioStatusView", () => {
   });
 
   it("offers a retry when the preview couldn't be made, while the song stays ready", () => {
-    expect(audioStatusView({ ...ready, hasPreview: false, previewFailed: true })).toMatchObject({
+    expect(audioStatusView({ ...ready, hasPreview: false, previewFailed: true, canRetry: true })).toMatchObject({
       state: "ready",
       preview: "The preview couldn't be made.",
       canRetry: true,
@@ -41,15 +41,16 @@ describe("audioStatusView", () => {
     });
   });
 
-  it("shows the reason and offers a retry when the file failed", () => {
+  it("shows the reason when the file failed, offering a retry only when one can help", () => {
     const reason = "We couldn't read this file. Try exporting it again as WAV, MP3 or FLAC.";
     expect(audioStatusView({ ...ready, status: "failed", error: reason, durationMs: null, hasPreview: false })).toEqual({
       state: "failed",
       title: "Failed",
       detail: reason,
       preview: null,
-      canRetry: true,
+      canRetry: false,
       settled: true,
     });
+    expect(audioStatusView({ ...ready, status: "failed", error: "Too slow.", durationMs: null, hasPreview: false, canRetry: true }).canRetry).toBe(true);
   });
 });

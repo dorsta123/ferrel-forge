@@ -5,13 +5,13 @@
 After an upload the worker measures the song and makes its preview (decisions 027, 028). The artist should see that happen without reloading, and see why a file failed. A failed file could still be published, giving advertisers a release with no length and no player.
 
 ## Decision
-- **Polling, not a live connection:** while something is still in progress (processing, or a preview being made), the editor asks an owner-only Server Action every 3 seconds. It stops as soon as everything is settled, and after 10 minutes so a forgotten tab stops asking. A new upload remounts the panel and starts afresh.
+- **Polling, not a live connection:** while something is still in progress (processing, or a preview being made), the editor asks an owner-only Server Action every 3 seconds, one check at a time (Server Actions run one after another, so stacked checks would delay the artist's own saves). Errors are ignored until the next check; a "not found" answer stops it. After 10 minutes it says "Still working on it. Reload the page to check again." It stops as soon as everything is settled, and after 10 minutes so a forgotten tab stops asking. A new upload remounts the panel and starts afresh.
 - **The status never includes storage keys:** only the state, the artist-facing reason, the length and whether a preview exists.
-- **"Try again"** only works after a failure:
-  - a failed file goes back to "processing";
+- **"Try again"** is offered only when a retry can help (from review):
+  - a file that took too long goes back to "processing";
   - a preview that was given up on is cleared.
 
-  Each is a guarded update, so a double click sends one ticket. Anything else answers "Nothing to retry."
+  Broken, silent, over-long or missing files need a different file, so their message says so and there is no button (the server refuses too). Each retry is a guarded update, so a double click sends one ticket. The failure messages live in `@ferrel/db/constants` (`AUDIO_FAILURE`, `RETRYABLE_AUDIO_FAILURES`), shared by the worker and the editor.
 - **Publishing is blocked while the audio is Failed** (user, 2026-10-31). The rule is in `checkAction` and repeated in the publish query (decision 014). Publishing during Processing still works, as decided in 022.
 - When the polled status changes, the page refreshes around the panel, so the publish button always matches.
 
@@ -21,4 +21,5 @@ After an upload the worker measures the song and makes its preview (decisions 02
 
 ## Consequences
 - An open editor makes at most one small request every 3 seconds, and only while something is in progress.
-- A release published *before* its audio failed stays published (unpublishing is the artist's choice); the block applies to publishing.
+- A release published *before* its audio failed stays published (unpublishing is the artist's choice); the block applies to publishing. Whether public pages should hide such a release is an open question for the user.
+- A creator could still script retries of a slow file. Per-creator rate limits come with the pre-deployment rate limiting (security.md finding 4).

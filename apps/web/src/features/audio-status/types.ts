@@ -12,6 +12,8 @@ export type AudioStatusSnapshot = {
   hasPreview: boolean;
   /** The preview failed every attempt (decision 028). */
   previewFailed: boolean;
+  /** A retry can help: a slow file, or a preview that couldn't be made. Other failures need a different file. */
+  canRetry: boolean;
 };
 
 export type RetryResult = { ok: true; snapshot: AudioStatusSnapshot } | { ok: false; error: string };
