@@ -24,7 +24,7 @@ pnpm audio:fetch      # download the pinned FFmpeg into .cache/ffmpeg (SHA-256 v
 pnpm storage:setup    # create RustFS buckets (masters private, previews public-read) + upload CORS; idempotent
 pnpm dev              # web on :3000 + worker, in parallel
 pnpm test             # unit tests (vitest), no services needed; the audio tests fetch the pinned FFmpeg first if missing (needs internet once)
-pnpm test:integration # services/queries with forged input, DB constraints, storage security (needs pnpm db:up)
+pnpm test:integration # web: services/queries with forged input, DB constraints, storage security; worker: measuring real songs (needs pnpm db:up + FFmpeg)
 pnpm e2e              # Playwright browser journeys with the installed Chrome (needs pnpm db:up; starts dev server if not running)
 pnpm typecheck        # runs `next typegen` first for the web app
 pnpm lint
