@@ -187,6 +187,9 @@ importers:
       '@ferrel/pricing':
         specifier: workspace:*
         version: link:../../packages/pricing
+      '@ferrel/queues':
+        specifier: workspace:*
+        version: link:../../packages/queues
       '@ferrel/storage':
         specifier: workspace:*
         version: link:../../packages/storage
@@ -257,12 +260,15 @@ importers:
       '@ferrel/pricing':
         specifier: workspace:*
         version: link:../../packages/pricing
+      '@ferrel/queues':
+        specifier: workspace:*
+        version: link:../../packages/queues
       bullmq:
         specifier: ^6.3.15
-        version: 6.3.15(ioredis@6.0.0)
+        version: 6.3.15(ioredis@6.0.0(supports-color@7.2.0))
       ioredis:
         specifier: ^6.0.0
-        version: 6.0.0
+        version: 6.0.0(supports-color@7.2.0)
     devDependencies:
       tsx:
         specifier: ^4.23.15
@@ -310,6 +316,22 @@ importers:
         version: 0.31.11
 
   packages/pricing:
+    devDependencies:
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@26.6.5)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+
+  packages/queues:
+    dependencies:
+      '@ferrel/db':
+        specifier: workspace:*
+        version: link:../db
+      bullmq:
+        specifier: ^6.3.15
+        version: 6.3.15(ioredis@6.0.0(supports-color@7.2.0))
+      ioredis:
+        specifier: ^6.0.0
+        version: 6.0.0(supports-color@7.2.0)
     devDependencies:
       vitest:
         specifier: ^5.0.5
@@ -6223,7 +6245,7 @@ snapshots:
 
   buffer-from@1.1.2: {}
 
-  bullmq@6.3.15(ioredis@6.0.0):
+  bullmq@6.3.15(ioredis@6.0.0(supports-color@7.2.0)):
     dependencies:
       cron-parser: 5.10.2
       msgpackr: 2.1.0
@@ -6231,7 +6253,7 @@ snapshots:
       semver: 7.8.5
       tslib: 2.8.1
     optionalDependencies:
-      ioredis: 6.0.0
+      ioredis: 6.0.0(supports-color@7.2.0)
 
   bundle-name@4.1.1:
     dependencies:
@@ -7198,7 +7220,7 @@ snapshots:
       hasown: 2.0.4
       side-channel: 1.1.1
 
-  ioredis@6.0.0:
+  ioredis@6.0.0(supports-color@7.2.0):
     dependencies:
       '@ioredis/commands': 2.0.0
       cluster-key-slot: 1.1.1

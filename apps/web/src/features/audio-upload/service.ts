@@ -2,6 +2,7 @@
 // creator id. Every function re-checks ownership and draft status itself.
 import { and, db, eq, tracks } from "@ferrel/db";
 import { AUDIO_CONTENT_TYPES, TRACK_LIMITS } from "@ferrel/db/constants";
+import { queueAudioProcessing } from "@ferrel/queues";
 import {
   AUDIO_SIGNATURE_BYTES,
   createUploadUrl,
@@ -74,6 +75,10 @@ export async function confirmAudioUpload(creatorId: string, trackId: string, key
   // Only now remove the file it replaced.
   if (track.audioKey && track.audioKey !== key) await deleteObject("masters", track.audioKey);
   if (track.previewKey) await deleteObject("previews", track.previewKey);
+
+  // Hand the worker its ticket. If Redis is down the upload still counts: the track
+  // is saved as "processing" and the worker's sweep re-sends the ticket later.
+  await queueAudioProcessing({ trackId, audioKey: key });
   return { ok: true, format: detected, sizeBytes: info.size };
 }
 

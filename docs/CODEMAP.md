@@ -18,7 +18,7 @@ Postgres (database)             RustFS (file storage: audio)
                                        │  browser uploads audio straight here
 apps/worker ── background jobs (phase 4 makes it do real work) ── Redis (job queue)
 
-packages/  ── shared code used by web and worker: db, storage, pricing, audio
+packages/  ── shared code used by web and worker: db, storage, pricing, audio, queues
 e2e/       ── browser tests
 docs/      ── what, why, how we work
 ```
@@ -123,7 +123,13 @@ apps/web/src/
     ├── pg-error.ts           reading database error codes
     └── format-*.ts           numbers, bytes, durations
 
-apps/worker/src/            background jobs (BullMQ on Redis); only a "ping" today
+apps/worker/src/            background jobs (BullMQ on Redis)
+├── index.ts                starts the workers, schedules the 5-minute sweep
+├── queues.ts               the worker's Redis connection and system queue
+├── audio/process-audio.ts  one uploaded file to process (slice 4: logs the ticket)
+└── system/                 housekeeping jobs: ping, re-send stuck audio tickets
+packages/queues/            what web and worker share: queue names, the audio ticket (track + exact
+                            file), its duplicate-proof id, sending with a 2 s limit, the stuck-track sweep
 packages/db/                database: tables, constants, migrations
 ├── src/schema/             one file per area: auth.ts, creators.ts, tracks.ts
 ├── src/constants/          genres, keys, limits: shared by DB, server and browser
@@ -182,7 +188,8 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 3. The browser uploads the file **straight to storage**, with a progress bar. The file never passes through our server.
 4. **The browser asks the server to confirm.** `confirmAudioUpload` → the service reads the file's first bytes ([storage/audio-signature.ts](../packages/storage/src/audio-signature.ts)):
    - a fake file is deleted;
-   - a real one is attached to the track, and any older file is deleted.
+   - a real one is attached to the track (status "processing"), and any older file is deleted.
+5. **The worker gets a ticket.** The service sends `{ track, exact file }` to the audio queue ([queues/audio-queue.ts](../packages/queues/src/audio-queue.ts)); the worker picks it up in [process-audio.ts](../apps/worker/src/audio/process-audio.ts). If Redis was down, the 5-minute sweep re-sends it ([queues/requeue-stuck.ts](../packages/queues/src/requeue-stuck.ts), [decision 026](decisions/026-audio-queue.md)).
 
 ---
 
@@ -226,6 +233,8 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 | Upload fails | Browser Network tab (the PUT to `localhost:9000`); use `localhost:3000`, **not** `127.0.0.1`; [audio-upload/service.ts](../apps/web/src/features/audio-upload/service.ts) |
 | Sign-in / sign-up error | [components/auth/auth-errors.ts](../apps/web/src/components/auth/auth-errors.ts) maps error codes to messages; server side in [lib/auth.ts](../apps/web/src/lib/auth.ts) |
 | Database "violates check constraint …" | The constraint name says which rule: see [schema/tracks.ts](../packages/db/src/schema/tracks.ts) |
+| A track stays "processing" | Is the worker running (`pnpm dev` starts it)? Its terminal shows `[audio] ticket received …` per upload. A lost ticket is re-sent by the sweep within ~15 minutes; see [decision 026](decisions/026-audio-queue.md) |
+| "couldn't queue audio for track …" in the web log | Redis was down at upload. Nothing to do: the sweep re-sends it once Redis is back (`pnpm db:up`) |
 | "FFmpeg isn't installed" / FFMPEG_MISSING | Run `pnpm audio:fetch` (downloads the pinned build into `.cache/ffmpeg`); see [packages/audio](../packages/audio/src/) |
 | FFMPEG_TAMPERED | The file in `.cache/ffmpeg` doesn't match its pinned SHA-256: delete the folder and run `pnpm audio:fetch` |
 | Styles look broken or old | Stop the dev server, delete `apps/web/.next/dev`, start again |

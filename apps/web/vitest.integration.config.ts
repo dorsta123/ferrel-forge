@@ -14,5 +14,7 @@ export default defineConfig({
     fileParallelism: false,
     testTimeout: 30_000,
     hookTimeout: 30_000,
+    // Queue tickets go under a test-only prefix, out of reach of a running dev worker.
+    env: { QUEUE_PREFIX: "ferrel-test" },
   },
 });

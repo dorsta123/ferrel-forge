@@ -15,6 +15,7 @@
     "@base-ui/react": "^1.9.0",
     "@ferrel/db": "workspace:*",
     "@ferrel/pricing": "workspace:*",
+    "@ferrel/queues": "workspace:*",
     "@ferrel/storage": "workspace:*",
     "better-auth": "^1.7.10",
     "class-variance-authority": "^0.7.1",
