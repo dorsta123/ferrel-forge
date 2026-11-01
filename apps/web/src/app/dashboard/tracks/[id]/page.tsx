@@ -76,7 +76,7 @@ async function TrackEditor({ params }: { params: Promise<{ id: string }> }) {
         {/* Keyed by the file, so a new upload starts the live status afresh. The live region
             stays mounted around it, so screen readers announce the first status too. */}
         <div aria-live="polite">
-          <AudioStatusPanel key={track.audioKey ?? "none"} trackId={track.id} initial={toSnapshot(track)} />
+          <AudioStatusPanel key={track.audioKey ?? "none"} trackId={track.id} initial={toSnapshot(track)} released={track.status !== "draft"} />
         </div>
         <AudioUploadField trackId={track.id} current={current} editable={track.status === "draft"} />
       </section>

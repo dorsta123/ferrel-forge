@@ -21,5 +21,5 @@ After an upload the worker measures the song and makes its preview (decisions 02
 
 ## Consequences
 - An open editor makes at most one small request every 3 seconds, and only while something is in progress.
-- A release published *before* its audio failed stays published (unpublishing is the artist's choice); the block applies to publishing. Whether public pages should hide such a release is an open question for the user.
+- **A release whose audio fails after publishing is hidden from public pages until fixed** (user, 2026-11-01, option A): Explore, the homepage, creator pages and its own page all skip `audio_status = 'failed'` (`features/catalog/queries.ts`). It stays published; the editor says "Hidden from public pages until fixed. Unpublish to upload a new file." Rejected: leaving it public (B), or unpublishing it automatically (C), which would surprise the artist.
 - A creator could still script retries of a slow file. Per-creator rate limits come with the pre-deployment rate limiting (security.md finding 4).

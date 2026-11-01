@@ -53,4 +53,10 @@ test("the audio status updates without reloading, and a failed file blocks publi
     await expect(status).toContainText(AUDIO_FAILURE.noAudio);
     await expect(status.getByRole("button", { name: "Try again" })).toHaveCount(0);
   });
+
+  await test.step("a published release whose audio fails says it's hidden publicly, and how to fix it", async () => {
+    await sql`update tracks set status = 'published', published_at = now() where id = ${trackId}`;
+    await page.reload();
+    await expect(status).toContainText("Hidden from public pages until fixed");
+  });
 });
