@@ -36,7 +36,11 @@ async function change(creatorId: string, trackId: string, decide: (t: LockedTrac
     return decide({ ...t, tx }, owned);
   });
   if (!outcome.ok) return outcome;
-  if (outcome.oldPreview) await deleteObject("previews", outcome.oldPreview);
+  // The change is saved; a storage hiccup must not undo it or crash the page. A file left behind
+  // is unreferenced and removed by the orphan clean-up (phase 4 slice 12).
+  if (outcome.oldPreview) {
+    await deleteObject("previews", outcome.oldPreview).catch((err: Error) => console.error(`[previews] couldn't delete ${outcome.oldPreview}: ${err.message}`));
+  }
   // If Redis is down the change still counts: the worker's sweep makes the preview later.
   if (outcome.makePreview && outcome.audioKey) await queueAudioProcessing({ trackId, audioKey: outcome.audioKey });
   return { ok: true };

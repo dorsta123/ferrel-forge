@@ -16,10 +16,12 @@ type Props = {
   enabled: boolean;
   /** Archived releases are read-only. */
   editable: boolean;
+  /** The file couldn't be used: there's nothing to preview until it's fixed. */
+  audioFailed: boolean;
 };
 
 /** The Preview section: on/off, and (once measured) the 15 s window on the waveform. */
-export function PreviewSettings({ trackId, durationMs, waveform, startMs: initialStart, enabled: initialEnabled, editable }: Props) {
+export function PreviewSettings({ trackId, durationMs, waveform, startMs: initialStart, enabled: initialEnabled, editable, audioFailed }: Props) {
   const s = usePreviewSettings(trackId, { startMs: initialStart, enabled: initialEnabled });
   const measured = durationMs !== null && waveform !== null && waveform.length > 0;
 
@@ -48,7 +50,11 @@ export function PreviewSettings({ trackId, durationMs, waveform, startMs: initia
       {s.enabled && measured && (
         <StartPicker durationMs={durationMs} waveform={waveform} startMs={s.startMs} onMove={s.move} disabled={!editable || s.pending} />
       )}
-      {s.enabled && !measured && <p className="text-sm text-muted-foreground">You can choose where it starts once your track is measured.</p>}
+      {s.enabled && !measured && (
+        <p className="text-sm text-muted-foreground">
+          {audioFailed ? "Fix the audio above to choose a preview." : "You can choose where it starts once your track is measured."}
+        </p>
+      )}
 
       {s.enabled && measured && editable && (
         <div className="flex items-center gap-3">

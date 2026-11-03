@@ -90,15 +90,17 @@ async function TrackEditor({ params }: { params: Promise<{ id: string }> }) {
           <h2 id="preview-heading" className="font-display text-lg font-semibold">
             Preview
           </h2>
-          {/* Keyed by the file only: saving must keep its "Saved" message (the page refreshes). */}
+          {/* Keyed by the file and its processing state (so it picks up the real default start once
+              measured), but not by the start: saving must keep its "Saved" message (the page refreshes). */}
           <PreviewSettings
-            key={track.audioKey}
+            key={`${track.audioKey}:${track.audioStatus}`}
             trackId={track.id}
             durationMs={track.audioStatus === "ready" ? track.durationMs : null}
             waveform={track.waveform}
             startMs={track.previewStartMs ?? (track.durationMs ? defaultStartMs(track.durationMs) : 0)}
             enabled={track.previewEnabled}
             editable={track.status !== "archived"}
+            audioFailed={track.audioStatus === "failed"}
           />
         </section>
       )}

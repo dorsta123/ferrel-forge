@@ -10,6 +10,7 @@ import { deleteObject, getObjectInfo, newPreviewKey, uploadFile } from "@ferrel/
 import { AUDIO_FAILURE } from "../../src/audio/failure";
 import { processTrackAudio } from "../../src/audio/process-track-audio";
 import { savePreviewOrDiscard } from "../../src/audio/preview-step";
+import { savePreviewFailed } from "../../src/audio/track-audio-store";
 import { createCreator, publicUrl, removeCreated, trackRow, trackWithMaster } from "./support";
 
 const files = mkdtempSync(join(tmpdir(), "ferrel worker test "));
@@ -112,6 +113,30 @@ describe("the preview", () => {
     expect((await processTrackAudio(ticket, opts)).preview).toBe("made");
     const { peaks } = await analyzeAudio(await downloadPublic((await trackRow(ticket.trackId)).previewKey!), "mp3");
     expect(Math.max(...peaks.slice(0, 3))).toBeGreaterThan(0.05); // loud from the first moment
+  });
+
+  it("is made again, in the same job, for a start the artist chose while the first was being made", async () => {
+    const ticket = await trackWithMaster(creator, join(files, "quiet then loud.wav"), "wav");
+    await db.update(tracks).set({ audioStatus: "ready", durationMs: 40_000, previewStartMs: 0 }).where(eq(tracks.id, ticket.trackId));
+    let moved = false;
+    const beforeAttach = async () => {
+      if (moved) return;
+      moved = true; // the artist saves 20 s while the 0 s preview is being made
+      await db.update(tracks).set({ previewStartMs: 20_000 }).where(eq(tracks.id, ticket.trackId));
+    };
+    expect((await processTrackAudio(ticket, { ...opts, beforeAttach })).preview).toBe("made");
+    const { peaks } = await analyzeAudio(await downloadPublic((await trackRow(ticket.trackId)).previewKey!), "mp3");
+    expect(Math.max(...peaks.slice(0, 3))).toBeGreaterThan(0.05); // the new start: loud from the first moment
+    expect(readdirSync(work)).toEqual([]);
+  });
+
+  it("gives up only on the start that was tried, not on one chosen meanwhile", async () => {
+    const ticket = await trackWithMaster(creator, join(files, "tone 10s.wav"), "wav");
+    await db.update(tracks).set({ audioStatus: "ready", durationMs: 10_000, previewStartMs: 0 }).where(eq(tracks.id, ticket.trackId));
+    await savePreviewFailed(ticket, null); // the default was tried, but 0 is chosen now
+    expect((await trackRow(ticket.trackId)).previewFailedAt).toBeNull();
+    await savePreviewFailed(ticket, 0);
+    expect((await trackRow(ticket.trackId)).previewFailedAt).toBeInstanceOf(Date);
   });
 
   it("isn't attached if the artist changed the start while it was being made", async () => {

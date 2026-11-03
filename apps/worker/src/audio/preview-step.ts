@@ -13,13 +13,14 @@ export async function previewStep(
   master: string,
   format: InputFormat,
   track: { durationMs: number; previewStartMs: number | null },
-  { tempDir, timeoutMs }: { tempDir: string; timeoutMs: number },
+  { tempDir, timeoutMs, beforeAttach }: { tempDir: string; timeoutMs: number; beforeAttach?: () => Promise<void> },
 ): Promise<"made" | "skipped"> {
   const out = join(tempDir, `ferrel-${randomUUID()}.mp3`);
   try {
     await makePreview(master, format, out, previewWindow(track.durationMs, track.previewStartMs), { timeoutMs });
     const key = newPreviewKey(ticket.trackId);
     await uploadFile("previews", key, out, "audio/mpeg");
+    await beforeAttach?.();
     return (await savePreviewOrDiscard(ticket, key, track.previewStartMs)) ? "made" : "skipped";
   } finally {
     await rm(out, { force: true }).catch(() => {});

@@ -19,13 +19,17 @@ export type ProcessOptions = {
   timeoutMs?: number;
   /** Where temporary files go (tests use their own folder). */
   tempDir?: string;
+  /** Tests only: runs after a preview is uploaded and before it's attached, to simulate the artist acting meanwhile. */
+  beforeAttach?: () => Promise<void>;
 };
+
+const PREVIEW_ROUNDS = 3;
 
 export type ProcessResult = { measured: "ready" | "failed" | "skipped"; preview: "made" | "failed" | "skipped" };
 
 const NOTHING: ProcessResult = { measured: "skipped", preview: "skipped" };
 
-export async function processTrackAudio(ticket: AudioProcessJob, { lastAttempt, timeoutMs = 120_000, tempDir = tmpdir() }: ProcessOptions): Promise<ProcessResult> {
+export async function processTrackAudio(ticket: AudioProcessJob, { lastAttempt, timeoutMs = 120_000, tempDir = tmpdir(), beforeAttach }: ProcessOptions): Promise<ProcessResult> {
   const state = await audioState(ticket);
   if (!state) return NOTHING; // the song was replaced
   const needsMeasuring = state.status === "processing";
@@ -52,18 +56,29 @@ export async function processTrackAudio(ticket: AudioProcessJob, { lastAttempt, 
       if (m.result !== "ready") return { measured, preview: "skipped" };
       durationMs = m.durationMs;
     }
-    if (!wantsPreview || durationMs === null) return { measured, preview: "skipped" };
-    try {
-      const preview = await previewStep(ticket, await master(), state.format, { durationMs, previewStartMs: state.previewStartMs }, { tempDir, timeoutMs });
-      return { measured, preview };
-    } catch (err) {
-      // Ours, never the artist's (the song decoded fine): retry, and after the last attempt
-      // record it and stop, so a preview that can't be made isn't retried forever.
-      if (!lastAttempt) throw err;
-      console.error(`[audio] preview for track ${ticket.trackId} failed on the last attempt: ${(err as Error).message}`);
-      await savePreviewFailed(ticket);
-      return { measured, preview: "failed" };
+    if (durationMs === null) return { measured, preview: "skipped" };
+
+    // The artist may move the start or switch previews on/off while this job runs, and a new
+    // ticket for the same file is ignored until it ends. So read the settings again before each
+    // try, and try again if they changed while the preview was being made (at most 3 times).
+    for (let round = 0; round < PREVIEW_ROUNDS; round++) {
+      const now = round === 0 && !needsMeasuring ? state : await audioState(ticket);
+      if (!now || now.status !== "ready" || !now.previewEnabled || now.previewKey !== null || now.previewFailedAt !== null) {
+        return { measured, preview: "skipped" };
+      }
+      try {
+        const preview = await previewStep(ticket, await master(), state.format, { durationMs, previewStartMs: now.previewStartMs }, { tempDir, timeoutMs, beforeAttach });
+        if (preview === "made") return { measured, preview };
+      } catch (err) {
+        // Ours, never the artist's (the song decoded fine): retry, and after the last attempt
+        // record it and stop, so a preview that can't be made isn't retried forever.
+        if (!lastAttempt) throw err;
+        console.error(`[audio] preview for track ${ticket.trackId} failed on the last attempt: ${(err as Error).message}`);
+        await savePreviewFailed(ticket, now.previewStartMs);
+        return { measured, preview: "failed" };
+      }
     }
+    return { measured, preview: "skipped" };
   } finally {
     // A failed clean-up must not change the result (e.g. Windows briefly locking the file).
     await rm(copy, { force: true }).catch((err: Error) => console.warn(`[audio] couldn't delete temp file ${copy}: ${err.message}`));
