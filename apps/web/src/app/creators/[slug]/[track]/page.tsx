@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { ArrowLeftIcon } from "lucide-react";
+import { PreviewPlayer } from "@/components/audio/preview-player";
 import { TrackCover } from "@/components/track/track-cover";
 import { parseCreatorSlug, parseTrackSlug } from "@/features/catalog/params";
 import { LicensePanel } from "@/features/catalog/license-panel";
@@ -77,6 +78,8 @@ async function Release({ params }: { params: Params }) {
               </Link>
             </p>
           </header>
+
+          {track.preview && <PreviewPlayer preview={track.preview} />}
 
           <LicensePanel track={track} />
 

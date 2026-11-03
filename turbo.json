@@ -11,6 +11,7 @@
     "S3_SECRET_KEY",
     "S3_BUCKET_MASTERS",
     "S3_BUCKET_PREVIEWS",
+    "PREVIEWS_PUBLIC_URL",
     "S3_CORS_ORIGINS"
   ],
   "tasks": {

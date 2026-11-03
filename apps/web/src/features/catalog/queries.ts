@@ -4,11 +4,13 @@
 // - drafts are never public;
 // - neither is a release whose audio failed after publishing, until it's fixed (decision 029);
 // - only display columns are selected — never the audio file location, owner ids,
-//   or the artist's rate (not public until pricing is decided, decision 021).
+//   or the artist's rate (not public until pricing is decided, decision 021). The preview
+//   (a public file by design, decision 028) is passed on only as a ready-to-play link.
 import { cache } from "react";
 import { and, creatorProfiles, db, eq, sql, tracks } from "@ferrel/db";
 import type { Genre } from "@ferrel/db/constants";
 import { EXPLORE_PAGE_SIZE } from "./params";
+import { previewInfo } from "./preview-info";
 
 const cardColumns = {
   id: tracks.id,
@@ -75,12 +77,19 @@ export const getPublicTrack = cache(async (creatorSlug: string, trackSlug: strin
       description: tracks.description,
       status: tracks.status,
       publishedAt: tracks.publishedAt,
+      audioStatus: tracks.audioStatus,
+      previewEnabled: tracks.previewEnabled,
+      previewKey: tracks.previewKey,
+      previewStartMs: tracks.previewStartMs,
+      waveform: tracks.waveform,
     })
     .from(tracks)
     .innerJoin(creatorProfiles, eq(creatorProfiles.userId, tracks.creatorId))
     .where(and(eq(creatorProfiles.slug, creatorSlug), eq(tracks.slug, trackSlug), sql`${tracks.status} in ('published', 'archived')`, audioUsable))
     .limit(1);
-  return track ?? null;
+  if (!track) return null;
+  const { audioStatus, previewEnabled, previewKey, previewStartMs, waveform, ...display } = track;
+  return { ...display, preview: previewInfo({ audioStatus, durationMs: track.durationMs, previewEnabled, previewKey, previewStartMs, waveform }) };
 });
 
 export type PublicTrack = NonNullable<Awaited<ReturnType<typeof getPublicTrack>>>;

@@ -7,6 +7,8 @@ import { toSnapshot } from "@/features/audio-status/service";
 import { AudioUploadField } from "@/features/audio-upload/audio-upload-field";
 import { defaultStartMs } from "@/features/preview-settings/rules";
 import { PreviewSettings } from "@/features/preview-settings/preview-settings";
+import { PreviewPlayer } from "@/components/audio/preview-player";
+import { previewInfo } from "@/features/catalog/preview-info";
 import { trackHref } from "@/features/catalog/track-href";
 import { updateRelease } from "@/features/releases/actions";
 import { releaseFormValues } from "@/features/releases/form-values";
@@ -41,6 +43,7 @@ async function TrackEditor({ params }: { params: Promise<{ id: string }> }) {
 
   const facts = releaseFacts(track);
   const current = track.audioFormat && track.audioSizeBytes ? { format: track.audioFormat, sizeBytes: track.audioSizeBytes } : null;
+  const preview = previewInfo(track);
   const statusKey = `${track.audioKey ?? "none"}:${track.previewStartMs ?? "default"}:${track.previewEnabled}`;
 
   return (
@@ -90,6 +93,8 @@ async function TrackEditor({ params }: { params: Promise<{ id: string }> }) {
           <h2 id="preview-heading" className="font-display text-lg font-semibold">
             Preview
           </h2>
+          {/* Listen to the current preview (made by the worker from the saved start). */}
+          {preview && <PreviewPlayer key={preview.url} preview={preview} />}
           {/* Keyed by the file and its processing state (so it picks up the real default start once
               measured), but not by the start: saving must keep its "Saved" message (the page refreshes). */}
           <PreviewSettings
