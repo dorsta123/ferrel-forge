@@ -44,7 +44,7 @@ test("a creator moves the preview window, saves it, and switches previews off", 
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-checked", "false");
     await expect(slider).toHaveCount(0);
-    expect((await stored()).enabled).toBe(false);
+    await expect.poll(async () => (await stored()).enabled).toBe(false);
     await expect(m.getByTestId("audio-status")).toContainText("Preview off");
   });
 });

@@ -51,12 +51,23 @@ export async function savePreviewFailed(ticket: AudioProcessJob): Promise<void> 
     .where(and(sameFile(ticket), eq(tracks.audioStatus, "ready"), sql`${tracks.previewKey} is null`));
 }
 
-/** Attach a new preview, only while the track is ready, still wants one and has none. */
-export async function savePreview(ticket: AudioProcessJob, previewKey: string): Promise<boolean> {
+/**
+ * Attach a new preview, only while the track is ready, still wants one, has none, and its
+ * start is still the one the preview was made from (the artist may have moved it meanwhile).
+ */
+export async function savePreview(ticket: AudioProcessJob, previewKey: string, startUsed: number | null): Promise<boolean> {
   const done = await db
     .update(tracks)
     .set({ previewKey })
-    .where(and(sameFile(ticket), eq(tracks.audioStatus, "ready"), eq(tracks.previewEnabled, true), sql`${tracks.previewKey} is null`))
+    .where(
+      and(
+        sameFile(ticket),
+        eq(tracks.audioStatus, "ready"),
+        eq(tracks.previewEnabled, true),
+        sql`${tracks.previewKey} is null`,
+        startUsed === null ? sql`${tracks.previewStartMs} is null` : eq(tracks.previewStartMs, startUsed),
+      ),
+    )
     .returning({ id: tracks.id });
   return done.length > 0;
 }

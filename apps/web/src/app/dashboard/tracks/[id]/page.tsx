@@ -5,6 +5,8 @@ import { ArrowLeftIcon, ExternalLinkIcon } from "lucide-react";
 import { AudioStatusPanel } from "@/features/audio-status/audio-status-panel";
 import { toSnapshot } from "@/features/audio-status/service";
 import { AudioUploadField } from "@/features/audio-upload/audio-upload-field";
+import { defaultStartMs } from "@/features/preview-settings/rules";
+import { PreviewSettings } from "@/features/preview-settings/preview-settings";
 import { trackHref } from "@/features/catalog/track-href";
 import { updateRelease } from "@/features/releases/actions";
 import { releaseFormValues } from "@/features/releases/form-values";
@@ -39,6 +41,7 @@ async function TrackEditor({ params }: { params: Promise<{ id: string }> }) {
 
   const facts = releaseFacts(track);
   const current = track.audioFormat && track.audioSizeBytes ? { format: track.audioFormat, sizeBytes: track.audioSizeBytes } : null;
+  const statusKey = `${track.audioKey ?? "none"}:${track.previewStartMs ?? "default"}:${track.previewEnabled}`;
 
   return (
     <>
@@ -73,13 +76,32 @@ async function TrackEditor({ params }: { params: Promise<{ id: string }> }) {
           </h2>
           <p className="text-sm text-muted-foreground">The full-quality master. It stays private; licensed advertisers get it once licensing opens.</p>
         </div>
-        {/* Keyed by the file, so a new upload starts the live status afresh. The live region
-            stays mounted around it, so screen readers announce the first status too. */}
+        {/* Keyed by the file and preview settings, so a new upload or a new preview start
+            starts the live status afresh. The live region stays mounted around it, so screen
+            readers announce the first status too. */}
         <div aria-live="polite">
-          <AudioStatusPanel key={track.audioKey ?? "none"} trackId={track.id} initial={toSnapshot(track)} released={track.status !== "draft"} />
+          <AudioStatusPanel key={statusKey} trackId={track.id} initial={toSnapshot(track)} released={track.status !== "draft"} />
         </div>
         <AudioUploadField trackId={track.id} current={current} editable={track.status === "draft"} />
       </section>
+
+      {track.audioKey && (
+        <section aria-labelledby="preview-heading" className="flex flex-col gap-4 rounded-2xl border bg-card p-6">
+          <h2 id="preview-heading" className="font-display text-lg font-semibold">
+            Preview
+          </h2>
+          {/* Keyed by the file only: saving must keep its "Saved" message (the page refreshes). */}
+          <PreviewSettings
+            key={track.audioKey}
+            trackId={track.id}
+            durationMs={track.audioStatus === "ready" ? track.durationMs : null}
+            waveform={track.waveform}
+            startMs={track.previewStartMs ?? (track.durationMs ? defaultStartMs(track.durationMs) : 0)}
+            enabled={track.previewEnabled}
+            editable={track.status !== "archived"}
+          />
+        </section>
+      )}
 
       <section aria-labelledby="details-heading" className="flex flex-col gap-4">
         <h2 id="details-heading" className="font-display text-lg font-semibold">
