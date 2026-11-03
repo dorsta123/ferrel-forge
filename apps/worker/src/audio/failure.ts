@@ -1,14 +1,10 @@
 // Which failures are the file's (tell the artist, stop) and which are ours (retry,
 // never blame the artist). Messages are shown to the artist, so they say what to do.
 import { AudioToolError } from "@ferrel/audio";
+import { AUDIO_FAILURE } from "@ferrel/db/constants";
 
-export const AUDIO_FAILURE = {
-  unreadable: "We couldn't read this file. Try exporting it again as WAV, MP3 or FLAC.",
-  noAudio: "This file has no audio in it.",
-  tooLong: "Tracks can be at most 4 hours long.",
-  tooSlow: "This file took too long to process. Try exporting it again, or upload a shorter file.",
-  missing: "The uploaded file is missing. Please upload it again.",
-} as const;
+// The messages live in @ferrel/db/constants, shared with the editor (which offers a retry only for some).
+export { AUDIO_FAILURE };
 
 /** The measured track is longer than the database allows. */
 export class TooLongError extends Error {}

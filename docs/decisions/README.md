@@ -32,6 +32,7 @@ One file per decision, numbered in order. To reverse a decision, add a new recor
 | [026](026-audio-queue.md) | Uploads reach the worker as one ticket per file (id from track + file); sending never blocks the upload; a 5-minute sweep re-sends tickets for stuck tracks | Accepted |
 | [027](027-measuring-songs.md) | The worker measures each song once (length + waveform together); the file's problems → "failed" with a message for the artist, ours → retried, never blamed on the artist | Accepted |
 | [028](028-previews.md) | Previews are made in the same job right after measuring (one download); "ready" means measured; a new random public file each time, attached only if the track didn't change, else deleted | Accepted |
+| [029](029-live-audio-status.md) | The editor polls the audio status every 3 s while in progress (stops when settled or after 10 min); Try again only after a failure; publishing blocked while Failed | Accepted |
 
 ## Template
 

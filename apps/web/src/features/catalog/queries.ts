@@ -2,6 +2,7 @@
 // - lists show only published releases;
 // - a release page also opens for archived releases (buyers' links keep working);
 // - drafts are never public;
+// - neither is a release whose audio failed after publishing, until it's fixed (decision 029);
 // - only display columns are selected — never the audio file location, owner ids,
 //   or the artist's rate (not public until pricing is decided, decision 021).
 import { cache } from "react";
@@ -21,7 +22,9 @@ const cardColumns = {
   artistName: creatorProfiles.artistName,
 };
 
-const published = eq(tracks.status, "published");
+/** The audio is usable or still being processed; a failed file is hidden until fixed. */
+const audioUsable = sql`${tracks.audioStatus} <> 'failed'`;
+const published = and(eq(tracks.status, "published"), audioUsable);
 const newestFirst = [sql`${tracks.publishedAt} desc`, sql`${tracks.id}`];
 
 function cards() {
@@ -75,7 +78,7 @@ export const getPublicTrack = cache(async (creatorSlug: string, trackSlug: strin
     })
     .from(tracks)
     .innerJoin(creatorProfiles, eq(creatorProfiles.userId, tracks.creatorId))
-    .where(and(eq(creatorProfiles.slug, creatorSlug), eq(tracks.slug, trackSlug), sql`${tracks.status} in ('published', 'archived')`))
+    .where(and(eq(creatorProfiles.slug, creatorSlug), eq(tracks.slug, trackSlug), sql`${tracks.status} in ('published', 'archived')`, audioUsable))
     .limit(1);
   return track ?? null;
 });

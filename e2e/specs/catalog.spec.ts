@@ -46,9 +46,10 @@ test("anyone can browse published releases, and only those", async ({ open }) =>
     audio_key: `${bobId}/x/bob-track-${i}.wav`, audio_size_bytes: 10, audio_format: "wav", audio_status: "processing",
   }));
   await sql`insert into tracks ${sql(bobTracks)}`;
-  // Counted from the database, so real releases already there don't break the test.
+  // Counted from the database, so real releases already there don't break the test. Same rule
+  // as the public pages: published, and audio not failed (decision 029).
   const count = async (genre?: string) =>
-    Number((await sql`select count(*) from tracks where status = 'published' and (${genre ?? null}::track_genre is null or genre = ${genre ?? null})`)[0].count);
+    Number((await sql`select count(*) from tracks where status = 'published' and audio_status <> 'failed' and (${genre ?? null}::track_genre is null or genre = ${genre ?? null})`)[0].count);
   const published = await count();
   const lofi = await count("lo-fi");
 

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowLeftIcon, ExternalLinkIcon } from "lucide-react";
+import { AudioStatusPanel } from "@/features/audio-status/audio-status-panel";
+import { toSnapshot } from "@/features/audio-status/service";
 import { AudioUploadField } from "@/features/audio-upload/audio-upload-field";
 import { trackHref } from "@/features/catalog/track-href";
 import { updateRelease } from "@/features/releases/actions";
@@ -70,6 +72,11 @@ async function TrackEditor({ params }: { params: Promise<{ id: string }> }) {
             Audio
           </h2>
           <p className="text-sm text-muted-foreground">The full-quality master. It stays private; licensed advertisers get it once licensing opens.</p>
+        </div>
+        {/* Keyed by the file, so a new upload starts the live status afresh. The live region
+            stays mounted around it, so screen readers announce the first status too. */}
+        <div aria-live="polite">
+          <AudioStatusPanel key={track.audioKey ?? "none"} trackId={track.id} initial={toSnapshot(track)} released={track.status !== "draft"} />
         </div>
         <AudioUploadField trackId={track.id} current={current} editable={track.status === "draft"} />
       </section>

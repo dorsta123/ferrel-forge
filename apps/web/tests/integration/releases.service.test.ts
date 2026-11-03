@@ -83,8 +83,15 @@ describe("publish, unpublish, lock", () => {
     expect(failure(await changeReleaseStatus(B.id, id, "publish"))).toContain("Track not found");
   });
 
-  it("publishes once audio is attached", async () => {
+  it("refuses to publish while the audio has failed (also when forged past the page)", async () => {
     await attachAudio(A.id, id);
+    await db.update(tracks).set({ audioStatus: "failed", audioError: "Not audio." }).where(eq(tracks.id, id));
+    expect(failure(await changeReleaseStatus(A.id, id, "publish"))).toContain("Fix the audio");
+    expect((await row(id)).status).toBe("draft");
+    await db.update(tracks).set({ audioStatus: "processing", audioError: null }).where(eq(tracks.id, id));
+  });
+
+  it("publishes once audio is attached, even while it's still processing", async () => {
     expect((await changeReleaseStatus(A.id, id, "publish")).ok).toBe(true);
     const r = await row(id);
     expect(r.status).toBe("published");
