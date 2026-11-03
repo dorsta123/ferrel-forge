@@ -108,6 +108,7 @@ apps/web/src/
 │   ├── releases/             create, edit, publish/unpublish/archive/delete
 │   ├── audio-status/         the editor's live audio status and "Try again" (polls every 3 s while unsettled)
 │   ├── audio-upload/         uploading the master audio file
+│   ├── preview-settings/     the preview's start (waveform + slider) and on/off
 │   ├── creator-tracks/       the dashboard's release list, filters, stats
 │   ├── catalog/              everything public: Explore, creator & release pages
 │   └── tracks/               shared: "get my track" (ownership check), "who's the creator"
@@ -163,7 +164,7 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 | `/become-creator` | [app/become-creator/page.tsx](../apps/web/src/app/become-creator/page.tsx) | [its actions.ts](../apps/web/src/app/become-creator/actions.ts), [lib/creator-profile.ts](../apps/web/src/lib/creator-profile.ts) | Signed-in non-creators |
 | `/dashboard` | [app/dashboard/page.tsx](../apps/web/src/app/dashboard/page.tsx) | [features/creator-tracks/](../apps/web/src/features/creator-tracks/) | The creator |
 | `/dashboard/tracks/new` | [app/dashboard/tracks/new/page.tsx](../apps/web/src/app/dashboard/tracks/new/page.tsx) | [features/releases/](../apps/web/src/features/releases/) | Creators |
-| `/dashboard/tracks/<id>` | [app/dashboard/tracks/[id]/page.tsx](../apps/web/src/app/dashboard/tracks/[id]/page.tsx) | [features/releases/](../apps/web/src/features/releases/), [features/audio-upload/](../apps/web/src/features/audio-upload/), [features/audio-status/](../apps/web/src/features/audio-status/) | The track's owner only |
+| `/dashboard/tracks/<id>` | [app/dashboard/tracks/[id]/page.tsx](../apps/web/src/app/dashboard/tracks/[id]/page.tsx) | [features/releases/](../apps/web/src/features/releases/), [features/audio-upload/](../apps/web/src/features/audio-upload/), [features/audio-status/](../apps/web/src/features/audio-status/), [features/preview-settings/](../apps/web/src/features/preview-settings/) | The track's owner only |
 | `/explore` | [app/explore/page.tsx](../apps/web/src/app/explore/page.tsx) | [features/catalog/](../apps/web/src/features/catalog/) | Everyone |
 | `/creators/<slug>` | [app/creators/[slug]/page.tsx](../apps/web/src/app/creators/[slug]/page.tsx) | [features/catalog/queries.ts](../apps/web/src/features/catalog/queries.ts) | Everyone |
 | `/creators/<slug>/<track>` | [app/creators/[slug]/[track]/page.tsx](../apps/web/src/app/creators/[slug]/[track]/page.tsx) | [features/catalog/](../apps/web/src/features/catalog/) | Everyone (published or archived only) |
@@ -201,6 +202,7 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 6. **The worker measures the song.** [process-track-audio.ts](../apps/worker/src/audio/process-track-audio.ts) downloads it to a temp file; [measure-step.ts](../apps/worker/src/audio/measure-step.ts) runs `analyzeAudio` and saves the length, waveform and "ready", or "failed" with a reason for the artist ([decision 027](decisions/027-measuring-songs.md)). The length then shows on cards, the release page and the dashboard.
 7. **The worker makes the preview.** [preview-step.ts](../apps/worker/src/audio/preview-step.ts) cuts 15 s (from the artist's start, or 25% in) with one soft tone at 7.5 s ([audio/preview.ts](../packages/audio/src/preview.ts)), uploads it to the public bucket as `<trackId>/<random>.mp3`, and saves its key, unless the track changed meanwhile ([decision 028](decisions/028-previews.md)).
 8. **The artist sees it happen.** [audio-status-panel.tsx](../apps/web/src/features/audio-status/audio-status-panel.tsx) → [use-audio-status.ts](../apps/web/src/features/audio-status/use-audio-status.ts) asks the server every 3 s while something is in progress: Processing → Ready (length; preview making / ready / off / couldn't be made) or Failed (the reason) with **Try again** ([audio-status/service.ts](../apps/web/src/features/audio-status/service.ts)). Publishing is blocked while Failed ([releases/status.ts](../apps/web/src/features/releases/status.ts)).
+9. **The artist picks the preview.** [preview-settings.tsx](../apps/web/src/features/preview-settings/preview-settings.tsx) shows the waveform with the 15 s window; **Save start point** or the on/off switch call [preview-settings/service.ts](../apps/web/src/features/preview-settings/service.ts), which deletes the old public preview and asks the worker for a new one. The worker attaches it only if the start hasn't changed meanwhile ([decision 030](decisions/030-choosing-the-preview.md)).
 
 ---
 
