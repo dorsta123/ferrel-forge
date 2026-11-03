@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { playedBars, timeLabel, windowBars } from "./player-math";
+import { captionFor, playedBars, timeLabel, windowBars } from "./player-math";
 
 describe("windowBars", () => {
   it("maps the preview window onto the 200 waveform bars", () => {
@@ -19,6 +19,13 @@ describe("playedBars", () => {
     expect(playedBars(w, 7_500, 15_000)).toBe(87.5);
     expect(playedBars(w, 15_000, 15_000)).toBe(125);
     expect(playedBars(w, 99_000, 15_000)).toBe(125); // never past the window
+  });
+});
+
+describe("captionFor", () => {
+  it("says how long the preview really is", () => {
+    expect(captionFor(15_000)).toBe("Preview · 15 s with a soft watermark tone");
+    expect(captionFor(8_000)).toBe("Preview · 8 s with a soft watermark tone");
   });
 });
 

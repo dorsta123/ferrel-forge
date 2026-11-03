@@ -20,6 +20,18 @@ describe("publicPreviewUrl", () => {
     expect(publicPreviewUrl(KEY)).toBe(`https://cdn.example.com/p/${KEY}`);
   });
 
+  it("ignores a trailing slash on the storage address", () => {
+    process.env.PREVIEWS_PUBLIC_URL = "";
+    process.env.S3_ENDPOINT = "http://localhost:9000/";
+    process.env.S3_BUCKET_PREVIEWS = "previews";
+    expect(publicPreviewUrl(KEY)).toBe(`http://localhost:9000/previews/${KEY}`);
+  });
+
+  it.each(["javascript:alert(1)", "ftp://cdn.example.com", "not a url"])("refuses a PREVIEWS_PUBLIC_URL that isn't http(s): %s", (base) => {
+    process.env.PREVIEWS_PUBLIC_URL = base;
+    expect(() => publicPreviewUrl(KEY)).toThrow(/PREVIEWS_PUBLIC_URL/);
+  });
+
   it.each([
     ["a master key", "11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222/33333333-3333-4333-8333-333333333333.wav"],
     ["a path escape", "../masters/x.mp3"],

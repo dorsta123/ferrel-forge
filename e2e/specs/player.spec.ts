@@ -51,9 +51,15 @@ test("a visitor plays the preview, never the master; with previews off there's n
     expect(requested.some((u) => u.includes(`/${bucketId("masters")}/`))).toBe(false);
   });
 
+  await test.step("a preview deleted since the page loaded says so instead of doing nothing", async () => {
+    await visitor.reload();
+    await deleteObject("previews", previewKey); // e.g. the artist just picked a new start
+    await m.getByRole("button", { name: "Play preview" }).click();
+    await expect(m.getByRole("alert")).toContainText("Preview unavailable");
+  });
+
   await test.step("with previews switched off there's no player", async () => {
     await sql`update tracks set preview_enabled = false, preview_key = null where id = ${trackId}`;
-    await deleteObject("previews", previewKey); // as switching off does
     await visitor.reload();
     await expect(m.getByRole("heading", { name: "Midnight Run", level: 1 })).toBeVisible();
     await expect(m.getByRole("button", { name: "Play preview" })).toHaveCount(0);
