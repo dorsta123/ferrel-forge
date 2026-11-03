@@ -114,6 +114,7 @@ apps/web/src/
 │   └── tracks/               shared: "get my track" (ownership check), "who's the creator"
 ├── components/             reusable UI pieces
 │   ├── ui/                   basic building blocks (button, input, menu…) from shadcn/ui
+│   ├── audio/                the preview player (play/pause over the waveform) and its maths
 │   ├── track/                track card + generated cover art
 │   ├── home/                 homepage example campaign
 │   ├── auth/                 sign-in / sign-up forms
@@ -177,8 +178,8 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 1. The browser asks for `/creators/dingo/abcd`.
 2. [app/creators/[slug]/[track]/page.tsx](../apps/web/src/app/creators/[slug]/[track]/page.tsx) runs **on the server**.
 3. [catalog/params.ts](../apps/web/src/features/catalog/params.ts) checks that `dingo` and `abcd` *look like* valid slugs. If not, it shows "not found" without touching the database.
-4. [catalog/queries.ts](../apps/web/src/features/catalog/queries.ts) → `getPublicTrack` selects only public columns, and only published or archived tracks. The private rate and the audio location are never selected.
-5. The page renders the cover ([track-cover.tsx](../apps/web/src/components/track/track-cover.tsx)) and the licensing box ([license-panel.tsx](../apps/web/src/features/catalog/license-panel.tsx)), and sends HTML to the browser.
+4. [catalog/queries.ts](../apps/web/src/features/catalog/queries.ts) → `getPublicTrack` selects only public columns, and only published or archived tracks. The private rate and the audio location are never selected. A preview, if one exists, comes back as a ready-to-play public link ([catalog/preview-info.ts](../apps/web/src/features/catalog/preview-info.ts), [decision 031](decisions/031-the-player.md)).
+5. The page renders the cover ([track-cover.tsx](../apps/web/src/components/track/track-cover.tsx)), the preview player ([preview-player.tsx](../apps/web/src/components/audio/preview-player.tsx), which downloads the preview only when play is pressed) and the licensing box ([license-panel.tsx](../apps/web/src/features/catalog/license-panel.tsx)), and sends HTML to the browser.
 
 ### 5.2 A creator edits and saves a release
 1. [release-form.tsx](../apps/web/src/features/releases/release-form.tsx) (browser) holds the typed values via [use-release-form.ts](../apps/web/src/features/releases/use-release-form.ts) and shows the live preview card.
@@ -202,7 +203,7 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 6. **The worker measures the song.** [process-track-audio.ts](../apps/worker/src/audio/process-track-audio.ts) downloads it to a temp file; [measure-step.ts](../apps/worker/src/audio/measure-step.ts) runs `analyzeAudio` and saves the length, waveform and "ready", or "failed" with a reason for the artist ([decision 027](decisions/027-measuring-songs.md)). The length then shows on cards, the release page and the dashboard.
 7. **The worker makes the preview.** [preview-step.ts](../apps/worker/src/audio/preview-step.ts) cuts 15 s (from the artist's start, or 25% in) with one soft tone at 7.5 s ([audio/preview.ts](../packages/audio/src/preview.ts)), uploads it to the public bucket as `<trackId>/<random>.mp3`, and saves its key, unless the track changed meanwhile ([decision 028](decisions/028-previews.md)).
 8. **The artist sees it happen.** [audio-status-panel.tsx](../apps/web/src/features/audio-status/audio-status-panel.tsx) → [use-audio-status.ts](../apps/web/src/features/audio-status/use-audio-status.ts) asks the server every 3 s while something is in progress: Processing → Ready (length; preview making / ready / off / couldn't be made) or Failed (the reason) with **Try again** ([audio-status/service.ts](../apps/web/src/features/audio-status/service.ts)). Publishing is blocked while Failed ([releases/status.ts](../apps/web/src/features/releases/status.ts)).
-9. **The artist picks the preview.** [preview-settings.tsx](../apps/web/src/features/preview-settings/preview-settings.tsx) shows the waveform with the 15 s window; **Save start point** or the on/off switch call [preview-settings/service.ts](../apps/web/src/features/preview-settings/service.ts), which deletes the old public preview and asks the worker for a new one. The worker attaches it only if the start hasn't changed meanwhile ([decision 030](decisions/030-choosing-the-preview.md)).
+9. **The artist picks the preview.** [preview-settings.tsx](../apps/web/src/features/preview-settings/preview-settings.tsx) shows the waveform with the 15 s window; **Save start point** or the on/off switch call [preview-settings/service.ts](../apps/web/src/features/preview-settings/service.ts), which deletes the old public preview and asks the worker for a new one. The worker attaches it only if the start hasn't changed meanwhile ([decision 030](decisions/030-choosing-the-preview.md)). The same section plays the current preview.
 
 ---
 

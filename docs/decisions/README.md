@@ -34,6 +34,7 @@ One file per decision, numbered in order. To reverse a decision, add a new recor
 | [028](028-previews.md) | Previews are made in the same job right after measuring (one download); "ready" means measured; a new random public file each time, attached only if the track didn't change, else deleted | Accepted |
 | [029](029-live-audio-status.md) | The editor polls the audio status every 3 s while in progress (stops when settled or after 10 min); Try again only after a failure; publishing blocked while Failed | Accepted |
 | [030](030-choosing-the-preview.md) | The artist moves a 15 s window on the waveform (standard slider) and saves with a button; the old preview is deleted and a new one made; the worker attaches a preview only if the start is still the one it used | Accepted |
+| [031](031-the-player.md) | The preview player: the song's waveform with the previewed 15 s filling as it plays; loads only on play; shown only when a preview exists; served from `PREVIEWS_PUBLIC_URL` | Accepted |
 
 ## Template
 
