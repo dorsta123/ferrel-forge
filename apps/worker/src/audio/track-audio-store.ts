@@ -5,6 +5,8 @@ import { and, db, eq, sql, tracks } from "@ferrel/db";
 import type { AudioProcessJob } from "@ferrel/queues";
 
 const sameFile = (t: AudioProcessJob) => and(eq(tracks.id, t.trackId), eq(tracks.audioKey, t.audioKey));
+/** The track's preview start is still the one used (null = the default). */
+const sameStart = (startUsed: number | null) => (startUsed === null ? sql`${tracks.previewStartMs} is null` : eq(tracks.previewStartMs, startUsed));
 
 /** What still needs doing for this ticket's file, or null if the track no longer has that file. */
 export async function audioState(ticket: AudioProcessJob) {
@@ -43,20 +45,34 @@ export async function saveFailed(ticket: AudioProcessJob, reason: string): Promi
   return done.length > 0;
 }
 
-/** Give up on this file's preview after its last attempt, so it isn't retried forever. */
-export async function savePreviewFailed(ticket: AudioProcessJob): Promise<void> {
+/**
+ * Give up on this file's preview after its last attempt, so it isn't retried forever, but only
+ * for the start that was tried: a start chosen meanwhile still deserves its own attempts.
+ */
+export async function savePreviewFailed(ticket: AudioProcessJob, startUsed: number | null): Promise<void> {
   await db
     .update(tracks)
     .set({ previewFailedAt: new Date() })
-    .where(and(sameFile(ticket), eq(tracks.audioStatus, "ready"), sql`${tracks.previewKey} is null`));
+    .where(and(sameFile(ticket), eq(tracks.audioStatus, "ready"), sql`${tracks.previewKey} is null`, sameStart(startUsed)));
 }
 
-/** Attach a new preview, only while the track is ready, still wants one and has none. */
-export async function savePreview(ticket: AudioProcessJob, previewKey: string): Promise<boolean> {
+/**
+ * Attach a new preview, only while the track is ready, still wants one, has none, and its
+ * start is still the one the preview was made from (the artist may have moved it meanwhile).
+ */
+export async function savePreview(ticket: AudioProcessJob, previewKey: string, startUsed: number | null): Promise<boolean> {
   const done = await db
     .update(tracks)
     .set({ previewKey })
-    .where(and(sameFile(ticket), eq(tracks.audioStatus, "ready"), eq(tracks.previewEnabled, true), sql`${tracks.previewKey} is null`))
+    .where(
+      and(
+        sameFile(ticket),
+        eq(tracks.audioStatus, "ready"),
+        eq(tracks.previewEnabled, true),
+        sql`${tracks.previewKey} is null`,
+        sameStart(startUsed),
+      ),
+    )
     .returning({ id: tracks.id });
   return done.length > 0;
 }

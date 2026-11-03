@@ -33,6 +33,7 @@ One file per decision, numbered in order. To reverse a decision, add a new recor
 | [027](027-measuring-songs.md) | The worker measures each song once (length + waveform together); the file's problems → "failed" with a message for the artist, ours → retried, never blamed on the artist | Accepted |
 | [028](028-previews.md) | Previews are made in the same job right after measuring (one download); "ready" means measured; a new random public file each time, attached only if the track didn't change, else deleted | Accepted |
 | [029](029-live-audio-status.md) | The editor polls the audio status every 3 s while in progress (stops when settled or after 10 min); Try again only after a failure; publishing blocked while Failed | Accepted |
+| [030](030-choosing-the-preview.md) | The artist moves a 15 s window on the waveform (standard slider) and saves with a button; the old preview is deleted and a new one made; the worker attaches a preview only if the start is still the one it used | Accepted |
 
 ## Template
 

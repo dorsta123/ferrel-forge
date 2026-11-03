@@ -10,6 +10,7 @@ import { deleteObject, getObjectInfo, newPreviewKey, uploadFile } from "@ferrel/
 import { AUDIO_FAILURE } from "../../src/audio/failure";
 import { processTrackAudio } from "../../src/audio/process-track-audio";
 import { savePreviewOrDiscard } from "../../src/audio/preview-step";
+import { savePreviewFailed } from "../../src/audio/track-audio-store";
 import { createCreator, publicUrl, removeCreated, trackRow, trackWithMaster } from "./support";
 
 const files = mkdtempSync(join(tmpdir(), "ferrel worker test "));
@@ -21,6 +22,12 @@ beforeAll(async () => {
   creator = await createCreator("measure");
   await runFfmpeg(["-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=10", "-ac", "1", join(files, "tone 10s.wav")]);
   await runFfmpeg(["-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=40", "-ac", "1", join(files, "tone 40s.wav")]);
+  // 20 s of silence, then 20 s of tone: shows where a preview starts.
+  await runFfmpeg([
+    "-y", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100:duration=20",
+    "-filter_complex", "[0:a]atrim=0:20,aformat=sample_rates=44100:channel_layouts=mono[q];[1:a]aformat=sample_rates=44100:channel_layouts=mono[l];[q][l]concat=n=2:v=0:a=1",
+    join(files, "quiet then loud.wav"),
+  ]);
   writeFileSync(join(files, "fake.wav"), "plain text pretending to be a wav file");
   await runFfmpeg(["-y", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100:duration=0.0001", join(files, "blip.wav")]);
 });
@@ -100,6 +107,49 @@ describe("measuring", () => {
 });
 
 describe("the preview", () => {
+  it("starts where the artist chose (slice 9)", async () => {
+    const ticket = await trackWithMaster(creator, join(files, "quiet then loud.wav"), "wav");
+    await db.update(tracks).set({ audioStatus: "ready", durationMs: 40_000, previewStartMs: 20_000 }).where(eq(tracks.id, ticket.trackId));
+    expect((await processTrackAudio(ticket, opts)).preview).toBe("made");
+    const { peaks } = await analyzeAudio(await downloadPublic((await trackRow(ticket.trackId)).previewKey!), "mp3");
+    expect(Math.max(...peaks.slice(0, 3))).toBeGreaterThan(0.05); // loud from the first moment
+  });
+
+  it("is made again, in the same job, for a start the artist chose while the first was being made", async () => {
+    const ticket = await trackWithMaster(creator, join(files, "quiet then loud.wav"), "wav");
+    await db.update(tracks).set({ audioStatus: "ready", durationMs: 40_000, previewStartMs: 0 }).where(eq(tracks.id, ticket.trackId));
+    let moved = false;
+    const beforeAttach = async () => {
+      if (moved) return;
+      moved = true; // the artist saves 20 s while the 0 s preview is being made
+      await db.update(tracks).set({ previewStartMs: 20_000 }).where(eq(tracks.id, ticket.trackId));
+    };
+    expect((await processTrackAudio(ticket, { ...opts, beforeAttach })).preview).toBe("made");
+    const { peaks } = await analyzeAudio(await downloadPublic((await trackRow(ticket.trackId)).previewKey!), "mp3");
+    expect(Math.max(...peaks.slice(0, 3))).toBeGreaterThan(0.05); // the new start: loud from the first moment
+    expect(readdirSync(work)).toEqual([]);
+  });
+
+  it("gives up only on the start that was tried, not on one chosen meanwhile", async () => {
+    const ticket = await trackWithMaster(creator, join(files, "tone 10s.wav"), "wav");
+    await db.update(tracks).set({ audioStatus: "ready", durationMs: 10_000, previewStartMs: 0 }).where(eq(tracks.id, ticket.trackId));
+    await savePreviewFailed(ticket, null); // the default was tried, but 0 is chosen now
+    expect((await trackRow(ticket.trackId)).previewFailedAt).toBeNull();
+    await savePreviewFailed(ticket, 0);
+    expect((await trackRow(ticket.trackId)).previewFailedAt).toBeInstanceOf(Date);
+  });
+
+  it("isn't attached if the artist changed the start while it was being made", async () => {
+    const ticket = await trackWithMaster(creator, join(files, "tone 10s.wav"), "wav");
+    await db.update(tracks).set({ audioStatus: "ready", durationMs: 10_000, previewStartMs: 0 }).where(eq(tracks.id, ticket.trackId));
+    const key = newPreviewKey(ticket.trackId);
+    await uploadFile("previews", key, join(files, "tone 10s.wav"), "audio/mpeg");
+
+    expect(await savePreviewOrDiscard(ticket, key, null)).toBe(false); // made from the default, but 0 was chosen meanwhile
+    expect(await getObjectInfo("previews", key)).toBeNull();
+    expect(await savePreviewOrDiscard(ticket, newPreviewKey(ticket.trackId), 0)).toBe(true); // made from the current start
+  });
+
   it("is made right after measuring: 15 s, public, while the master stays private", async () => {
     const ticket = await trackWithMaster(creator, join(files, "tone 40s.wav"), "wav");
     expect(await processTrackAudio(ticket, opts)).toEqual({ measured: "ready", preview: "made" });
@@ -168,7 +218,7 @@ describe("the preview", () => {
     const key = newPreviewKey(ticket.trackId);
     await uploadFile("previews", key, join(files, "tone 10s.wav"), "audio/mpeg");
 
-    expect(await savePreviewOrDiscard(ticket, key)).toBe(false);
+    expect(await savePreviewOrDiscard(ticket, key, null)).toBe(false);
     expect(await getObjectInfo("previews", key)).toBeNull();
     expect((await trackRow(ticket.trackId)).previewKey).toBeNull();
   });

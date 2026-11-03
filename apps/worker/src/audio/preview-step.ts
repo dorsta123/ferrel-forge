@@ -13,14 +13,15 @@ export async function previewStep(
   master: string,
   format: InputFormat,
   track: { durationMs: number; previewStartMs: number | null },
-  { tempDir, timeoutMs }: { tempDir: string; timeoutMs: number },
+  { tempDir, timeoutMs, beforeAttach }: { tempDir: string; timeoutMs: number; beforeAttach?: () => Promise<void> },
 ): Promise<"made" | "skipped"> {
   const out = join(tempDir, `ferrel-${randomUUID()}.mp3`);
   try {
     await makePreview(master, format, out, previewWindow(track.durationMs, track.previewStartMs), { timeoutMs });
     const key = newPreviewKey(ticket.trackId);
     await uploadFile("previews", key, out, "audio/mpeg");
-    return (await savePreviewOrDiscard(ticket, key)) ? "made" : "skipped";
+    await beforeAttach?.();
+    return (await savePreviewOrDiscard(ticket, key, track.previewStartMs)) ? "made" : "skipped";
   } finally {
     await rm(out, { force: true }).catch(() => {});
   }
@@ -28,10 +29,11 @@ export async function previewStep(
 
 /**
  * Attach the uploaded preview. If the track changed meanwhile (song replaced, previews
- * switched off, a preview already there), delete the file again so nothing is left public.
+ * switched off, a preview already there, or a new start chosen), delete the file again so
+ * nothing stray is left public. `startUsed` is the start the preview was made from.
  */
-export async function savePreviewOrDiscard(ticket: AudioProcessJob, key: string): Promise<boolean> {
-  if (await savePreview(ticket, key)) return true;
+export async function savePreviewOrDiscard(ticket: AudioProcessJob, key: string, startUsed: number | null): Promise<boolean> {
+  if (await savePreview(ticket, key, startUsed)) return true;
   await deleteObject("previews", key);
   return false;
 }
