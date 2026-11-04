@@ -38,18 +38,18 @@ Two-strike rule: if the same fix fails twice, stop and rethink.
 | 9 ✅ | **Start-point picker and preview on/off:** a Preview section once measured: the waveform with the 15 s window highlighted, moved by a standard slider (drag or arrow keys), saved with a button; saving deletes the old preview and the worker makes a new one; a switch turns the preview off (deletes the file) or on (makes one). Owner-only, not for archived releases, the start must fit. The worker only attaches a preview made from the *current* start (user approved, 2026-11-03) | Changing the start produces a new preview |
 | 10 ✅ | **The player:** waveform play/pause on release pages and in the editor, preview only; nothing shown when the preview is off or not ready. The song's waveform with the previewed 15 s highlighted and filling as it plays; the audio loads only on play; keyboard and screen-reader friendly; previews served from `PREVIEWS_PUBLIC_URL` (defaults to local storage). Explore-card play buttons are a possible follow-up (user approved, 2026-11-04) | **A visitor presses play**; the master is never requested |
 | 11 ✅ | **Listen link:** the `listen_url` column (moved here from slice 3) and an optional field in Details, only `youtube.com` (also `www.`, `m.`, `music.`), `youtu.be`, `open.spotify.com` or `soundcloud.com` (also `www.`, `m.`) over https with a path, no logins or ports, at most 300 characters, stored normalized and checked in the browser, server and database; shown as "Listen to the full song on …" opening in a new tab (`noopener noreferrer nofollow`) (user approved, 2026-11-05) | Forged and hostile links refused (integration tests) |
-| 12 | **Cleanup and hardening:** a daily worker job deletes storage files no track points to: masters after 24 h (abandoned uploads), previews after 1 h (public, so stray ones shouldn't linger); only files named in our exact formats, page by page, logged. `/security-review` of the whole pipeline. The e2e journey "upload → process → pick start → publish → visitor plays" with the real worker (started by the test; CI's e2e job gets FFmpeg); docs; phase 4 complete (user approved, 2026-11-05) | Leftovers disappear; journey green |
+| 12 ✅ | **Cleanup and hardening:** a daily worker job deletes storage files no track points to: masters after 24 h (abandoned uploads), previews after 1 h (public, so stray ones shouldn't linger); only files named in our exact formats, page by page, logged. `/security-review` of the whole pipeline. The e2e journey "upload → process → pick start → publish → visitor plays" with the real worker (started by the test; CI's e2e job gets FFmpeg); docs; phase 4 complete (user approved, 2026-11-05) | Leftovers disappear; journey green |
 
 ## Acceptance criteria (whole phase)
-- [ ] After uploading, the creator sees the preview processing, then ready, with the length, without reloading.
-- [ ] Previews are 15 s, start where the creator chose (or about 25% in), and contain one watermark tone at 7.5 s.
-- [ ] Visitors can play the preview, never the master.
-- [ ] A release can be published before its preview is ready, or with previews switched off; public pages then simply show no player.
-- [ ] Replacing the audio, or changing the start, replaces the preview and deletes the old file. Deleting a release deletes its preview.
-- [ ] Corrupt files end as "Preview failed" with a reason and a retry.
-- [ ] Listen links accept only the allowed sites; anything else is refused on the server.
-- [ ] Abandoned uploads are deleted after 24 hours.
-- [ ] CI passes, including tests that run real FFmpeg.
+- [x] After uploading, the creator sees the preview processing, then ready, with the length, without reloading.
+- [x] Previews are 15 s, start where the creator chose (or about 25% in), and contain one watermark tone at 7.5 s.
+- [x] Visitors can play the preview, never the master.
+- [x] A release can be published before its preview is ready, or with previews switched off; public pages then simply show no player.
+- [x] Replacing the audio, or changing the start, replaces the preview and deletes the old file. Deleting a release deletes its preview.
+- [x] Corrupt files end as "Failed" with a reason; a retry is offered where it can help (decision 029).
+- [x] Listen links accept only the allowed sites; anything else is refused on the server (and by the database).
+- [x] Abandoned uploads are deleted after 24 hours (orphaned previews after 1 hour, decision 033).
+- [x] CI passes, including tests that run real FFmpeg (unit, worker integration, and the full journey in the browser).
 
 ## Risks
 - **Processing untrusted media:**
