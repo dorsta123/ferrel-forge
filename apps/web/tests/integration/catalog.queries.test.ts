@@ -1,6 +1,6 @@
 // Public catalog queries: what anyone can see, no private columns, filters and paging.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { db, tracks } from "@ferrel/db";
+import { db, eq, tracks } from "@ferrel/db";
 import { EXPLORE_PAGE_SIZE } from "@/features/catalog/params";
 import { creatorReleases, explorePage, getPublicCreator, getPublicTrack, latestReleases } from "@/features/catalog/queries";
 import { ago, createUsers, removeCreatedUsers, type TestUser } from "./support";
@@ -103,5 +103,46 @@ describe("releases whose audio failed after publishing (user choice A, slice 8)"
     expect(await getPublicTrack(D.slug!, "d-broken")).toBeNull();
     expect(await getPublicTrack(D.slug!, "d-broken-old")).toBeNull();
     expect(await getPublicTrack(D.slug!, "d-ok")).not.toBeNull();
+  });
+});
+
+describe("the preview player's data (slice 10)", () => {
+  it("is there only when a preview exists, with a public link and never the master's location", async () => {
+    const [E] = await createUsers(["pe"]);
+    const waveform = Array<number>(200).fill(500);
+    const previewKey = (id: string) => `${id}/00000000-0000-4000-8000-000000000001.mp3`;
+    const rows = await db
+      .insert(tracks)
+      .values([
+        live(E.id, "e-ready", 1, { audioStatus: "ready", durationMs: 40_000, waveform }),
+        live(E.id, "e-off", 2, { audioStatus: "ready", durationMs: 40_000, waveform, previewEnabled: false }),
+        live(E.id, "e-processing", 3),
+      ])
+      .returning({ id: tracks.id, slug: tracks.slug });
+    const ready = rows.find((r) => r.slug === "e-ready")!;
+    await db.update(tracks).set({ previewKey: previewKey(ready.id), previewStartMs: 20_000 }).where(eq(tracks.id, ready.id));
+
+    const page = await getPublicTrack(E.slug!, "e-ready");
+    expect(page?.preview).toEqual({
+      url: expect.stringMatching(new RegExp(`/${previewKey(ready.id)}$`)),
+      durationMs: 40_000,
+      startMs: 20_000,
+      lengthMs: 15_000,
+      waveform,
+    });
+    expect(page).not.toHaveProperty("audioKey");
+    expect(page).not.toHaveProperty("previewKey");
+    expect((await getPublicTrack(E.slug!, "e-off"))?.preview).toBeNull();
+    expect((await getPublicTrack(E.slug!, "e-processing"))?.preview).toBeNull();
+  });
+});
+
+describe("bad preview data (slice 10 review)", () => {
+  it("gives no player instead of breaking the page when a stored preview address isn't a real preview", async () => {
+    const [F] = await createUsers(["pf"]);
+    await db.insert(tracks).values(live(F.id, "f-odd", 1, { audioStatus: "ready", durationMs: 40_000, waveform: Array<number>(200).fill(1), previewKey: "not/a-preview.mp3" }));
+    const page = await getPublicTrack(F.slug!, "f-odd");
+    expect(page).not.toBeNull();
+    expect(page?.preview).toBeNull();
   });
 });

@@ -7,3 +7,4 @@ export { deleteObject, downloadObjectToFile, getObjectInfo, readObjectStart } fr
 export { AUDIO_SIGNATURE_BYTES, detectAudioFormat } from "./audio-signature";
 export { isMasterKeyFor, newMasterKey, newPreviewKey, parseMasterKey } from "./keys";
 export { uploadFile } from "./upload-file";
+export { isPreviewKey, publicPreviewUrl } from "./public-url";
