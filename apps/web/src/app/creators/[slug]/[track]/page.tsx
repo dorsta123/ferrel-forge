@@ -79,7 +79,7 @@ async function Release({ params }: { params: Params }) {
             </p>
           </header>
 
-          {track.preview && <PreviewPlayer preview={track.preview} />}
+          {track.preview && <PreviewPlayer key={track.preview.url} preview={track.preview} />}
 
           <LicensePanel track={track} />
 

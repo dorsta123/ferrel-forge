@@ -4,17 +4,19 @@ import { useRef, useState } from "react";
 import { PauseIcon, PlayIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TRACK_LIMITS } from "@ferrel/db/constants";
-import { playedBars, timeLabel, windowBars } from "./player-math";
+import { captionFor, playedBars, timeLabel, windowBars } from "./player-math";
 import type { PreviewInfo } from "./types";
 
 /**
  * Play/pause for a 15 s preview over the song's waveform: the previewed part is
  * highlighted and fills as it plays. The audio is fetched only when play is pressed.
+ * Key it by `preview.url` so a new preview starts from a clean state.
  */
 export function PreviewPlayer({ preview }: { preview: PreviewInfo }) {
   const audio = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [currentMs, setCurrentMs] = useState(0);
+  const [unavailable, setUnavailable] = useState(false);
   const bars = preview.waveform;
   const w = windowBars(bars.length, preview.durationMs, preview.startMs, preview.lengthMs);
   const played = playedBars(w, currentMs, preview.lengthMs);
@@ -41,12 +43,17 @@ export function PreviewPlayer({ preview }: { preview: PreviewInfo }) {
             return <rect key={i} x={i + 0.15} y={20 - h / 2} width={0.7} height={h} className={tone} />;
           })}
         </svg>
-        <p className="flex justify-between text-xs text-muted-foreground">
-          <span>Preview · 15 s with a soft watermark tone</span>
-          <span data-testid="player-time" className="font-mono tabular-nums">
+        <p className="flex justify-between gap-2 text-xs text-muted-foreground">
+          <span className="min-w-0 truncate">{captionFor(preview.lengthMs)}</span>
+          <span data-testid="player-time" className="shrink-0 font-mono whitespace-nowrap tabular-nums">
             {timeLabel(currentMs, preview.lengthMs)}
           </span>
         </p>
+        {unavailable && (
+          <p role="alert" className="text-xs text-destructive">
+            Preview unavailable. Reload the page to get the latest one.
+          </p>
+        )}
       </div>
       <audio
         ref={audio}
@@ -59,6 +66,11 @@ export function PreviewPlayer({ preview }: { preview: PreviewInfo }) {
           setCurrentMs(0);
         }}
         onTimeUpdate={(e) => setCurrentMs(e.currentTarget.currentTime * 1000)}
+        // e.g. the artist replaced the preview since this page loaded and the old file is gone
+        onError={() => {
+          setPlaying(false);
+          setUnavailable(true);
+        }}
       />
     </div>
   );

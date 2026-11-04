@@ -18,3 +18,8 @@ export function playedBars(w: BarWindow, currentMs: number, lengthMs: number): n
 export function timeLabel(currentMs: number, lengthMs: number): string {
   return `${formatDuration(Math.floor(currentMs / 1000) * 1000)} / ${formatDuration(lengthMs)}`;
 }
+
+/** "Preview · 15 s with a soft watermark tone" (shorter songs are previewed whole). */
+export function captionFor(lengthMs: number): string {
+  return `Preview · ${Math.round(lengthMs / 1000)} s with a soft watermark tone`;
+}

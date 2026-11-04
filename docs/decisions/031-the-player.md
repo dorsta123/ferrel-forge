@@ -12,6 +12,7 @@ Releases now have 15-second previews in a public bucket (decision 028), with a s
 - **Shown only when a preview exists:** the track is ready, previews are on, and a preview file is attached. Otherwise there's no player and no message; the page looks as it did before.
 - **Public data only:** `getPublicTrack` turns the preview columns into a ready-to-play link (`preview: { url, durationMs, startMs, lengthMs, waveform }`) and drops the raw columns. The master's location is still never selected (decision 015).
 - **`publicPreviewUrl`** builds the link and accepts preview keys only (`<trackId>/<random>.mp3`), so nothing else can become a public link. `PREVIEWS_PUBLIC_URL` points at a CDN in a real deployment; empty means the local storage server.
+- **From review:** a preview that fails to load (e.g. deleted since the page opened) shows "Preview unavailable. Reload the page to get the latest one."; the caption gives the real length (shorter songs are previewed whole); `PREVIEWS_PUBLIC_URL` must be http(s), and trailing slashes are ignored.
 
 ## Alternatives considered
 - **Preload metadata or the whole file:** a faster first play, but every page view would download audio.
