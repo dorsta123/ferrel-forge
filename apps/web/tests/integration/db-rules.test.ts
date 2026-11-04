@@ -78,6 +78,12 @@ describe("tracks table", () => {
     ["a bar above 1000", { ...audio(), waveform: [...wave(199), 1001] }, "tracks_waveform_shape"],
     ["a negative bar", { ...audio(), waveform: [-1, ...wave(199)] }, "tracks_waveform_shape"],
     ["unknown audio status", { audioStatus: "done" }, "22P02"],
+    // The full-song link (slice 11): https, an allowed site, a path.
+    ["a listen link to another site", { listenUrl: "https://evil.com/song" }, "tracks_listen_url"],
+    ["a listen link over http", { listenUrl: "http://youtu.be/abc" }, "tracks_listen_url"],
+    ["a lookalike listen link", { listenUrl: "https://youtube.com.evil.com/x" }, "tracks_listen_url"],
+    ["a listen link with a hidden login", { listenUrl: "https://youtube.com@evil.com/x" }, "tracks_listen_url"],
+    ["a listen link over 300 chars", { listenUrl: `https://youtu.be/${"a".repeat(300)}` }, "tracks_listen_url"],
     ["unknown genre", { genre: "polka" }, "22P02"],
     ["unknown status", { status: "deleted" }, "22P02"],
   ])("refuses %s", async (_, patch, expected) => {
@@ -89,6 +95,7 @@ describe("tracks table", () => {
     ["a track under 15 s previewed from 0", { ...audio(), audioStatus: "ready", durationMs: 10_000, previewStartMs: 0 }],
     ["a failed track with a reason", { ...audio(), audioStatus: "failed", audioError: "That file isn't valid audio." }],
     ["previews switched off", { ...audio(), previewEnabled: false }],
+    ["a full-song link on Spotify", { listenUrl: "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC" }],
     // The old preview stays while a new one is made (start changed) or if making it failed.
     ["a preview kept while a new one is made", { ...audio(), previewKey: "p/x.mp3" }],
     ["a preview kept after making a new one failed", { ...audio(), audioStatus: "failed", audioError: "Preview failed.", previewKey: "p/x.mp3" }],

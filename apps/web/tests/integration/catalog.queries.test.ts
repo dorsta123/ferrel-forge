@@ -146,3 +146,11 @@ describe("bad preview data (slice 10 review)", () => {
     expect(page?.preview).toBeNull();
   });
 });
+
+describe("the full-song link (slice 11)", () => {
+  it("is shown on the release page", async () => {
+    const [G] = await createUsers(["pg"]);
+    await db.insert(tracks).values(live(G.id, "g-linked", 1, { listenUrl: "https://youtu.be/dQw4w9WgXcQ" }));
+    expect((await getPublicTrack(G.slug!, "g-linked"))?.listenUrl).toBe("https://youtu.be/dQw4w9WgXcQ");
+  });
+});

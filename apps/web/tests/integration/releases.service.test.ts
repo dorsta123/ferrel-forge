@@ -7,7 +7,7 @@ import type { ReleaseFormValues } from "@/features/releases/types";
 import { createUsers, removeCreatedUsers, type TestUser } from "./support";
 
 const form = (patch: Partial<ReleaseFormValues> = {}): ReleaseFormValues => ({
-  title: "Midnight Run", slug: "", description: "", genre: "electronic", bpm: "", musicalKey: "", price: "12.50", ...patch,
+  title: "Midnight Run", slug: "", description: "", genre: "electronic", bpm: "", musicalKey: "", price: "12.50", listenUrl: "", ...patch,
 });
 const row = async (id: string) => (await db.select().from(tracks).where(eq(tracks.id, id)))[0];
 const failure = (r: { ok: boolean; errors?: object; error?: string }) => (r.ok ? "ok" : JSON.stringify(r.errors ?? r.error));
@@ -69,6 +69,17 @@ describe("update", () => {
     const r = await updateRelease(A.id, id, form({ title: "Midnight Run (Extended)", slug: "midnight-run-extended", bpm: "124", musicalKey: "Am", price: "15" }));
     expect(r.ok).toBe(true);
     expect(await row(id)).toMatchObject({ slug: "midnight-run-extended", bpm: 124, basePriceCents: 1500 });
+  });
+
+  it("stores a full-song link, cleaned up, and refuses hostile ones (slice 11)", async () => {
+    expect((await updateRelease(A.id, id, form({ listenUrl: "  https://Open.Spotify.com/track/4uLU6hMCjMI75M1A2tKUQC " }))).ok).toBe(true);
+    expect((await row(id)).listenUrl).toBe("https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC");
+    for (const hostile of ["javascript:alert(1)", "https://youtube.com.evil.com/x", "https://youtube.com@evil.com/x", "http://youtu.be/x"]) {
+      expect(failure(await updateRelease(A.id, id, form({ listenUrl: hostile })))).toContain("listenUrl");
+    }
+    expect((await row(id)).listenUrl).toBe("https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC");
+    expect((await updateRelease(A.id, id, form({ listenUrl: "" }))).ok).toBe(true);
+    expect((await row(id)).listenUrl).toBeNull();
   });
 
   it("refuses a URL the creator already uses", async () => {
