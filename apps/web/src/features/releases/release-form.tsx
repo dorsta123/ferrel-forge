@@ -2,7 +2,7 @@
 
 import { startTransition, useActionState } from "react";
 import { CheckCircle2Icon, LockIcon } from "lucide-react";
-import { GENRES, MUSICAL_KEYS, TRACK_LIMITS as L } from "@ferrel/db/constants";
+import { GENRES, LISTEN_URL_MAX, MUSICAL_KEYS, TRACK_LIMITS as L } from "@ferrel/db/constants";
 import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,6 +99,22 @@ export function ReleaseForm({ mode, action, initial, locks, creatorSlug, artistN
               aria-invalid={!!errors.description}
               aria-describedby="description-hint"
               onChange={(e) => set("description", e.target.value)}
+            />
+          </FormField>
+
+          {/* A plain text box (not type="url"): our own message explains which sites are allowed. */}
+          <FormField id="listenUrl" label="Listen to the full song" optional error={errors.listenUrl} hint="A YouTube, Spotify or SoundCloud link, shown on your release page.">
+            <Input
+              id="listenUrl"
+              name="listenUrl"
+              inputMode="url"
+              autoComplete="off"
+              placeholder="https://open.spotify.com/track/…"
+              value={values.listenUrl}
+              maxLength={LISTEN_URL_MAX}
+              aria-invalid={!!errors.listenUrl}
+              aria-describedby="listenUrl-hint"
+              onChange={(e) => set("listenUrl", e.target.value)}
             />
           </FormField>
 

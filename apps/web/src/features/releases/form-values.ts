@@ -11,6 +11,7 @@ export const NEW_RELEASE_VALUES: ReleaseFormValues = {
   bpm: "",
   musicalKey: "",
   price: "10.00",
+  listenUrl: "",
 };
 
 /** A stored track as form input, for prefilling the edit form. */
@@ -22,6 +23,7 @@ export function releaseFormValues(track: {
   bpm: number | null;
   musicalKey: MusicalKey | null;
   basePriceCents: number;
+  listenUrl: string | null;
 }): ReleaseFormValues {
   return {
     title: track.title,
@@ -31,6 +33,7 @@ export function releaseFormValues(track: {
     bpm: track.bpm === null ? "" : String(track.bpm),
     musicalKey: track.musicalKey ?? "",
     price: centsToInput(track.basePriceCents),
+    listenUrl: track.listenUrl ?? "",
   };
 }
 
@@ -48,5 +51,6 @@ export function readReleaseForm(formData: FormData): ReleaseFormValues {
     bpm: get("bpm"),
     musicalKey: get("musicalKey"),
     price: get("price"),
+    listenUrl: get("listenUrl"),
   };
 }

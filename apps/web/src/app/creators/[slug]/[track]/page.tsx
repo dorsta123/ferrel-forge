@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, ExternalLinkIcon } from "lucide-react";
 import { PreviewPlayer } from "@/components/audio/preview-player";
 import { TrackCover } from "@/components/track/track-cover";
 import { parseCreatorSlug, parseTrackSlug } from "@/features/catalog/params";
@@ -11,6 +11,8 @@ import { LicensePanel } from "@/features/catalog/license-panel";
 import { getPublicTrack } from "@/features/catalog/queries";
 import { creatorHref } from "@/features/catalog/track-href";
 import { genreLabel, keyLabel } from "@/features/releases/labels";
+import { listenPlatform } from "@/features/releases/listen-link";
+import { buttonVariants } from "@/components/ui/button";
 import { formatDuration } from "@/lib/format-duration";
 
 type Params = PageProps<"/creators/[slug]/[track]">["params"];
@@ -80,6 +82,15 @@ async function Release({ params }: { params: Params }) {
           </header>
 
           {track.preview && <PreviewPlayer key={track.preview.url} preview={track.preview} />}
+
+          {track.listenUrl && (
+            // Another site: a new tab that can't control this page, with no ranking passed on.
+            <a href={track.listenUrl} target="_blank" rel="noopener noreferrer nofollow" className={buttonVariants({ variant: "outline", className: "w-fit" })}>
+              Listen to the full song on {listenPlatform(track.listenUrl)}
+              <ExternalLinkIcon aria-hidden="true" />
+              <span className="sr-only">(opens in a new tab)</span>
+            </a>
+          )}
 
           <LicensePanel track={track} />
 

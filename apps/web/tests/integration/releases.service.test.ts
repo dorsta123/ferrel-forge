@@ -71,17 +71,6 @@ describe("update", () => {
     expect(await row(id)).toMatchObject({ slug: "midnight-run-extended", bpm: 124, basePriceCents: 1500 });
   });
 
-  it("stores a full-song link, cleaned up, and refuses hostile ones (slice 11)", async () => {
-    expect((await updateRelease(A.id, id, form({ listenUrl: "  https://Open.Spotify.com/track/4uLU6hMCjMI75M1A2tKUQC " }))).ok).toBe(true);
-    expect((await row(id)).listenUrl).toBe("https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC");
-    for (const hostile of ["javascript:alert(1)", "https://youtube.com.evil.com/x", "https://youtube.com@evil.com/x", "http://youtu.be/x"]) {
-      expect(failure(await updateRelease(A.id, id, form({ listenUrl: hostile })))).toContain("listenUrl");
-    }
-    expect((await row(id)).listenUrl).toBe("https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC");
-    expect((await updateRelease(A.id, id, form({ listenUrl: "" }))).ok).toBe(true);
-    expect((await row(id)).listenUrl).toBeNull();
-  });
-
   it("refuses a URL the creator already uses", async () => {
     const r = await updateRelease(A.id, id, form({ slug: "midnight-run-2" }));
     expect(r.ok ? undefined : r.errors.slug).toBe("You already have a release at this URL.");
@@ -169,5 +158,24 @@ describe("archive and delete", () => {
 
   it("refuses an unknown action", async () => {
     expect(failure(await changeReleaseStatus(A.id, id, "destroy" as never))).toContain("Unknown action");
+  });
+});
+
+describe("the full-song link (slice 11)", () => {
+  it("is stored cleaned up; hostile links are refused and change nothing", async () => {
+    const [{ id: linkId }] = await db
+      .insert(tracks)
+      .values({ creatorId: A.id, title: "Linked", slug: "linked", genre: "pop", basePriceCents: 500 })
+      .returning({ id: tracks.id });
+    const save = (listenUrl: string) => updateRelease(A.id, linkId, form({ title: "Linked", slug: "linked", price: "5", listenUrl }));
+
+    expect((await save("  https://Open.Spotify.com/track/4uLU6hMCjMI75M1A2tKUQC ")).ok).toBe(true);
+    expect((await row(linkId)).listenUrl).toBe("https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC");
+    for (const hostile of ["javascript:alert(1)", "https://youtube.com.evil.com/x", "https://youtube.com@evil.com/x", "http://youtu.be/x"]) {
+      expect(failure(await save(hostile))).toContain("listenUrl");
+    }
+    expect((await row(linkId)).listenUrl).toBe("https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC");
+    expect((await save("")).ok).toBe(true);
+    expect((await row(linkId)).listenUrl).toBeNull();
   });
 });

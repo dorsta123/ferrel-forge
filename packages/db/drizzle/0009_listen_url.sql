@@ -1,0 +1,3 @@
+ALTER TABLE "tracks" ADD COLUMN "listen_url" text;--> statement-breakpoint
+ALTER TABLE "tracks" ADD CONSTRAINT "tracks_listen_url" CHECK ("tracks"."listen_url" is null or (char_length("tracks"."listen_url") <= 300
+        and "tracks"."listen_url" ~ '^https://(youtube[.]com|www[.]youtube[.]com|m[.]youtube[.]com|music[.]youtube[.]com|youtu[.]be|open[.]spotify[.]com|soundcloud[.]com|www[.]soundcloud[.]com|m[.]soundcloud[.]com)/[^[:space:]]+$'));

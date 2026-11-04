@@ -82,6 +82,8 @@ export const getPublicTrack = cache(async (creatorSlug: string, trackSlug: strin
       previewKey: tracks.previewKey,
       previewStartMs: tracks.previewStartMs,
       waveform: tracks.waveform,
+      // The artist's full-song link (decision 032): checked against allowed sites when saved and by the database.
+      listenUrl: tracks.listenUrl,
     })
     .from(tracks)
     .innerJoin(creatorProfiles, eq(creatorProfiles.userId, tracks.creatorId))

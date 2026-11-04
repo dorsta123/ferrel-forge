@@ -10,6 +10,7 @@ const valid: ReleaseFormValues = {
   bpm: "",
   musicalKey: "",
   price: "12.50",
+  listenUrl: "",
 };
 const run = (patch: Partial<ReleaseFormValues>) => validateRelease({ ...valid, ...patch });
 const errorFor = (patch: Partial<ReleaseFormValues>) => {
@@ -29,6 +30,7 @@ describe("validateRelease", () => {
         bpm: null,
         musicalKey: null,
         basePriceCents: 1250,
+        listenUrl: null,
       },
     });
   });
