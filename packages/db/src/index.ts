@@ -14,4 +14,4 @@ export const db = drizzle(client, { schema });
 export * from "./schema";
 export * from "./constants";
 // Re-export query helpers so apps use the same drizzle-orm instance as the schema.
-export { and, eq, or, sql } from "drizzle-orm";
+export { and, eq, inArray, or, sql } from "drizzle-orm";
