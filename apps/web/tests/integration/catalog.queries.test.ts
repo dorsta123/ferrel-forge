@@ -153,4 +153,12 @@ describe("the full-song link (slice 11)", () => {
     await db.insert(tracks).values(live(G.id, "g-linked", 1, { listenUrl: "https://youtu.be/dQw4w9WgXcQ" }));
     expect((await getPublicTrack(G.slug!, "g-linked"))?.listenUrl).toBe("https://youtu.be/dQw4w9WgXcQ");
   });
+
+  it("isn't shown on an archived release (it can't be edited any more, so it can't be fixed if it goes bad)", async () => {
+    const [H] = await createUsers(["ph"]);
+    await db.insert(tracks).values(live(H.id, "h-archived", 1, { status: "archived", listenUrl: "https://youtu.be/dQw4w9WgXcQ" }));
+    const page = await getPublicTrack(H.slug!, "h-archived");
+    expect(page).not.toBeNull();
+    expect(page?.listenUrl).toBeNull();
+  });
 });

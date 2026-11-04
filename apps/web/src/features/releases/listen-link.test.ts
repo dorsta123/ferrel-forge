@@ -32,6 +32,8 @@ describe("checkListenUrl", () => {
     ["a different site", "https://example.com/song"],
     ["not a link", "my song on youtube"],
     ["over 300 characters", `https://youtu.be/${"a".repeat(300)}`],
+    ["YouTube's redirect page", "https://www.youtube.com/redirect?q=https://evil.com"],
+    ["YouTube's attribution redirect", "https://youtube.com/attribution_link?u=/watch"],
   ])("refuses %s", (_, input) => {
     expect(checkListenUrl(input).ok).toBe(false);
   });

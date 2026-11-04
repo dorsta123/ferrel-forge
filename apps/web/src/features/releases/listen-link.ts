@@ -6,6 +6,8 @@ export type ListenCheck = { ok: true; value: string | null } | { ok: false; erro
 
 const REFUSED = "Paste a link to the song on YouTube, Spotify or SoundCloud (https://…).";
 const WHITESPACE_OR_CONTROL = /[\s\u0000-\u001f\u007f]/;
+/** The allowed sites' own "go to another website" pages: the button promises the site itself. */
+const REDIRECT_PATHS = /^\/(redirect|attribution_link)(\/|$)/i;
 
 /** "" → no link; otherwise an https link to one of the allowed sites, with a path, cleaned up. */
 export function checkListenUrl(input: string): ListenCheck {
@@ -25,7 +27,8 @@ export function checkListenUrl(input: string): ListenCheck {
     url.password === "" &&
     url.port === "" &&
     Object.hasOwn(LISTEN_HOSTS, url.hostname) &&
-    url.pathname.length > 1;
+    url.pathname.length > 1 &&
+    !REDIRECT_PATHS.test(url.pathname);
   if (!allowed) return { ok: false, error: REFUSED };
 
   const value = url.href; // lowercased host, standard form

@@ -13,11 +13,13 @@ Previews are 15 seconds (decision 022). Artists who want advertisers to hear the
 
   The common `www.`/`m.` forms are included because that's what people paste.
 - **The link must** have a path beyond the home page, no login part (`user@`), no port, no spaces, and at most 300 characters. It's stored in the browser's standard form (host lowercased), so what's saved is exactly what visitors open.
-- **One list, three checks:**
-  - `LISTEN_HOSTS` in `@ferrel/db/constants` feeds the form's instant check and the server's real check (`features/releases/listen-link.ts`, using the standard URL parser);
-  - it also builds the database check `tracks_listen_url`, a regular expression requiring an allowed host right after `https://`. Lookalikes (`youtube.com.evil.com`) and hidden logins (`youtube.com@evil.com`) fail all three.
+- **One list, two checks:**
+  - `LISTEN_HOSTS` in `@ferrel/db/constants` feeds the server's check when the form is saved (`features/releases/listen-link.ts`, using the standard URL parser);
+  - it also builds the database check `tracks_listen_url`, a regular expression requiring an allowed host right after `https://`. Lookalikes (`youtube.com.evil.com`) and hidden logins (`youtube.com@evil.com`) fail both.
+- **Not the sites' own redirect pages** (from review): YouTube's `/redirect` and `/attribution_link` are refused, because the button promises the site itself.
 - **On the release page:** a "Listen to the full song on YouTube/Spotify/SoundCloud" button. It opens in a new tab with `rel="noopener noreferrer nofollow"`: the other site can't control our page, isn't told where the visitor came from, and gets no search ranking from us.
-- **A plain text field**, not the browser's URL field, so the artist sees our message naming the allowed sites instead of a generic browser one.
+- **A plain text field**, not the browser's URL field, so the artist sees our message naming the allowed sites instead of a generic browser one. It has no length cut-off, so an over-long link gets a message instead of being silently shortened.
+- **Not on archived releases** (from review): they can't be edited, so a link that later goes bad couldn't be removed; the public page hides it.
 
 ## Alternatives considered
 - **Any https link:** flexible, but a public page would then link anywhere, including phishing pages.
@@ -25,4 +27,4 @@ Previews are 15 seconds (decision 022). Artists who want advertisers to hear the
 
 ## Consequences
 - Adding a site means adding it to `LISTEN_HOSTS` **and** a migration, since the database check is built from the list when generated.
-- Links stay within the allowed sites, but those sites' own redirect pages could still forward elsewhere; that's a risk we accept from YouTube, Spotify and SoundCloud.
+- Links stay within the allowed sites. YouTube's known redirect pages are refused; any other way those sites forward visitors elsewhere is a risk we accept from YouTube, Spotify and SoundCloud.
