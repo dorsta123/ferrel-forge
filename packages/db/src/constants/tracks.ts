@@ -70,3 +70,21 @@ export const TRACK_LIMITS = {
   waveformBars: 200, // must match PEAK_COUNT in @ferrel/audio
   waveformMax: 1000, // bar heights are whole numbers 0–1000 (0 = silence)
 } as const;
+
+/**
+ * Sites a "Listen to the full song" link may point to (https only, decision 032). Shared by
+ * the browser, the server and the database check, so all three accept exactly the same links.
+ */
+export const LISTEN_HOSTS = {
+  "youtube.com": "YouTube",
+  "www.youtube.com": "YouTube",
+  "m.youtube.com": "YouTube",
+  "music.youtube.com": "YouTube",
+  "youtu.be": "YouTube",
+  "open.spotify.com": "Spotify",
+  "soundcloud.com": "SoundCloud",
+  "www.soundcloud.com": "SoundCloud",
+  "m.soundcloud.com": "SoundCloud",
+} as const;
+export type ListenHost = keyof typeof LISTEN_HOSTS;
+export const LISTEN_URL_MAX = 300;

@@ -102,6 +102,22 @@ export function ReleaseForm({ mode, action, initial, locks, creatorSlug, artistN
             />
           </FormField>
 
+          {/* A plain text box (not type="url") with no length cut-off: our own messages explain which
+              sites are allowed and when a link is too long, instead of silently shortening it. */}
+          <FormField id="listenUrl" label="Listen to the full song" optional error={errors.listenUrl} hint="A YouTube, Spotify or SoundCloud link, shown on your release page.">
+            <Input
+              id="listenUrl"
+              name="listenUrl"
+              inputMode="url"
+              autoComplete="off"
+              placeholder="https://open.spotify.com/track/…"
+              value={values.listenUrl}
+              aria-invalid={!!errors.listenUrl}
+              aria-describedby="listenUrl-hint"
+              onChange={(e) => set("listenUrl", e.target.value)}
+            />
+          </FormField>
+
           <div className="grid gap-5 sm:grid-cols-3">
             <FormField id="genre" label="Genre" error={errors.genre}>
               <NativeSelect id="genre" name="genre" value={values.genre} aria-invalid={!!errors.genre} onChange={(e) => set("genre", e.target.value)} required>

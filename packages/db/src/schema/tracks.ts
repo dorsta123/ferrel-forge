@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { bigint, boolean, check, index, integer, pgEnum, pgTable, smallint, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
-import { AUDIO_FORMATS, AUDIO_STATUSES, GENRES, MUSICAL_KEYS, TRACK_LIMITS as L, TRACK_STATUSES } from "../constants/tracks";
+import { AUDIO_FORMATS, AUDIO_STATUSES, GENRES, LISTEN_HOSTS, LISTEN_URL_MAX, MUSICAL_KEYS, TRACK_LIMITS as L, TRACK_STATUSES } from "../constants/tracks";
 import { lit, timestamps } from "./columns";
 import { creatorProfiles } from "./creators";
 
@@ -9,6 +9,9 @@ export const trackGenre = pgEnum("track_genre", GENRES);
 export const musicalKey = pgEnum("musical_key", MUSICAL_KEYS);
 export const audioFormat = pgEnum("audio_format", AUDIO_FORMATS);
 export const audioStatus = pgEnum("audio_status", AUDIO_STATUSES);
+
+/** `^https://(host|host|…)/<no spaces>+$`, from the shared list of allowed sites. */
+const listenUrlPattern = `^https://(${Object.keys(LISTEN_HOSTS).map((h) => h.replaceAll(".", "[.]")).join("|")})/[^[:space:]]+$`;
 
 /**
  * A release a creator sells licenses for. One license type per track (phase 3).
@@ -47,6 +50,8 @@ export const tracks = pgTable(
     // Set when the preview failed every attempt, so it isn't retried forever (decision 028).
     // Cleared by a new upload; slice 9's start change clears it too.
     previewFailedAt: timestamp("preview_failed_at", { withTimezone: true }),
+    // Optional "Listen to the full song" link (decision 032).
+    listenUrl: text("listen_url"),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     ...timestamps,
   },
@@ -96,6 +101,13 @@ export const tracks = pgTable(
       sql`${t.waveform} is null or (array_ndims(${t.waveform}) = 1 and cardinality(${t.waveform}) = ${lit(L.waveformBars)}
         and array_position(${t.waveform}, null) is null
         and 0 <= all(${t.waveform}) and ${lit(L.waveformMax)} >= all(${t.waveform}))`,
+    ),
+    // The full-song link: https, one of the allowed sites (right after https://, so no lookalikes
+    // or hidden logins), a path, no spaces (decision 032).
+    check(
+      "tracks_listen_url",
+      sql`${t.listenUrl} is null or (char_length(${t.listenUrl}) <= ${lit(LISTEN_URL_MAX)}
+        and ${t.listenUrl} ~ ${lit(listenUrlPattern)})`,
     ),
     // Anything beyond a draft must have audio and a publish time.
     check(

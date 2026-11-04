@@ -2,6 +2,7 @@
 // service as the real check. The database enforces the same limits (tracks
 // check constraints) as a backstop.
 import { GENRES, MUSICAL_KEYS, TRACK_LIMITS as L, type Genre, type MusicalKey } from "@ferrel/db/constants";
+import { checkListenUrl } from "./listen-link";
 import { formatCents, parseDollars } from "./money";
 import { FALLBACK_SLUG, TRACK_SLUG_PATTERN, trackSlugify } from "./slug";
 import type { ReleaseErrors, ReleaseFormValues, ReleaseValues } from "./types";
@@ -47,6 +48,9 @@ export function validateRelease(input: ReleaseFormValues): ReleaseCheck {
     errors.price = `Base rate is ${formatCents(L.priceMinCents)}–${formatCents(L.priceMaxCents)}, e.g. 12.50.`;
   }
 
+  const listen = checkListenUrl(input.listenUrl);
+  if (!listen.ok) errors.listenUrl = listen.error;
+
   if (Object.keys(errors).length > 0) return { ok: false, errors };
   return {
     ok: true,
@@ -58,6 +62,7 @@ export function validateRelease(input: ReleaseFormValues): ReleaseCheck {
       bpm: bpm ?? null,
       musicalKey,
       basePriceCents: basePriceCents!,
+      listenUrl: listen.ok ? listen.value : null,
     },
   };
 }

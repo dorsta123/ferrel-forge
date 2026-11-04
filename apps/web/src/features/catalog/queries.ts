@@ -82,6 +82,8 @@ export const getPublicTrack = cache(async (creatorSlug: string, trackSlug: strin
       previewKey: tracks.previewKey,
       previewStartMs: tracks.previewStartMs,
       waveform: tracks.waveform,
+      // The artist's full-song link (decision 032): checked against allowed sites when saved and by the database.
+      listenUrl: tracks.listenUrl,
     })
     .from(tracks)
     .innerJoin(creatorProfiles, eq(creatorProfiles.userId, tracks.creatorId))
@@ -89,7 +91,12 @@ export const getPublicTrack = cache(async (creatorSlug: string, trackSlug: strin
     .limit(1);
   if (!track) return null;
   const { audioStatus, previewEnabled, previewKey, previewStartMs, waveform, ...display } = track;
-  return { ...display, preview: previewInfo({ audioStatus, durationMs: track.durationMs, previewEnabled, previewKey, previewStartMs, waveform }) };
+  return {
+    ...display,
+    preview: previewInfo({ audioStatus, durationMs: track.durationMs, previewEnabled, previewKey, previewStartMs, waveform }),
+    // Archived releases can't be edited, so a link that later goes bad couldn't be removed: don't show it.
+    listenUrl: display.status === "published" ? display.listenUrl : null,
+  };
 });
 
 export type PublicTrack = NonNullable<Awaited<ReturnType<typeof getPublicTrack>>>;

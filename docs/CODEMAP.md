@@ -244,6 +244,7 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 | A form refuses a value | That feature's `rules.ts`; the exact message tells you which check |
 | A button is greyed out (Publish…) | [releases/status.ts](../apps/web/src/features/releases/status.ts): the reason text appears under the buttons |
 | "This release changed in the meantime" | The `WHERE` conditions in [releases/service.ts](../apps/web/src/features/releases/service.ts) didn't match; reload and retry |
+| A "Listen to the full song" link is refused | Only https links to YouTube, Spotify or SoundCloud, with a path and no login or port: [releases/listen-link.ts](../apps/web/src/features/releases/listen-link.ts), the site list in [constants/tracks.ts](../packages/db/src/constants/tracks.ts) (`LISTEN_HOSTS`; adding a site needs a migration too, [decision 032](decisions/032-listen-link.md)) |
 | Upload fails | Browser Network tab (the PUT to `localhost:9000`); use `localhost:3000`, **not** `127.0.0.1`; [audio-upload/service.ts](../apps/web/src/features/audio-upload/service.ts) |
 | Sign-in / sign-up error | [components/auth/auth-errors.ts](../apps/web/src/components/auth/auth-errors.ts) maps error codes to messages; server side in [lib/auth.ts](../apps/web/src/lib/auth.ts) |
 | Database "violates check constraint …" | The constraint name says which rule: see [schema/tracks.ts](../packages/db/src/schema/tracks.ts) |
