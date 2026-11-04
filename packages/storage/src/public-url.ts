@@ -3,6 +3,9 @@
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const PREVIEW_KEY = new RegExp(`^${UUID}/${UUID}\\.mp3$`);
 
+/** True for a well-formed preview key (`<trackId>/<random>.mp3`, from `newPreviewKey`). */
+export const isPreviewKey = (key: string) => PREVIEW_KEY.test(key);
+
 /**
  * The address browsers play a preview from. PREVIEWS_PUBLIC_URL points at a CDN in a real
  * deployment; by default it's the storage server's previews bucket. Only well-formed preview
@@ -10,7 +13,7 @@ const PREVIEW_KEY = new RegExp(`^${UUID}/${UUID}\\.mp3$`);
  * Reads the environment on each call (no secrets involved).
  */
 export function publicPreviewUrl(key: string): string {
-  if (!PREVIEW_KEY.test(key)) throw new Error("Not a preview key.");
+  if (!isPreviewKey(key)) throw new Error("Not a preview key.");
   const configured = process.env.PREVIEWS_PUBLIC_URL;
   if (configured && !isHttpUrl(configured)) throw new Error("PREVIEWS_PUBLIC_URL must be an http(s) address.");
   return `${withoutTrailingSlash(configured || defaultBase())}/${key}`;

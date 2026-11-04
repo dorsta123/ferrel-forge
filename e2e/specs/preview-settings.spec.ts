@@ -26,7 +26,7 @@ test("a creator moves the preview window, saves it, and switches previews off", 
     await expect(preview).toContainText("once your track is measured");
     // The worker finishes while the page is open (played here in the database).
     await sql`update tracks set audio_status = 'ready', duration_ms = 222000, waveform = ${waveform},
-              preview_key = ${`${trackId}/p.mp3`} where id = ${trackId}`;
+              preview_key = ${`${trackId}/00000000-0000-4000-8000-000000000001.mp3`} where id = ${trackId}`;
     await expect(slider).toHaveAttribute("aria-valuetext", "Starts at 0:56 of 3:42", { timeout: 10_000 });
   });
 

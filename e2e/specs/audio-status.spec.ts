@@ -30,7 +30,7 @@ test("the audio status updates without reloading, and a failed file blocks publi
     await expect(status).toContainText("Ready", { timeout: 10_000 });
     await expect(status).toContainText("3:42");
     await expect(status).toContainText("Making the preview");
-    await sql`update tracks set preview_key = ${`${trackId}/p.mp3`} where id = ${trackId}`;
+    await sql`update tracks set preview_key = ${`${trackId}/00000000-0000-4000-8000-000000000001.mp3`} where id = ${trackId}`;
     await expect(status).toContainText("Preview ready", { timeout: 10_000 });
   });
 

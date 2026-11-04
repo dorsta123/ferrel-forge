@@ -136,3 +136,13 @@ describe("the preview player's data (slice 10)", () => {
     expect((await getPublicTrack(E.slug!, "e-processing"))?.preview).toBeNull();
   });
 });
+
+describe("bad preview data (slice 10 review)", () => {
+  it("gives no player instead of breaking the page when a stored preview address isn't a real preview", async () => {
+    const [F] = await createUsers(["pf"]);
+    await db.insert(tracks).values(live(F.id, "f-odd", 1, { audioStatus: "ready", durationMs: 40_000, waveform: Array<number>(200).fill(1), previewKey: "not/a-preview.mp3" }));
+    const page = await getPublicTrack(F.slug!, "f-odd");
+    expect(page).not.toBeNull();
+    expect(page?.preview).toBeNull();
+  });
+});
