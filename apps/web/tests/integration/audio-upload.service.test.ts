@@ -2,7 +2,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db, eq, tracks } from "@ferrel/db";
 import { closeQueues } from "@ferrel/queues";
-import { createUploadUrl, getObjectInfo, newMasterKey } from "@ferrel/storage";
+import { createUploadUrl, getObjectInfo, newMasterKey, parseMasterKey } from "@ferrel/storage";
 import { confirmAudioUpload, requestAudioUpload } from "@/features/audio-upload/service";
 import { createUsers, removeCreatedUsers, type TestUser } from "./support";
 
@@ -46,6 +46,11 @@ describe("requestAudioUpload", () => {
     ["a size that isn't a number", { name: "a.wav", size: Number("x"), type: "" }],
   ])("refuses %s", async (_, file) => {
     expect((await requestAudioUpload(A.id, draftId, file)).ok).toBe(false);
+  });
+
+  it("uses the standard lowercase file name even for an id sent in capitals (so the clean-up recognises it)", async () => {
+    const r = await requestAudioUpload(A.id, draftId.toUpperCase(), WAV);
+    expect(r.ok && parseMasterKey(r.key)).toMatchObject({ creatorId: A.id, trackId: draftId });
   });
 
   it("gives a valid request a link inside the creator's own folder", async () => {

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { analyzeAudio } from "./analyze";
 import { makePreview, PREVIEW_MS, previewWindow } from "./preview";
-import { runFfmpeg } from "./run-ffmpeg";
+import { localInput, runFfmpeg } from "./run-ffmpeg";
 import { generate, makeTempDir } from "./test-fixtures";
 
 const TOLERANCE_MS = 50; // decision 023
@@ -47,6 +47,20 @@ describe("makePreview", () => {
     await makePreview(tmp.file("quiet then loud.mp3"), "mp3", tmp.file("p0.mp3"), previewWindow(40_000, 17_000));
     const { peaks } = await analyzeAudio(tmp.file("p0.mp3"), "mp3"); // 75 ms per peak
     expect(Math.abs(peaks.findIndex((p) => p > 0.2) - 40)).toBeLessThanOrEqual(2); // loud from 3 s in (20 − 17)
+  });
+
+  it("carries none of the master's tags into the public preview", async () => {
+    const secret = "unreleased, for the label only";
+    await generate(tmp.file("tagged.mp3"), { seconds: 20, extra: ["-c:a", "libmp3lame", "-metadata", `comment=${secret}`, "-metadata", "title=Secret Demo"] });
+    // Control: the master really has the tags.
+    const tagsOf = async (file: string) =>
+      (await runFfmpeg([...localInput(file, "mp3"), "-f", "ffmetadata", "pipe:1"])).stdout.toString();
+    expect(await tagsOf(tmp.file("tagged.mp3"))).toContain(secret);
+
+    await makePreview(tmp.file("tagged.mp3"), "mp3", tmp.file("p-tags.mp3"), previewWindow(20_000, null));
+    const tags = await tagsOf(tmp.file("p-tags.mp3"));
+    expect(tags).not.toContain(secret);
+    expect(tags).not.toContain("Secret Demo");
   });
 
   it(`makes a ${PREVIEW_MS / 1000} s MP3 from a longer track`, async () => {

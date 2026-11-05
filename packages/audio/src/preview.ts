@@ -36,7 +36,10 @@ export async function makePreview(master: string, format: InputFormat, out: stri
       ...localInput(master, format, ["-ss", seconds(w.startMs), "-t", seconds(w.lengthMs)]),
       "-f", "lavfi", "-i", TONE,
       "-filter_complex", filters,
-      "-map", "[out]", "-c:a", "libmp3lame", "-b:a", "128k", "-f", "mp3", out,
+      "-map", "[out]",
+      // The preview is public: carry none of the master's tags or chapters (comments, notes, paths).
+      "-map_metadata", "-1", "-map_chapters", "-1",
+      "-c:a", "libmp3lame", "-b:a", "128k", "-f", "mp3", out,
     ],
     { timeoutMs },
   );
