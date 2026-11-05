@@ -30,7 +30,9 @@ export async function requestAudioUpload(creatorId: string, trackId: string, fil
   const check = checkAudioFile(file);
   if (!check.ok) return check;
 
-  const key = newMasterKey(creatorId, trackId, check.format);
+  // The stored id (always lowercase), not the one sent: an id in capitals still finds the track,
+  // but would give a file name the clean-up doesn't recognise, so it would never be removed.
+  const key = newMasterKey(creatorId, track.id, check.format);
   const contentType = AUDIO_CONTENT_TYPES[check.format];
   const uploadUrl = await createUploadUrl({ bucket: "masters", key, contentType, contentLength: file.size });
   return { ok: true, uploadUrl, key, contentType };
@@ -41,7 +43,7 @@ export async function confirmAudioUpload(creatorId: string, trackId: string, key
   const track = await getOwnedTrack(creatorId, trackId);
   if (!track) return NOT_FOUND;
   // Only keys we could have issued for this creator + track are ever touched.
-  if (!isMasterKeyFor(key, creatorId, trackId)) return { ok: false, error: "Upload not recognised." };
+  if (!isMasterKeyFor(key, creatorId, track.id)) return { ok: false, error: "Upload not recognised." };
   if (track.status !== "draft") return reject(key, NOT_DRAFT.error);
 
   const info = await getObjectInfo("masters", key);
@@ -56,7 +58,7 @@ export async function confirmAudioUpload(creatorId: string, trackId: string, key
   // Read the files being replaced and switch in the same locked step: the worker may attach
   // a preview of the old song at any moment until then, and that preview must be deleted too.
   const old = await db.transaction(async (tx) => {
-    const owned = and(eq(tracks.id, trackId), eq(tracks.creatorId, creatorId), eq(tracks.status, "draft"));
+    const owned = and(eq(tracks.id, track.id), eq(tracks.creatorId, creatorId), eq(tracks.status, "draft"));
     const [current] = await tx.select({ audioKey: tracks.audioKey, previewKey: tracks.previewKey }).from(tracks).where(owned).for("update");
     if (!current) return null; // published in the meantime
     await tx
@@ -86,7 +88,7 @@ export async function confirmAudioUpload(creatorId: string, trackId: string, key
 
   // Hand the worker its ticket. If Redis is down the upload still counts: the track
   // is saved as "processing" and the worker's sweep re-sends the ticket later.
-  await queueAudioProcessing({ trackId, audioKey: key });
+  await queueAudioProcessing({ trackId: track.id, audioKey: key });
   return { ok: true, format: detected, sizeBytes: info.size };
 }
 

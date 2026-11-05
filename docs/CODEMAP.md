@@ -127,7 +127,7 @@ apps/web/src/
     └── format-*.ts           numbers, bytes, durations
 
 apps/worker/src/            background jobs (BullMQ on Redis)
-├── index.ts                starts the workers, schedules the 5-minute sweep
+├── index.ts                starts the workers, schedules the 5-minute sweep and the daily clean-up
 ├── queues.ts               the worker's Redis connection and system queue
 ├── audio/                  one uploaded file to process (decisions 027, 028):
 │   ├── process-audio.ts    reads the ticket, knows if this is the last attempt
@@ -137,7 +137,8 @@ apps/worker/src/            background jobs (BullMQ on Redis)
 │   ├── track-audio-store.ts the worker's reads/writes, only for the ticket's current file
 │   ├── failure.ts          the file's fault (message for the artist) or ours (retry)
 │   └── waveform-bars.ts    peaks 0–1 → 200 bars 0–1000
-└── system/                 housekeeping jobs: ping, re-send stuck audio tickets
+├── cleanup/clean-up-storage.ts deletes storage files no track points to (masters after 24 h, previews after 1 h)
+└── system/                 housekeeping jobs: ping, re-send stuck audio tickets, the daily clean-up
 packages/queues/            what web and worker share: queue names, the audio ticket (track + exact
                             file), its duplicate-proof id, sending with a 2 s limit, the stuck-track sweep
 packages/db/                database: tables, constants, migrations
@@ -245,6 +246,7 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 | A button is greyed out (Publish…) | [releases/status.ts](../apps/web/src/features/releases/status.ts): the reason text appears under the buttons |
 | "This release changed in the meantime" | The `WHERE` conditions in [releases/service.ts](../apps/web/src/features/releases/service.ts) didn't match; reload and retry |
 | A "Listen to the full song" link is refused | Only https links to YouTube, Spotify or SoundCloud, with a path and no login or port: [releases/listen-link.ts](../apps/web/src/features/releases/listen-link.ts), the site list in [constants/tracks.ts](../packages/db/src/constants/tracks.ts) (`LISTEN_HOSTS`; adding a site needs a migration too, [decision 032](decisions/032-listen-link.md)) |
+| A storage file disappeared | The daily clean-up deletes files no track points to (masters after 24 h, previews after 1 h); the worker log lists each one ([decision 033](decisions/033-storage-clean-up.md)) |
 | Upload fails | Browser Network tab (the PUT to `localhost:9000`); use `localhost:3000`, **not** `127.0.0.1`; [audio-upload/service.ts](../apps/web/src/features/audio-upload/service.ts) |
 | Sign-in / sign-up error | [components/auth/auth-errors.ts](../apps/web/src/components/auth/auth-errors.ts) maps error codes to messages; server side in [lib/auth.ts](../apps/web/src/lib/auth.ts) |
 | Database "violates check constraint …" | The constraint name says which rule: see [schema/tracks.ts](../packages/db/src/schema/tracks.ts) |

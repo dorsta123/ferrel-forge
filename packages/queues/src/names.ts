@@ -5,6 +5,8 @@ export const JOB_NAMES = {
   ping: "ping",
   /** Re-send tickets for tracks stuck in "processing" (e.g. Redis was down at upload). */
   requeueStuckAudio: "requeue-stuck-audio",
+  /** Daily: delete storage files no track points to (decision 033). */
+  cleanUpStorage: "clean-up-storage",
   /** Process one uploaded file: length, preview, waveform (phase 4 slices 5–7). */
   audioProcess: "audio:process",
 } as const;

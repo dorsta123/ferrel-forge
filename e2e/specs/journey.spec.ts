@@ -41,6 +41,8 @@ for (const variant of VARIANTS) {
       await checkWidth(creator, "new release");
       await c.getByRole("button", { name: "Create draft" }).click();
       await creator.waitForURL(/\/dashboard\/tracks\/[0-9a-f-]{36}$/);
+      // Let the editor finish loading before acting on it (acting earlier was flaky on a cold dev server).
+      await creator.waitForLoadState("networkidle");
       trackId = creator.url().split("/").pop()!;
       await c.getByLabel("Choose an audio file").setInputFiles({ name: "journey.wav", mimeType: "audio/wav", buffer: makeWav() });
       await expect(creator.getByText("uploaded and verified")).toBeVisible({ timeout: 20_000 });
@@ -87,6 +89,7 @@ for (const variant of VARIANTS) {
     await test.step("archiving removes it from Explore but its page still opens", async () => {
       await c.getByTestId("track-row").filter({ hasText: "(Final)" }).click();
       await creator.waitForURL(`**/dashboard/tracks/${trackId}`);
+      await creator.waitForLoadState("networkidle");
       await c.getByRole("button", { name: "Archive" }).click();
       await c.getByRole("button", { name: "Yes, archive" }).click();
       await expect(c.getByTestId("status-badge")).toHaveText("Archived");

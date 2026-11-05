@@ -5,6 +5,7 @@ import { connection, prefix, systemQueue } from "./queues";
 import { handleSystemJob } from "./system/handle-system-job";
 
 const SWEEP_EVERY_MS = 5 * 60_000;
+const CLEAN_UP_EVERY_MS = 24 * 60 * 60_000;
 // Housekeeping results aren't needed afterwards; keep a few failures to debug.
 const HOUSEKEEPING = { removeOnComplete: true, removeOnFail: 100 };
 
@@ -27,6 +28,12 @@ await systemQueue.upsertJobScheduler(
   JOB_NAMES.requeueStuckAudio,
   { every: SWEEP_EVERY_MS },
   { name: JOB_NAMES.requeueStuckAudio, opts: HOUSEKEEPING },
+);
+// Delete storage files no track points to, once a day (decision 033).
+await systemQueue.upsertJobScheduler(
+  JOB_NAMES.cleanUpStorage,
+  { every: CLEAN_UP_EVERY_MS },
+  { name: JOB_NAMES.cleanUpStorage, opts: HOUSEKEEPING },
 );
 await systemQueue.add(JOB_NAMES.ping, {}, HOUSEKEEPING);
 

@@ -49,6 +49,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
+        with:
+          ffmpeg: true # the full-journey test runs the real worker
       - uses: ./.github/actions/services
       - name: Browser tests (installed Google Chrome; starts the dev server)
         run: pnpm e2e

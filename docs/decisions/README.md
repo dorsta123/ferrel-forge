@@ -36,6 +36,7 @@ One file per decision, numbered in order. To reverse a decision, add a new recor
 | [030](030-choosing-the-preview.md) | The artist moves a 15 s window on the waveform (standard slider) and saves with a button; the old preview is deleted and a new one made; the worker attaches a preview only if the start is still the one it used | Accepted |
 | [031](031-the-player.md) | The preview player: the song's waveform with the previewed 15 s filling as it plays; loads only on play; shown only when a preview exists; served from `PREVIEWS_PUBLIC_URL` | Accepted |
 | [032](032-listen-link.md) | An optional "Listen to the full song" link: https to YouTube, Spotify or SoundCloud only, one host list shared by form, server and database check; a safe new-tab button | Accepted |
+| [033](033-storage-clean-up.md) | A daily worker job deletes storage files no track points to (our name formats only): masters after 24 h, previews after 1 h | Accepted |
 
 ## Template
 
