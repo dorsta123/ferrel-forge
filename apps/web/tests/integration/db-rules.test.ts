@@ -2,7 +2,7 @@
 // code) are refused by Postgres with the expected constraint.
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { creatorProfiles, db, eq, sql, tracks, users } from "@ferrel/db";
+import { billingProfiles, creatorProfiles, db, eq, licenses, sql, tracks, users } from "@ferrel/db";
 import { createUsers, pgError, removeCreatedUsers, type TestUser } from "./support";
 
 let A: TestUser, B: TestUser, buyer: TestUser;
@@ -140,5 +140,55 @@ describe("deleting accounts", () => {
   it("is blocked while the creator has releases (licenses must survive)", async () => {
     await expectRefused(() => db.delete(creatorProfiles).where(eq(creatorProfiles.userId, A.id)), "23503");
     await expectRefused(() => db.delete(users).where(eq(users.id, A.id)), "23503");
+  });
+});
+
+describe("licenses table (phase 5)", () => {
+  const day = 24 * 60 * 60_000;
+  let trackId = "";
+  const license = (patch: Record<string, unknown> = {}) => {
+    const startsAt = new Date("2026-11-13T00:00:00Z");
+    return db.insert(licenses).values({
+      trackId,
+      licenseeId: B.id,
+      platforms: ["instagram"],
+      cities: ["london"],
+      termDays: 30,
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 30 * day),
+      rateMicros: 500_000,
+      quote: { rateMicros: 500_000, factors: [] },
+      termsVersion: "2026-11-13",
+      ...patch,
+    } as typeof licenses.$inferInsert);
+  };
+
+  beforeAll(async () => {
+    [{ id: trackId }] = await insert({ ...audio(), status: "published", publishedAt: new Date() }).returning({ id: tracks.id });
+  });
+
+  it("accepts a valid license (control)", async () => {
+    await expect(license()).resolves.toBeDefined();
+  });
+
+  it.each<[string, Record<string, unknown>, string]>([
+    ["no platform", { platforms: [] }, "licenses_platforms"],
+    ["no city", { cities: [] }, "licenses_cities"],
+    ["an unknown city", { cities: ["atlantis"] }, "licenses_cities"],
+    ["a term that isn't offered", { termDays: 45, endsAt: new Date(new Date("2026-11-13T00:00:00Z").getTime() + 45 * day) }, "licenses_term"],
+    ["an end date that doesn't match the term", { endsAt: new Date("2027-01-01T00:00:00Z") }, "licenses_dates"],
+    ["a rate under $0.01", { rateMicros: 9_999 }, "licenses_rate"],
+    ["an unknown platform", { platforms: ["myspace"] }, "22P02"],
+  ])("refuses %s", async (_, patch, expected) => {
+    await expectRefused(() => license(patch), expected);
+  });
+
+  it("keeps a licensed track and its licensee from being deleted", async () => {
+    await expectRefused(() => db.delete(tracks).where(eq(tracks.id, trackId)), "23503");
+  });
+
+  it("refuses billing details with an unknown country or a blank company", async () => {
+    await expectRefused(() => db.insert(billingProfiles).values({ userId: B.id, companyName: "Acme", country: "XX" }), "billing_profiles_country");
+    await expectRefused(() => db.insert(billingProfiles).values({ userId: B.id, companyName: "  ", country: "GB" }), "billing_profiles_company_name_len");
   });
 });

@@ -29,6 +29,9 @@ export async function purgeTestAccounts(): Promise<void> {
       select t.audio_key as key from tracks t join users u on u.id = t.creator_id
       where u.email like ${TEST_EMAIL_LIKE} and t.audio_key is not null`;
     for (const { key } of files) await deleteObject("masters", key);
+    // Licenses keep tracks and users from being deleted (RESTRICT), so they go first.
+    await db`delete from licenses where licensee_id in (select id from users where email like ${TEST_EMAIL_LIKE})
+             or track_id in (select t.id from tracks t join users u on u.id = t.creator_id where u.email like ${TEST_EMAIL_LIKE})`;
     await db`delete from tracks where creator_id in (select id from users where email like ${TEST_EMAIL_LIKE})`;
     await db`delete from users where email like ${TEST_EMAIL_LIKE}`;
   } finally {
