@@ -59,7 +59,7 @@ for (const variant of VARIANTS) {
       await checkWidth(visitor, "home");
       await card.click();
       await visitor.waitForURL(`**/creators/${artist.slug}/${trackSlug}`);
-      await expect(v.getByTestId("license-panel")).toContainText("Licensing opens soon");
+      await expect(v.getByTestId("license-panel")).toContainText("License this track");
       await expect(v).not.toContainText("$8.00");
       await checkWidth(visitor, "release");
       await visitor.goto("/explore?genre=cinematic");

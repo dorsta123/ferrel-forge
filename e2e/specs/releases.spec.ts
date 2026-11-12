@@ -30,7 +30,7 @@ test("a creator takes a release from draft to archive", async ({ open }) => {
     const card = m.getByTestId("track-card");
     for (const text of ["Midnight Run", "Electronic", "124 BPM", "Am"]) await expect(card).toContainText(text);
     // The rate is private: the public card shows no price.
-    await expect(m.getByTestId("card-status")).toHaveText("Licensing opens soon");
+    await expect(m.getByTestId("card-status")).toHaveText("Available to license");
     await expect(card).not.toContainText("$12.50");
   });
 

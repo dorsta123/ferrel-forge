@@ -7,7 +7,7 @@ import type { CreatorTrackRow } from "./queries";
 import { editedAgo, rowView } from "./row-view";
 
 /** One release in the dashboard list; the whole row opens its edit page. */
-export function TrackRow({ track, now }: { track: CreatorTrackRow; now: Date }) {
+export function TrackRow({ track, now, activeLicenses }: { track: CreatorTrackRow; now: Date; activeLicenses: number }) {
   const view = rowView(track);
 
   return (
@@ -31,6 +31,14 @@ export function TrackRow({ track, now }: { track: CreatorTrackRow; now: Date }) 
             <span>{genreLabel(track.genre)}</span>
             <span aria-hidden="true">·</span>
             <span>edited {editedAgo(track.updatedAt, now)}</span>
+            {activeLicenses > 0 && (
+              <span className="text-brand-text" data-testid="row-licenses">
+                <span aria-hidden="true" className="text-muted-foreground">
+                  ·{" "}
+                </span>
+                {activeLicenses === 1 ? "1 active license" : `${activeLicenses} active licenses`}
+              </span>
+            )}
             {view.needsAudio && (
               <span className="inline-flex items-center gap-1 text-brand-text">
                 <span aria-hidden="true" className="text-muted-foreground">

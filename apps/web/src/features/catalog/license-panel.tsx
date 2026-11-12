@@ -1,10 +1,11 @@
-import { ArchiveIcon, LockIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { ArchiveIcon, FileCheckIcon } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import type { PublicTrack } from "./queries";
 
 /**
- * The licensing box on a release page. No price yet: rates are decided before
- * licensing opens (decision 021). Archived releases say they can't be licensed.
+ * The licensing box on a release page. The rate is shown on the license page, where it's
+ * worked out and locked (decision 034). Archived releases say they can't be licensed.
  */
 export function LicensePanel({ track }: { track: PublicTrack }) {
   if (track.status === "archived") {
@@ -27,10 +28,10 @@ export function LicensePanel({ track }: { track: PublicTrack }) {
           Use it in Instagram, TikTok or YouTube ads and pay monthly for the exposure it gets: views × seconds watched.
         </p>
       </div>
-      <Button disabled className="h-11 gap-2 text-base font-semibold">
-        <LockIcon aria-hidden="true" />
-        Licensing opens soon
-      </Button>
+      <Link href={`/creators/${track.creatorSlug}/${track.slug}/license`} className={buttonVariants({ className: "h-11 gap-2 text-base font-semibold" })}>
+        <FileCheckIcon aria-hidden="true" />
+        License this track
+      </Link>
       <p className="text-center text-xs text-muted-foreground">Payments will run in Stripe test mode. No real money moves.</p>
     </div>
   );

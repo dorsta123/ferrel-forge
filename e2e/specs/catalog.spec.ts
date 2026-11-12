@@ -93,13 +93,13 @@ test("anyone can browse published releases, and only those", async ({ open }) =>
     await expect(m.getByRole("link", { name: "Back to the first page" })).toHaveCount(1);
   });
 
-  await test.step("a release page shows details and 'Licensing opens soon', but no price", async () => {
+  await test.step("a release page shows details and a License button, but no price", async () => {
     await page.goto("/explore");
     await cards.filter({ hasText: "Midnight Run" }).click();
     await page.waitForURL(`**/creators/${alice.slug}/midnight-run`);
     await expect(m.getByRole("heading", { name: "Midnight Run", level: 1 })).toBeVisible();
     await expect(m.getByTestId("license-panel")).toContainText("License this track for your ads");
-    await expect(m.getByRole("button", { name: "Licensing opens soon" })).toBeDisabled();
+    await expect(m.getByRole("link", { name: "License this track" })).toBeVisible();
     for (const text of ["124", "A minor", "3:42", "A late drive through neon."]) await expect(m).toContainText(text);
     // The artist's rate ($12.50) is private until pricing is decided; nothing about copies either.
     await expect(m).not.toContainText("$12.50");

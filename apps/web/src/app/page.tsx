@@ -60,7 +60,7 @@ export default function Home() {
               </Link>
             </div>
             <p className="text-xs text-muted-foreground">
-              Licensing opens soon. A non-commercial demo: ad platforms are simulated and payments will run in Stripe test mode.
+              A non-commercial demo: ad platforms are simulated and payments run in Stripe test mode.
             </p>
           </div>
 
@@ -102,7 +102,7 @@ export default function Home() {
             ))}
           </ol>
           <p className="mt-6 text-xs text-muted-foreground">
-            A non-commercial project: ad platforms are simulated and payments run in Stripe test mode. Licensing opens soon.
+            A non-commercial project: ad platforms are simulated and payments run in Stripe test mode.
           </p>
         </div>
       </section>

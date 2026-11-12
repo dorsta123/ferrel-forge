@@ -1,11 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authErrorMessage } from "@/components/auth/auth-errors";
+import { safeReturnTo } from "@/lib/return-to";
 import { signUp } from "@/lib/auth-client";
 import { DISPLAY_NAME_MAX, displayNameError, normalizeDisplayName } from "@/lib/display-name";
 
@@ -13,6 +14,8 @@ const MIN_PASSWORD = 8;
 
 export function SignUpForm() {
   const router = useRouter();
+  // Back to where they came from (e.g. a license page), only ever a path on this site.
+  const next = safeReturnTo(useSearchParams().get("next"));
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -37,7 +40,7 @@ export function SignUpForm() {
       setPending(false);
       return setError(authErrorMessage(error));
     }
-    router.push("/");
+    router.push(next);
     router.refresh();
   }
 
