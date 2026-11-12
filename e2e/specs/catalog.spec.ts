@@ -14,9 +14,9 @@ type Release = { title: string; slug: string; genre: string; price?: number; min
 async function addRelease(creatorId: string, r: Release, audioKey = `${creatorId}/x/${r.slug}.wav`) {
   const draft = r.status === "draft";
   const [{ id }] = await sql<{ id: string }[]>`
-    insert into tracks (creator_id, title, slug, genre, base_price_cents, status, published_at,
+    insert into tracks (creator_id, title, slug, genre, base_rate_micros, status, published_at,
                         audio_key, audio_size_bytes, audio_format, audio_status, bpm, musical_key, description, duration_ms)
-    values (${creatorId}, ${r.title}, ${r.slug}, ${r.genre}, ${r.price ?? 1250}, ${r.status ?? "published"},
+    values (${creatorId}, ${r.title}, ${r.slug}, ${r.genre}, ${r.price ?? 12_500_000}, ${r.status ?? "published"},
             ${draft ? null : new Date(Date.now() - (r.minutesAgo ?? 0) * 60_000)},
             ${draft ? null : audioKey}, ${draft ? null : 10}, ${draft ? null : "wav"}, ${draft ? "none" : "processing"}, ${r.bpm ?? null}, ${r.key ?? null}, ${r.description ?? null}, ${r.durationMs ?? null})
     returning id`;
@@ -42,7 +42,7 @@ test("anyone can browse published releases, and only those", async ({ open }) =>
   // Enough for a second Explore page, in one insert.
   const bobTracks = Array.from({ length: PAGE_SIZE + 2 }, (_, i) => ({
     creator_id: bobId, title: `Bob Track ${String(i).padStart(2, "0")}`, slug: `bob-track-${i}`, genre: "rock",
-    base_price_cents: 1250, status: "published", published_at: new Date(Date.now() - (60 + i) * 60_000),
+    base_rate_micros: 12_500_000, status: "published", published_at: new Date(Date.now() - (60 + i) * 60_000),
     audio_key: `${bobId}/x/bob-track-${i}.wav`, audio_size_bytes: 10, audio_format: "wav", audio_status: "processing",
   }));
   await sql`insert into tracks ${sql(bobTracks)}`;

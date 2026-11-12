@@ -21,6 +21,6 @@ describe("previewFromForm", () => {
   });
 
   it("never includes the artist's private rate", () => {
-    expect(previewFromForm({ ...NEW_RELEASE_VALUES, price: "12.50" })).not.toHaveProperty("basePriceCents");
+    expect(previewFromForm({ ...NEW_RELEASE_VALUES, price: "12.50" })).not.toHaveProperty("baseRateMicros");
   });
 });

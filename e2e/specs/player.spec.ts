@@ -15,9 +15,9 @@ test("a visitor plays the preview, never the master; with previews off there's n
   const [creator] = await sql<{ slug: string }[]>`select slug from creator_profiles where user_id = ${aliceId}`;
   const waveform = Array.from({ length: 200 }, (_, i) => (i * 37) % 1000);
   const [{ id: trackId }] = await sql<{ id: string }[]>`
-    insert into tracks (creator_id, title, slug, genre, base_price_cents, status, published_at,
+    insert into tracks (creator_id, title, slug, genre, base_rate_micros, status, published_at,
                         audio_key, audio_size_bytes, audio_format, audio_status, duration_ms, waveform)
-    values (${aliceId}, 'Midnight Run', 'midnight-run', 'electronic', 1000, 'published', now(),
+    values (${aliceId}, 'Midnight Run', 'midnight-run', 'electronic', 10000000, 'published', now(),
             ${`${aliceId}/x/a.wav`}, 10, 'wav', 'ready', 222000, ${waveform}) returning id`;
   const previewKey = `${trackId}/${randomUUID()}.mp3`;
   const wav = makeWav(15);

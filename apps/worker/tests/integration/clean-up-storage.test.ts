@@ -25,7 +25,7 @@ beforeAll(async () => {
   creator = await createCreator("cleanup");
   [{ id: trackId }] = await db
     .insert(tracks)
-    .values({ creatorId: creator, title: "Clean", slug: "clean", genre: "pop", basePriceCents: 500 })
+    .values({ creatorId: creator, title: "Clean", slug: "clean", genre: "pop", baseRateMicros: 5_000_000 })
     .returning({ id: tracks.id });
 });
 afterAll(async () => {

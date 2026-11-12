@@ -11,8 +11,8 @@ test("a creator adds a full-song link; hostile links are refused; visitors get a
   const aliceId = await userIdByEmail(alice.email);
   const [creator] = await sql<{ slug: string }[]>`select slug from creator_profiles where user_id = ${aliceId}`;
   const [{ id: trackId }] = await sql<{ id: string }[]>`
-    insert into tracks (creator_id, title, slug, genre, base_price_cents, status, published_at, audio_key, audio_size_bytes, audio_format, audio_status)
-    values (${aliceId}, 'Midnight Run', 'midnight-run', 'electronic', 1000, 'published', now(), ${`${aliceId}/x/a.wav`}, 10, 'wav', 'processing') returning id`;
+    insert into tracks (creator_id, title, slug, genre, base_rate_micros, status, published_at, audio_key, audio_size_bytes, audio_format, audio_status)
+    values (${aliceId}, 'Midnight Run', 'midnight-run', 'electronic', 10000000, 'published', now(), ${`${aliceId}/x/a.wav`}, 10, 'wav', 'processing') returning id`;
 
   await page.goto(`/dashboard/tracks/${trackId}`);
   await page.waitForLoadState("networkidle");

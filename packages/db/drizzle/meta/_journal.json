@@ -71,6 +71,20 @@
       "when": 1793818204846,
       "tag": "0009_listen_url",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794511625600,
+      "tag": "0010_base_rate_micros",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794511635824,
+      "tag": "0011_drop_base_price_cents",
+      "breakpoints": true
     }
   ]
 }

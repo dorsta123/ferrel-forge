@@ -3,7 +3,7 @@
 // check constraints) as a backstop.
 import { GENRES, MUSICAL_KEYS, TRACK_LIMITS as L, type Genre, type MusicalKey } from "@ferrel/db/constants";
 import { checkListenUrl } from "./listen-link";
-import { formatCents, parseDollars } from "./money";
+import { formatRate, parseRate } from "@/lib/rate";
 import { FALLBACK_SLUG, TRACK_SLUG_PATTERN, trackSlugify } from "./slug";
 import type { ReleaseErrors, ReleaseFormValues, ReleaseValues } from "./types";
 
@@ -42,10 +42,10 @@ export function validateRelease(input: ReleaseFormValues): ReleaseCheck {
   const musicalKey = (input.musicalKey || null) as MusicalKey | null;
   if (musicalKey !== null && !MUSICAL_KEYS.includes(musicalKey)) errors.musicalKey = "Choose a key from the list.";
 
-  // The artist's base rate: a placeholder until pricing is decided (PRODUCT.md question 15).
-  const basePriceCents = parseDollars(input.price);
-  if (basePriceCents === null || basePriceCents < L.priceMinCents || basePriceCents > L.priceMaxCents) {
-    errors.price = `Base rate is ${formatCents(L.priceMinCents)}–${formatCents(L.priceMaxCents)}, e.g. 12.50.`;
+  // The artist's base rate per 1,000 exposure-seconds (decision 034); licenses lock it.
+  const baseRateMicros = parseRate(input.price);
+  if (baseRateMicros === null || baseRateMicros < L.rateMinMicros || baseRateMicros > L.rateMaxMicros) {
+    errors.price = `Base rate is ${formatRate(L.rateMinMicros)}–${formatRate(L.rateMaxMicros)} per 1,000 exposure-seconds, e.g. 0.50.`;
   }
 
   const listen = checkListenUrl(input.listenUrl);
@@ -61,7 +61,7 @@ export function validateRelease(input: ReleaseFormValues): ReleaseCheck {
       genre,
       bpm: bpm ?? null,
       musicalKey,
-      basePriceCents: basePriceCents!,
+      baseRateMicros: baseRateMicros!,
       listenUrl: listen.ok ? listen.value : null,
     },
   };

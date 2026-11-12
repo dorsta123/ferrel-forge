@@ -1,11 +1,11 @@
 // What one dashboard row shows, worked out from the stored track. Pure.
 import type { TrackStatus } from "@ferrel/db/constants";
 import { formatDuration } from "@/lib/format-duration";
-import { formatCents } from "../releases/money";
+import { formatRate } from "@/lib/rate";
 
 export type RowFacts = {
   status: TrackStatus;
-  basePriceCents: number;
+  baseRateMicros: number;
   hasAudio: boolean;
   durationMs: number | null;
 };
@@ -21,7 +21,7 @@ export type RowView = {
 
 export function rowView(t: RowFacts): RowView {
   return {
-    rateLabel: formatCents(t.basePriceCents),
+    rateLabel: formatRate(t.baseRateMicros),
     lengthLabel: t.durationMs === null ? null : formatDuration(t.durationMs),
     needsAudio: t.status === "draft" && !t.hasAudio,
   };

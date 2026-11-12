@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { genreLabel, keyLabel } from "./labels";
-import { formatCents } from "./money";
+import { formatRate } from "@/lib/rate";
 import { ReleasePreview } from "./release-preview";
 import type { ReleaseLocks } from "./status";
 import type { ReleaseFormState, ReleaseFormValues } from "./types";
@@ -161,9 +161,9 @@ export function ReleaseForm({ mode, action, initial, locks, creatorSlug, artistN
           <div className="grid gap-5 sm:grid-cols-2">
             <FormField
               id="price"
-              label="Base rate"
+              label="Base rate per 1,000 exposure-seconds"
               error={errors.price}
-              hint={`${formatCents(L.priceMinCents)}–${formatCents(L.priceMaxCents)} · only you see this. How rates work for advertisers is decided before licensing opens.`}
+              hint={`${formatRate(L.rateMinMicros)}–${formatRate(L.rateMaxMicros)}. Advertisers pay this for every 1,000 exposure-seconds (views × seconds watched), locked when they license.`}
             >
               <div className="relative">
                 <span aria-hidden="true" className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-sm text-muted-foreground">

@@ -7,7 +7,7 @@ import { ago, createUsers, removeCreatedUsers, type TestUser } from "./support";
 
 let A: TestUser, B: TestUser, C: TestUser;
 const audio = (id: string, n: number) => ({ audioKey: `${id}/x/${n}.wav`, audioSizeBytes: 10, audioFormat: "wav" as const, audioStatus: "processing" as const });
-const t = (creatorId: string, slug: string, extra: object = {}) => ({ creatorId, title: slug, slug, genre: "pop" as const, basePriceCents: 500, ...extra });
+const t = (creatorId: string, slug: string, extra: object = {}) => ({ creatorId, title: slug, slug, genre: "pop" as const, baseRateMicros: 5_000_000, ...extra });
 
 beforeAll(async () => {
   [A, B, C] = await createUsers(["qa", "qb", "qc"]);

@@ -44,7 +44,7 @@ export function TrackRow({ track, now }: { track: CreatorTrackRow; now: Date }) 
 
         <div className="hidden shrink-0 flex-col items-end gap-0.5 text-right sm:flex">
           <span className="font-semibold tabular-nums">{view.rateLabel}</span>
-          <span className="text-xs text-muted-foreground tabular-nums">{view.lengthLabel ? `base rate · ${view.lengthLabel}` : "base rate"}</span>
+          <span className="text-xs text-muted-foreground tabular-nums">{view.lengthLabel ? `per 1k exposure-s · ${view.lengthLabel}` : "per 1k exposure-s"}</span>
         </div>
         {/* Phones: one compact line instead of the column. */}
         <span className="shrink-0 text-sm font-semibold tabular-nums sm:hidden">{view.rateLabel}</span>

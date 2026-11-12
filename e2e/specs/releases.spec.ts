@@ -21,7 +21,7 @@ test("a creator takes a release from draft to archive", async ({ open }) => {
     await page.waitForURL("**/dashboard/tracks/new");
     await page.waitForLoadState("networkidle");
     await field("Title").fill("Midnight Run");
-    await field("Base rate").fill("12.50");
+    await field("Base rate per 1,000 exposure-seconds").fill("12.50");
     await expect(m.getByLabel("Copies")).toHaveCount(0);
     await m.getByLabel("Genre").selectOption("electronic");
     await m.getByLabel("BPM (optional)").fill("124");
@@ -36,21 +36,21 @@ test("a creator takes a release from draft to archive", async ({ open }) => {
 
   await test.step("invalid values show errors next to the fields", async () => {
     await field("Title").fill("");
-    await field("Base rate").fill("0.50");
+    await field("Base rate per 1,000 exposure-seconds").fill("0.001"); // under the $0.01 minimum
     await m.getByRole("button", { name: "Create draft" }).click();
     await expect(m.getByText("Give your release a title.")).toBeVisible();
-    await expect(m.getByText(/Base rate is \$1\.00/)).toHaveCount(1);
+    await expect(m.getByText(/Base rate is \$0\.01/)).toHaveCount(1);
   });
 
   await test.step("a valid draft is saved with exactly what was entered", async () => {
     await field("Title").fill("Midnight Run");
-    await field("Base rate").fill("12.50");
+    await field("Base rate per 1,000 exposure-seconds").fill("12.50");
     await m.getByRole("button", { name: "Create draft" }).click();
     await page.waitForURL(TRACK_URL);
     trackId = page.url().split("/").pop()!;
     await expect(m.getByRole("heading", { name: "Midnight Run", level: 1 })).toBeVisible();
-    const [row] = await sql`select status, slug, base_price_cents, bpm, musical_key from tracks where id = ${trackId}`;
-    expect(row).toEqual({ status: "draft", slug: "midnight-run", base_price_cents: 1250, bpm: 124, musical_key: "Am" });
+    const [row] = await sql`select status, slug, base_rate_micros, bpm, musical_key from tracks where id = ${trackId}`;
+    expect(row).toEqual({ status: "draft", slug: "midnight-run", base_rate_micros: 12_500_000, bpm: 124, musical_key: "Am" });
     await expect(badge).toHaveText("Draft");
   });
 
@@ -97,10 +97,10 @@ test("a creator takes a release from draft to archive", async ({ open }) => {
   });
 
   await test.step("the base rate stays editable after publishing, and both actions remain", async () => {
-    await field("Base rate").fill("15");
+    await field("Base rate per 1,000 exposure-seconds").fill("15");
     await m.getByRole("button", { name: "Save changes" }).click();
     await expect(m.getByRole("status").filter({ hasText: "Saved." })).toBeVisible();
-    expect((await sql`select base_price_cents from tracks where id = ${trackId}`)[0].base_price_cents).toBe(1500);
+    expect((await sql`select base_rate_micros from tracks where id = ${trackId}`)[0].base_rate_micros).toBe(15_000_000);
     await expect(m.getByRole("button", { name: "Unpublish" })).toHaveCount(1);
     await expect(m.getByRole("button", { name: "Archive" })).toHaveCount(1);
   });

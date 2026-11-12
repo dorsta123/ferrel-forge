@@ -13,7 +13,7 @@ let uploadId: string, rejectId: string, freshId: string, readyId: string, noPrev
 
 beforeAll(async () => {
   [A] = await createUsers(["queuea"]);
-  const base = { creatorId: A.id, genre: "pop" as const, basePriceCents: 500 };
+  const base = { creatorId: A.id, genre: "pop" as const, baseRateMicros: 5_000_000 };
   [{ id: uploadId }, { id: rejectId }, { id: freshId }, { id: readyId }, { id: noPreviewId }, { id: previewOffId }] = await db
     .insert(tracks)
     .values(["upload", "reject", "fresh", "ready", "no-preview", "preview-off"].map((s) => ({ ...base, title: s, slug: `q-${s}` })))

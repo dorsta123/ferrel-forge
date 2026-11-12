@@ -31,12 +31,12 @@ test("the dashboard lists a creator's releases with real numbers", async ({ open
     const goldenId = page.url().split("/").pop()!;
     await sql`update tracks set updated_at = now() - interval '2 hours' where id = ${goldenId}`;
     [{ id: liveId }] = await sql<{ id: string }[]>`
-      insert into tracks (creator_id, title, slug, genre, base_price_cents, status, published_at, updated_at, audio_key, audio_size_bytes, audio_format, audio_status, duration_ms)
-      values (${aliceId}, 'Midnight Run', 'midnight-run', 'electronic', 1250, 'published', now(), now() - interval '5 minutes', ${`${aliceId}/x/a.wav`}, 10, 'wav', 'ready', 222000)
+      insert into tracks (creator_id, title, slug, genre, base_rate_micros, status, published_at, updated_at, audio_key, audio_size_bytes, audio_format, audio_status, duration_ms)
+      values (${aliceId}, 'Midnight Run', 'midnight-run', 'electronic', 12500000, 'published', now(), now() - interval '5 minutes', ${`${aliceId}/x/a.wav`}, 10, 'wav', 'ready', 222000)
       returning id`;
     await sql`
-      insert into tracks (creator_id, title, slug, genre, base_price_cents, status, published_at, updated_at, audio_key, audio_size_bytes, audio_format, audio_status)
-      values (${aliceId}, 'Old Tape', 'old-tape', 'ambient', 500, 'archived', now(), now() - interval '3 days', ${`${aliceId}/x/b.wav`}, 10, 'wav', 'processing')`;
+      insert into tracks (creator_id, title, slug, genre, base_rate_micros, status, published_at, updated_at, audio_key, audio_size_bytes, audio_format, audio_status)
+      values (${aliceId}, 'Old Tape', 'old-tape', 'ambient', 5000000, 'archived', now(), now() - interval '3 days', ${`${aliceId}/x/b.wav`}, 10, 'wav', 'processing')`;
     await m.getByRole("link", { name: "Dashboard" }).click();
     await page.waitForURL("/dashboard");
   });
@@ -83,7 +83,7 @@ test("the dashboard lists a creator's releases with real numbers", async ({ open
     await expect(main(bob).getByText("No releases yet")).toBeVisible();
     await expect(main(bob).getByText("Midnight Run")).toHaveCount(0);
     const bobId = await userIdByEmail(bobAccount.email);
-    await sql`insert into tracks (creator_id, title, slug, genre, base_price_cents) values (${bobId}, 'Bob Demo', 'bob-demo', 'rock', 300)`;
+    await sql`insert into tracks (creator_id, title, slug, genre, base_rate_micros) values (${bobId}, 'Bob Demo', 'bob-demo', 'rock', 3000000)`;
     await gotoReady(bob, "/dashboard?status=published");
     await expect(main(bob).getByText("No published releases.")).toBeVisible();
   });

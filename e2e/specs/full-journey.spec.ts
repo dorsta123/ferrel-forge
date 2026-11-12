@@ -24,8 +24,8 @@ test("upload → measured → preview → pick a start → publish → a visitor
   const aliceId = await userIdByEmail(alice.email);
   const [creator] = await sql<{ slug: string }[]>`select slug from creator_profiles where user_id = ${aliceId}`;
   const [{ id: trackId }] = await sql<{ id: string }[]>`
-    insert into tracks (creator_id, title, slug, genre, base_price_cents)
-    values (${aliceId}, 'Midnight Run', 'midnight-run', 'electronic', 1000) returning id`;
+    insert into tracks (creator_id, title, slug, genre, base_rate_micros)
+    values (${aliceId}, 'Midnight Run', 'midnight-run', 'electronic', 10000000) returning id`;
   const previewKey = async () => (await sql<{ key: string | null }[]>`select preview_key as key from tracks where id = ${trackId}`)[0].key;
 
   await page.goto(`/dashboard/tracks/${trackId}`);

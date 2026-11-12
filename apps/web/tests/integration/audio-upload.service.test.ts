@@ -14,7 +14,7 @@ let draftId: string, otherId: string;
 
 beforeAll(async () => {
   [A, B] = await createUsers(["upa", "upb"]);
-  const base = { creatorId: A.id, genre: "pop" as const, basePriceCents: 500 };
+  const base = { creatorId: A.id, genre: "pop" as const, baseRateMicros: 5_000_000 };
   [{ id: draftId }, { id: otherId }] = await db
     .insert(tracks)
     .values([
