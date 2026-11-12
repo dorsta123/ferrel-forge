@@ -1,6 +1,7 @@
 // Licensing, independent of Next.js: callers pass an already-authenticated user id.
 // The server decides everything that matters: which tracks can be licensed, and the rate.
 import { and, billingProfiles, creatorProfiles, db, eq, licenses, sql, tracks } from "@ferrel/db";
+import { formatRate } from "@/lib/rate";
 import { LICENSE_TERMS_VERSION } from "@ferrel/db/constants";
 import { quoteRate } from "@ferrel/pricing";
 import { isUuid } from "../tracks/track-access";
@@ -36,7 +37,12 @@ export async function licenseOffer(userId: string, trackId: string): Promise<Lic
   return { ok: true, rateMicros: quoteRate({ baseRateMicros: track.baseRateMicros }).rateMicros, needsBilling: !(await hasBilling(userId)) };
 }
 
-export type CreateLicenseResult = { ok: true; licenseId: string } | { ok: false; error: string } | { ok: false; errors: LicenseErrors };
+export type CreateLicenseResult =
+  | { ok: true; licenseId: string }
+  | { ok: false; error: string }
+  | { ok: false; errors: LicenseErrors }
+  /** The rate changed since the page showed it: the new one, to show before trying again. */
+  | { ok: false; error: string; rateMicros: number };
 
 export async function createLicense(userId: string, trackId: string, input: LicenseFormValues): Promise<CreateLicenseResult> {
   const track = await licensableTrack(trackId);
@@ -50,6 +56,10 @@ export async function createLicense(userId: string, trackId: string, input: Lice
   // The rate comes from the database, never from the request, and is locked on the license.
   const inputs = { baseRateMicros: track.baseRateMicros };
   const quote = quoteRate(inputs);
+  // ...but only if it's the rate the advertiser saw: never lock them into one they didn't agree to.
+  if (quote.rateMicros !== input.shownRateMicros) {
+    return { ok: false, error: `The rate changed to ${formatRate(quote.rateMicros)}. Review it and confirm again.`, rateMicros: quote.rateMicros };
+  }
   const startsAt = new Date();
 
   const licenseId = await db.transaction(async (tx) => {

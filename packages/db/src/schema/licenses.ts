@@ -62,7 +62,8 @@ export const licenses = pgTable(
     check("licenses_platforms", sql`cardinality(${t.platforms}) between 1 and ${lit(AD_PLATFORMS.length)}`),
     check("licenses_cities", sql`cardinality(${t.cities}) between 1 and ${lit(LICENSING_LIMITS.citiesMax)} and ${t.cities} <@ ${textList(CITY_CODES)}`),
     check("licenses_term", sql`${t.termDays} in (${sql.raw(LICENSE_TERM_DAYS.join(", "))})`),
-    check("licenses_dates", sql`${t.endsAt} = ${t.startsAt} + make_interval(days => ${t.termDays})`),
+    // Exact 24-hour days: calendar-day maths would depend on the session's time zone (daylight saving).
+    check("licenses_dates", sql`${t.endsAt} = ${t.startsAt} + ${t.termDays} * interval '24 hours'`),
     check("licenses_rate", sql`${t.rateMicros} between ${lit(TRACK_LIMITS.rateMinMicros)} and ${lit(TRACK_LIMITS.rateMaxMicros)}`),
   ],
 );

@@ -17,7 +17,7 @@ const choice = "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py
 
 /** Choose platforms, cities and term, agree to the terms, and license at the locked rate. */
 export function LicenseForm({ trackId, rateMicros, needsBilling }: Props) {
-  const f = useLicenseForm(trackId);
+  const f = useLicenseForm(trackId, rateMicros);
 
   return (
     <form
@@ -28,7 +28,7 @@ export function LicenseForm({ trackId, rateMicros, needsBilling }: Props) {
         f.submit();
       }}
     >
-      <Choices legend="Where your ads run" error={f.errors.platforms}>
+      <Choices id="platforms" legend="Where your ads run" error={f.errors.platforms}>
         {AD_PLATFORMS.map((p) => (
           <label key={p} className={choice}>
             <input type="checkbox" className="accent-brand" checked={f.values.platforms.includes(p)} onChange={() => f.toggle("platforms", p)} />
@@ -37,7 +37,7 @@ export function LicenseForm({ trackId, rateMicros, needsBilling }: Props) {
         ))}
       </Choices>
 
-      <Choices legend="Cities your ads are shown in" error={f.errors.cities} grid>
+      <Choices id="cities" legend="Cities your ads are shown in" error={f.errors.cities} grid>
         {CITIES.map((c) => (
           <label key={c.code} className={choice}>
             <input type="checkbox" className="accent-brand" checked={f.values.cities.includes(c.code)} onChange={() => f.toggle("cities", c.code)} />
@@ -46,7 +46,7 @@ export function LicenseForm({ trackId, rateMicros, needsBilling }: Props) {
         ))}
       </Choices>
 
-      <Choices legend="How long" error={f.errors.term}>
+      <Choices id="term" legend="How long" error={f.errors.term}>
         {LICENSE_TERM_DAYS.map((d) => (
           <label key={d} className={choice}>
             <input type="radio" name="term" className="accent-brand" checked={f.values.term === String(d)} onChange={() => f.set("term", String(d))} />
@@ -60,11 +60,11 @@ export function LicenseForm({ trackId, rateMicros, needsBilling }: Props) {
           <legend className="px-1 font-medium">Billing details</legend>
           <p className="-mt-2 text-sm text-muted-foreground">Asked once, for your invoices. You can license more tracks without entering them again.</p>
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField id="companyName" label="Company or brand" error={f.errors.companyName}>
-              <Input id="companyName" className="h-10" maxLength={LICENSING_LIMITS.companyNameMax} value={f.values.companyName} aria-invalid={!!f.errors.companyName} onChange={(e) => f.set("companyName", e.target.value)} />
+            <FormField id="license-companyName" label="Company or brand" error={f.errors.companyName}>
+              <Input id="license-companyName" className="h-10" maxLength={LICENSING_LIMITS.companyNameMax} value={f.values.companyName} aria-invalid={!!f.errors.companyName} onChange={(e) => f.set("companyName", e.target.value)} />
             </FormField>
-            <FormField id="country" label="Billing country" error={f.errors.country}>
-              <NativeSelect id="country" value={f.values.country} aria-invalid={!!f.errors.country} onChange={(e) => f.set("country", e.target.value)}>
+            <FormField id="license-country" label="Billing country" error={f.errors.country}>
+              <NativeSelect id="license-country" value={f.values.country} aria-invalid={!!f.errors.country} onChange={(e) => f.set("country", e.target.value)}>
                 <option value="" disabled>
                   Choose…
                 </option>
@@ -85,7 +85,7 @@ export function LicenseForm({ trackId, rateMicros, needsBilling }: Props) {
         </h2>
         <p className="flex items-baseline gap-2">
           <span className="font-display text-3xl font-bold" data-testid="license-rate">
-            {formatRate(rateMicros)}
+            {formatRate(f.rateMicros)}
           </span>
           <span className="text-sm text-muted-foreground">{RATE_UNIT}</span>
         </p>
@@ -104,10 +104,19 @@ export function LicenseForm({ trackId, rateMicros, needsBilling }: Props) {
           ))}
         </ul>
         <label className="flex items-start gap-2 text-sm">
-          <input type="checkbox" className="mt-0.5 accent-brand" checked={f.values.agreed} aria-invalid={!!f.errors.agreed} onChange={(e) => f.set("agreed", e.target.checked)} />I agree to these license terms
+          <input
+            id="license-agreed"
+            type="checkbox"
+            className="mt-0.5 accent-brand"
+            checked={f.values.agreed}
+            aria-invalid={!!f.errors.agreed}
+            aria-describedby={f.errors.agreed ? "license-agreed-error" : undefined}
+            onChange={(e) => f.set("agreed", e.target.checked)}
+          />
+          I agree to these license terms
         </label>
         {f.errors.agreed && (
-          <p role="alert" className="text-sm text-destructive">
+          <p id="license-agreed-error" className="text-sm text-destructive">
             {f.errors.agreed}
           </p>
         )}
@@ -128,13 +137,14 @@ export function LicenseForm({ trackId, rateMicros, needsBilling }: Props) {
   );
 }
 
-function Choices({ legend, error, grid, children }: { legend: string; error?: string; grid?: boolean; children: React.ReactNode }) {
+/** A group of choices; focusable so a failed submit can take the user to it, and its error is announced with it. */
+function Choices({ id, legend, error, grid, children }: { id: string; legend: string; error?: string; grid?: boolean; children: React.ReactNode }) {
   return (
-    <fieldset className="flex flex-col gap-2" aria-invalid={!!error}>
+    <fieldset id={`license-${id}`} tabIndex={-1} className="flex flex-col gap-2 outline-none" aria-describedby={error ? `license-${id}-error` : undefined}>
       <legend className="mb-1 font-medium">{legend}</legend>
       <div className={cn("flex flex-wrap gap-2", grid && "grid grid-cols-2 sm:grid-cols-4")}>{children}</div>
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p id={`license-${id}-error`} className="text-sm text-destructive">
           {error}
         </p>
       )}

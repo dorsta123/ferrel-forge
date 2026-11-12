@@ -17,7 +17,7 @@
 ## Decisions taken (recommendations — the user confirms or changes)
 | # | Question (PRODUCT.md) | Recommendation |
 |---|---|---|
-| 15 | **Rate unit** | Shown and set **per 1,000 exposure-seconds** (like ad "CPM" prices). Stored as a whole number of hundredths of a cent, so money maths never rounds wrongly. The artist's base rate field changes from "$1–$500" to **$0.01–$50.00 per 1,000 exposure-seconds** (existing values are converted or reset; only test data today) |
+| 15 | **Rate unit** | Shown and set **per 1,000 exposure-seconds** (like ad "CPM" prices). Stored as whole micro-dollars (millionths of a dollar), so money maths never rounds wrongly. The artist's base rate field changes from "$1–$500" to **$0.01–$50.00 per 1,000 exposure-seconds** (existing values are converted or reset; only test data today) |
 | 2 | **License term** | 30, 90 or 365 days; extendable before it ends at the same locked rate (part 4) |
 | 3 | **Advertiser accounts** | **Every signed-in account is an advertiser** (user, 2026-11-13): browsing needs no account, so a role-less account has no purpose; creator stays the opt-in extra. Company name and country are asked once, at the first license, and kept as billing details. No registration numbers or VAT in test mode |
 | 5 | **What a license allows** | One standard license, in plain English: use the track in paid ads on the chosen platforms, shown in the chosen cities, for the term; trimming and looping allowed; no remixing, no use as standalone music, no transfer. Text shown before confirming and stored with each license |
@@ -55,6 +55,7 @@ Four steps, one PR.
 - **Money and accounts:** card handling stays inside Stripe; security review on parts 1, 2 and 4.
 - **Changing the rate unit** touches the existing price field and its database rule; done in part 1 with a migration.
 - **Scope creep:** invoices, metering and payouts are phases 6–7, not here.
+- **Phase 8 note (from review):** the `licenses_rate` check reuses the base-rate range ($0.01–$50). Once the pricing model applies multipliers, a quote above $50 would be refused, so that range must be revisited with phase 8.
 
 ## Tests
 Unit: split maths (basis points summing to 10,000), quote and term rules. Integration: forged licenses, someone else's track, unpublished tracks, downloads without a license, splits that don't total 100%. E2e: advertiser licenses a track (part 1), and the full journey (part 4).

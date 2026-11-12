@@ -1,0 +1,2 @@
+ALTER TABLE "licenses" DROP CONSTRAINT "licenses_dates";--> statement-breakpoint
+ALTER TABLE "licenses" ADD CONSTRAINT "licenses_dates" CHECK ("licenses"."ends_at" = "licenses"."starts_at" + "licenses"."term_days" * interval '24 hours');

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
@@ -9,7 +10,21 @@ import { LicenseForm } from "@/features/licensing/license-form";
 import { licenseOffer } from "@/features/licensing/service";
 import { getCurrentUser } from "@/lib/session";
 
-export const metadata = { title: "License a track · ferrel-forge", robots: { index: false } };
+type Params = PageProps<"/creators/[slug]/[track]/license">["params"];
+
+async function load(params: Params) {
+  const { slug, track } = await params;
+  const creatorSlug = parseCreatorSlug(slug);
+  const trackSlug = parseTrackSlug(track);
+  return creatorSlug && trackSlug ? getPublicTrack(creatorSlug, trackSlug) : null;
+}
+
+// Called before streaming starts, so an unknown track gets a real 404 status (decision 015).
+export async function generateMetadata({ params }: PageProps<"/creators/[slug]/[track]/license">): Promise<Metadata> {
+  const track = await load(params);
+  if (!track) notFound();
+  return { title: `License ${track.title} · ferrel-forge`, robots: { index: false } };
+}
 
 export default function Page({ params }: PageProps<"/creators/[slug]/[track]/license">) {
   return (
@@ -21,12 +36,9 @@ export default function Page({ params }: PageProps<"/creators/[slug]/[track]/lic
   );
 }
 
-async function License({ params }: { params: PageProps<"/creators/[slug]/[track]/license">["params"] }) {
+async function License({ params }: { params: Params }) {
   await connection();
-  const { slug, track: trackParam } = await params;
-  const creatorSlug = parseCreatorSlug(slug);
-  const trackSlug = parseTrackSlug(trackParam);
-  const track = creatorSlug && trackSlug ? await getPublicTrack(creatorSlug, trackSlug) : null;
+  const track = await load(params);
   if (!track) notFound();
 
   const releaseHref = `/creators/${track.creatorSlug}/${track.slug}`;

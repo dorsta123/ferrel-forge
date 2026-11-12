@@ -20,6 +20,8 @@ export type LicenseFormValues = {
   companyName: string;
   country: string;
   agreed: boolean;
+  /** The rate the page showed; the license is refused if the real rate differs (no surprises). */
+  shownRateMicros: number;
 };
 
 export type LicenseRequest = {

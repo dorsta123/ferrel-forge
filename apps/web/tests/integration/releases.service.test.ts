@@ -169,7 +169,7 @@ describe("licensed releases (phase 5)", () => {
       .returning({ id: tracks.id });
     const startsAt = new Date();
     await db.insert(licenses).values({ trackId: lid, licenseeId: B.id, platforms: ["tiktok"], cities: ["paris"], termDays: 30, startsAt, endsAt: new Date(startsAt.getTime() + 30 * 86_400_000), rateMicros: 500_000, quote: {}, termsVersion: "2026-11-13" });
-    expect(failure(await changeReleaseStatus(A.id, lid, "delete"))).toContain("licensed");
+    expect(failure(await changeReleaseStatus(A.id, lid, "delete"))).toContain("Licensed releases can");
     expect(await row(lid)).toBeDefined();
   });
 });

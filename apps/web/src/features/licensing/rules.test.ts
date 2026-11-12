@@ -8,6 +8,7 @@ const valid: LicenseFormValues = {
   companyName: "",
   country: "",
   agreed: true,
+  shownRateMicros: 500_000,
 };
 const run = (patch: Partial<LicenseFormValues>, needsBilling = false) => validateLicenseRequest({ ...valid, ...patch }, { needsBilling });
 

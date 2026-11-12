@@ -19,6 +19,7 @@ export async function createLicenseAction(trackId: string, input: LicenseFormVal
     companyName: String(input?.companyName ?? ""),
     country: String(input?.country ?? ""),
     agreed: input?.agreed === true,
+    shownRateMicros: Number(input?.shownRateMicros),
   };
   const result = await createLicense(user.id, String(trackId), values);
   if (result.ok) revalidatePath("/licenses");
