@@ -183,6 +183,16 @@ describe("licenses table (phase 5)", () => {
     await expectRefused(() => license(patch), expected);
   });
 
+  it("accepts a term crossing a daylight-saving change, whatever the database session's time zone", async () => {
+    const startsAt = new Date("2026-10-20T12:00:00Z"); // New York and London change clocks within 30 days
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`set local time zone 'America/New_York'`);
+      await expect(
+        tx.insert(licenses).values({ trackId, licenseeId: B.id, platforms: ["instagram"], cities: ["london"], termDays: 30, startsAt, endsAt: new Date(startsAt.getTime() + 30 * day), rateMicros: 500_000, quote: {}, termsVersion: "2026-11-13" }),
+      ).resolves.toBeDefined();
+    });
+  });
+
   it("keeps a licensed track and its licensee from being deleted", async () => {
     await expectRefused(() => db.delete(tracks).where(eq(tracks.id, trackId)), "23503");
   });

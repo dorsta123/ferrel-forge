@@ -7,8 +7,10 @@ import { createUsers, removeCreatedUsers, type TestUser } from "./support";
 
 let artist: TestUser, advertiser: TestUser, other: TestUser;
 let liveId: string, draftId: string, archivedId: string, failedId: string;
+let currentRate = 750_000; // what the license page showed
 
 const form = (patch: Partial<LicenseFormValues> = {}): LicenseFormValues => ({
+  shownRateMicros: currentRate,
   platforms: ["instagram", "tiktok"],
   cities: ["london", "mumbai"],
   term: "30",
@@ -53,6 +55,7 @@ describe("createLicense", () => {
     await db.update(tracks).set({ baseRateMicros: 2_000_000 }).where(eq(tracks.id, liveId));
     const [l] = await db.select().from(licenses).where(eq(licenses.licenseeId, advertiser.id));
     expect(l.rateMicros).toBe(750_000);
+    currentRate = 2_000_000;
     // A new license uses the new rate.
     expect((await createLicense(advertiser.id, liveId, form({ companyName: "", country: "" }))).ok).toBe(true);
     const rates = (await db.select({ r: licenses.rateMicros }).from(licenses).where(eq(licenses.licenseeId, advertiser.id))).map((x) => x.r);
@@ -63,6 +66,12 @@ describe("createLicense", () => {
     await createLicense(other.id, liveId, { ...form(), rateMicros: 1 } as LicenseFormValues);
     const [l] = await db.select().from(licenses).where(eq(licenses.licenseeId, other.id));
     expect(l.rateMicros).toBe(2_000_000);
+  });
+
+  it("refuses if the rate changed after the page showed it, so nobody is locked into a rate they didn't see", async () => {
+    const r = await createLicense(advertiser.id, liveId, form({ shownRateMicros: 750_000 }));
+    expect(error(r)).toContain("rate changed");
+    expect(r.ok ? null : "rateMicros" in r ? r.rateMicros : null).toBe(2_000_000);
   });
 
   it("asks for billing details the first time only", async () => {
@@ -114,8 +123,13 @@ describe("listing", () => {
     expect(await myLicenses(artist.id)).toEqual([]);
   });
 
-  it("counts a creator's active licenses, in total and per track", async () => {
-    expect(await creatorLicenseCounts(artist.id)).toEqual({ active: 5, byTrack: { [liveId]: 5 } });
+  it("counts a creator's active licenses, in total and per track, leaving out ended ones", async () => {
+    const all = (await db.select().from(licenses).where(eq(licenses.trackId, liveId))).length;
+    expect(await creatorLicenseCounts(artist.id)).toEqual({ active: all, byTrack: { [liveId]: all } });
+    const [one] = await db.select().from(licenses).where(eq(licenses.trackId, liveId)).limit(1);
+    const past = new Date("2020-01-01T00:00:00Z");
+    await db.update(licenses).set({ startsAt: past, endsAt: new Date(past.getTime() + one.termDays * 86_400_000) }).where(eq(licenses.id, one.id));
+    expect((await creatorLicenseCounts(artist.id)).active).toBe(all - 1);
     expect(await creatorLicenseCounts(advertiser.id)).toEqual({ active: 0, byTrack: {} });
   });
 });

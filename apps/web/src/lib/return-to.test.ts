@@ -18,6 +18,9 @@ describe("safeReturnTo", () => {
     ["a relative path", "creators/x"],
     ["an encoded double slash", "/%2F%2Fevil.example"],
     ["control characters", "/x\u0000y"],
+    ["a dot segment hiding a double slash", "/.//evil.example"],
+    ["a parent segment hiding a double slash", "/..//evil.example"],
+    ["an encoded parent segment", "/%2e%2e//evil.example"],
   ])("falls back to the homepage for %s", (_, input) => {
     expect(safeReturnTo(input)).toBe("/");
   });

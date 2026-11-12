@@ -1,6 +1,6 @@
 // Forged requests against the release service, following one release through its lifecycle.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { db, eq, tracks } from "@ferrel/db";
+import { db, eq, licenses, tracks } from "@ferrel/db";
 import { createUploadUrl, getObjectInfo, newMasterKey, newPreviewKey } from "@ferrel/storage";
 import { changeReleaseStatus, createRelease, updateRelease } from "@/features/releases/service";
 import type { ReleaseFormValues } from "@/features/releases/types";
@@ -158,6 +158,19 @@ describe("archive and delete", () => {
 
   it("refuses an unknown action", async () => {
     expect(failure(await changeReleaseStatus(A.id, id, "destroy" as never))).toContain("Unknown action");
+  });
+});
+
+describe("licensed releases (phase 5)", () => {
+  it("can't be deleted, even after unpublishing: a clear message instead of a database error", async () => {
+    const [{ id: lid }] = await db
+      .insert(tracks)
+      .values({ creatorId: A.id, title: "Licensed", slug: "licensed", genre: "pop", baseRateMicros: 500_000, audioKey: `${A.id}/x/l.wav`, audioSizeBytes: 10, audioFormat: "wav", audioStatus: "processing", status: "draft", publishedAt: new Date() })
+      .returning({ id: tracks.id });
+    const startsAt = new Date();
+    await db.insert(licenses).values({ trackId: lid, licenseeId: B.id, platforms: ["tiktok"], cities: ["paris"], termDays: 30, startsAt, endsAt: new Date(startsAt.getTime() + 30 * 86_400_000), rateMicros: 500_000, quote: {}, termsVersion: "2026-11-13" });
+    expect(failure(await changeReleaseStatus(A.id, lid, "delete"))).toContain("licensed");
+    expect(await row(lid)).toBeDefined();
   });
 });
 
