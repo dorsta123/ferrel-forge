@@ -29,7 +29,7 @@ describe("validateRelease", () => {
         genre: "electronic",
         bpm: null,
         musicalKey: null,
-        basePriceCents: 1250,
+        baseRateMicros: 12_500_000,
         listenUrl: null,
       },
     });
@@ -58,15 +58,17 @@ describe("validateRelease", () => {
     ["bpm too high", { bpm: "251" }, "bpm"],
     ["fractional bpm", { bpm: "120.5" }, "bpm"],
     ["unknown key", { musicalKey: "H" }, "musicalKey"],
-    ["price below $1", { price: "0.99" }, "price"],
-    ["price above $500", { price: "500.01" }, "price"],
+    ["a rate below $0.01", { price: "0.0099" }, "price"],
+    ["a rate above $50", { price: "50.01" }, "price"],
+    ["a rate with 5 decimals", { price: "0.12345" }, "price"],
     ["price not a number", { price: "ten" }, "price"],
   ])("rejects %s", (_, patch, field) => {
     expect(errorFor(patch)[field]).toBeTruthy();
   });
 
   it("accepts the limits themselves", () => {
-    expect(run({ bpm: "40", price: "1" }).ok).toBe(true);
-    expect(run({ bpm: "250", price: "500" }).ok).toBe(true);
+    expect(run({ bpm: "40", price: "0.01" }).ok).toBe(true);
+    expect(run({ bpm: "250", price: "50" }).ok).toBe(true);
+    expect(run({ price: "0.0125" })).toMatchObject({ ok: true, value: { baseRateMicros: 12_500 } });
   });
 });

@@ -1,7 +1,7 @@
 // Release logic, independent of Next.js: callers pass an already-authenticated
 // creator id. Every write re-checks ownership and repeats its rules inside the
 // UPDATE/DELETE itself, so a request racing another can't slip past.
-import { and, db, eq, sql, tracks } from "@ferrel/db";
+import { and, db, eq, licenses, sql, tracks } from "@ferrel/db";
 import { deleteObject } from "@ferrel/storage";
 import { PG_UNIQUE_VIOLATION, pgError } from "@/lib/pg-error";
 import { getOwnedTrack } from "../tracks/track-access";
@@ -112,10 +112,13 @@ export async function changeReleaseStatus(creatorId: string, trackId: string, ac
         .returning({ id: tracks.id });
       break;
     case "delete": {
+      // A licensed track is kept for its licensees (the database refuses too). Phase 5 part 4
+      // adds the full rules (no unpublish or archive while licenses are active).
+      const [licensed] = await db.select({ id: licenses.id }).from(licenses).where(eq(licenses.trackId, trackId)).limit(1);
+      if (licensed) return { ok: false, error: "Licensed releases can't be deleted: advertisers rely on them." };
       const [gone] = await db
         .delete(tracks)
-        // PHASE 5: also require "no licenses" here, matching checkAction (decision 021).
-        .where(and(owned, eq(tracks.status, "draft")))
+        .where(and(owned, eq(tracks.status, "draft"), sql`not exists (select 1 from ${licenses} where ${licenses.trackId} = ${tracks.id})`))
         .returning({ audioKey: tracks.audioKey, previewKey: tracks.previewKey });
       if (gone?.audioKey) await deleteObject("masters", gone.audioKey);
       // The preview is public: it must go with the release.

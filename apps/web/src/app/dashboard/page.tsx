@@ -8,6 +8,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { CreatorReleases } from "@/features/creator-tracks/creator-releases";
 import { parseTrackFilter } from "@/features/creator-tracks/filters";
 import { creatorTrackStats } from "@/features/creator-tracks/queries";
+import { creatorLicenseCounts } from "@/features/licensing/service";
 import { formatCount } from "@/lib/format-number";
 import { getCurrentUser } from "@/lib/session";
 
@@ -29,9 +30,10 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/dashboard
   if (!user) redirect("/sign-in");
   if (!user.creator) return <CreatorsOnly />;
 
-  const [[profile], stats] = await Promise.all([
+  const [[profile], stats, licenses] = await Promise.all([
     db.select().from(creatorProfiles).where(eq(creatorProfiles.userId, user.id)).limit(1),
     creatorTrackStats(user.id),
+    creatorLicenseCounts(user.id),
   ]);
   if (!profile) return <CreatorsOnly />; // deleted between the two reads
   const filter = parseTrackFilter(params.status);
@@ -55,15 +57,15 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/dashboard
         </div>
       </section>
 
-      {/* Stats: real counts. Licenses (and earnings) arrive in phase 5; until then there are none. */}
+      {/* Stats: real counts. Active licenses are those not yet ended; earnings come with billing (phase 7). */}
       <section aria-label="Stats" className="grid grid-cols-3 gap-2 sm:gap-4">
         <Stat label="Releases" value={stats.all} />
         <Stat label="Published" value={stats.published} />
-        <Stat label="Active licenses" value={0} hint="Licensing opens soon" />
+        <Stat label="Active licenses" value={licenses.active} />
       </section>
 
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_20rem]">
-        <CreatorReleases creatorId={user.id} filter={filter} stats={stats} />
+        <CreatorReleases creatorId={user.id} filter={filter} stats={stats} licenseCounts={licenses.byTrack} />
 
         {/* Profile details */}
         <section className="flex flex-col gap-4 rounded-2xl border bg-card p-6">

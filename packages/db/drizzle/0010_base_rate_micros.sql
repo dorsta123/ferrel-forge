@@ -1,0 +1,2 @@
+ALTER TABLE "tracks" ADD COLUMN "base_rate_micros" integer DEFAULT 500000 NOT NULL;--> statement-breakpoint
+ALTER TABLE "tracks" ADD CONSTRAINT "tracks_rate_range" CHECK ("tracks"."base_rate_micros" between 10000 and 50000000);

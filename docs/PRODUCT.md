@@ -134,10 +134,10 @@ Not yet decided. Answers become decision records.
 | # | Question | Needed by |
 |---|---|---|
 | 1 | **Artist custom rate:** a fixed rate that replaces the model, or a floor the model can't go below? | Stage 8 (forecast UI in 5) |
-| 2 | **License term:** fixed lengths (30/90/365 days) or any end date? Can a license be extended? | Stage 5 |
-| 3 | **Advertiser accounts:** same account type with an "advertiser profile" (like artists), or separate? Company details needed? | Stage 5 |
+| 2 | ✅ **License term:** 30, 90 or 365 days; extendable at the locked rate (phase 5 part 4) ([034](decisions/034-licensing-basics.md)) | Stage 5 |
+| 3 | ✅ **Advertiser accounts:** every signed-in account can license; company name and country asked once, at the first license ([034](decisions/034-licensing-basics.md)) | Stage 5 |
 | 4 | **Platform fee:** what cut of each invoice the marketplace keeps (even in test mode) | Stage 7 |
-| 5 | **License terms:** what the license allows (which platforms, ad formats, edits, territories) in plain English | Stage 5 |
+| 5 | ✅ **License terms:** one plain-English standard license: paid ads on the chosen platforms and cities for the term; trim, loop, fade; no remixes, other uses, resale or transfer ([034](decisions/034-licensing-basics.md)) | Stage 5 |
 | 6 | **Exposure definition details:** does a 2-second scroll-past count? Minimum watch time per view? | Stage 6 |
 | 7 | **Budget alerts:** notify advertisers when estimated monthly cost passes a limit they set? | Stage 7 |
 | 8 | **Unpaid invoices:** what happens if a saved card fails (retries, license suspended, artist still credited?) | Stage 7 |
@@ -147,4 +147,4 @@ Not yet decided. Answers become decision records.
 | 12 | **Limits:** maximum contributors per track (e.g. 50), minimum share (e.g. 0.5%)? | Stage 5 |
 | 13 | **Unclaimed shares:** how long are held balances kept for invitees who never join, and what happens after? | Stage 7 |
 | 14 | **Declined split:** if a contributor declines, does the lead artist just edit and re-send, and can the track stay published (unlicensable) meanwhile? | Stage 5 |
-| 15 | **Rate unit and limits:** how rates are shown and stored (e.g. per 1,000 or per 1 million exposure-seconds), the allowed range, and the money precision underneath. Deliberately deferred by the user (2026-10-21); until then phase 3's existing artist price field stays as a placeholder | Before stage 5 |
+| 15 | ✅ Answered: per 1,000 exposure-seconds, stored in micro-dollars, base rate $0.01–$50.00 ([034](decisions/034-licensing-basics.md)). **Rate unit and limits:** how rates are shown and stored (e.g. per 1,000 or per 1 million exposure-seconds), the allowed range, and the money precision underneath. Deliberately deferred by the user (2026-10-21); until then phase 3's existing artist price field stays as a placeholder | Before stage 5 |

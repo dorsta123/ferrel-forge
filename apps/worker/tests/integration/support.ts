@@ -21,7 +21,7 @@ export async function createCreator(label: string): Promise<string> {
 export async function trackWithMaster(creatorId: string, path: string, format: AudioFormat) {
   const [{ id }] = await db
     .insert(tracks)
-    .values({ creatorId, title: "Worker test", slug: `wk-${randomUUID().slice(0, 8)}`, genre: "pop", basePriceCents: 500 })
+    .values({ creatorId, title: "Worker test", slug: `wk-${randomUUID().slice(0, 8)}`, genre: "pop", baseRateMicros: 5_000_000 })
     .returning({ id: tracks.id });
   const body = readFileSync(path);
   const key = newMasterKey(creatorId, id, format);

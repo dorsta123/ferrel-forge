@@ -1,7 +1,7 @@
 // Test accounts for integration tests: created straight in the database and
 // removed afterwards together with their tracks and stored audio.
 import { randomUUID } from "node:crypto";
-import { creatorProfiles, db, sql, tracks, users } from "@ferrel/db";
+import { creatorProfiles, db, licenses, sql, tracks, users } from "@ferrel/db";
 import { deleteObject } from "@ferrel/storage";
 
 const run = Date.now().toString(36);
@@ -30,6 +30,8 @@ export async function removeCreatedUsers(): Promise<void> {
   const owned = sql`${tracks.creatorId} in (${idList})`;
   const files = await db.select({ key: tracks.audioKey }).from(tracks).where(owned);
   await Promise.all(files.map((f) => (f.key ? deleteObject("masters", f.key) : null)));
+  // Licenses keep tracks and users from being deleted (RESTRICT), so they go first.
+  await db.delete(licenses).where(sql`${licenses.licenseeId} in (${idList}) or ${licenses.trackId} in (select ${tracks.id} from ${tracks} where ${owned})`);
   await db.delete(tracks).where(owned);
   await db.delete(users).where(sql`${users.id} in (${idList})`);
 }

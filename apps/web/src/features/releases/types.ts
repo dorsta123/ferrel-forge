@@ -16,8 +16,8 @@ export type ReleaseValues = {
   genre: Genre;
   bpm: number | null;
   musicalKey: MusicalKey | null;
-  /** The artist's base rate in cents: a placeholder until pricing is decided. */
-  basePriceCents: number;
+  /** The artist's base rate per 1,000 exposure-seconds, in micro-dollars (decision 034). */
+  baseRateMicros: number;
   /** Optional "Listen to the full song" link (decision 032), cleaned up. */
   listenUrl: string | null;
 };

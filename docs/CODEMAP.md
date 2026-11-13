@@ -108,6 +108,7 @@ apps/web/src/
 │   ├── releases/             create, edit, publish/unpublish/archive/delete
 │   ├── audio-status/         the editor's live audio status and "Try again" (polls every 3 s while unsettled)
 │   ├── audio-upload/         uploading the master audio file
+│   ├── licensing/            licensing a track: rules, service (rate from the database, locked), license form, "My licenses"
 │   ├── preview-settings/     the preview's start (waveform + slider) and on/off
 │   ├── creator-tracks/       the dashboard's release list, filters, stats
 │   ├── catalog/              everything public: Explore, creator & release pages
@@ -166,6 +167,8 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 | `/become-creator` | [app/become-creator/page.tsx](../apps/web/src/app/become-creator/page.tsx) | [its actions.ts](../apps/web/src/app/become-creator/actions.ts), [lib/creator-profile.ts](../apps/web/src/lib/creator-profile.ts) | Signed-in non-creators |
 | `/dashboard` | [app/dashboard/page.tsx](../apps/web/src/app/dashboard/page.tsx) | [features/creator-tracks/](../apps/web/src/features/creator-tracks/) | The creator |
 | `/dashboard/tracks/new` | [app/dashboard/tracks/new/page.tsx](../apps/web/src/app/dashboard/tracks/new/page.tsx) | [features/releases/](../apps/web/src/features/releases/) | Creators |
+| `/creators/<slug>/<track>/license` | [app/creators/[slug]/[track]/license/page.tsx](../apps/web/src/app/creators/[slug]/[track]/license/page.tsx) | [features/licensing/](../apps/web/src/features/licensing/) | Signed-in accounts (others are sent to sign in and back) |
+| `/licenses` | [app/licenses/page.tsx](../apps/web/src/app/licenses/page.tsx) | [features/licensing/service.ts](../apps/web/src/features/licensing/service.ts) | Signed-in accounts (their own licenses) |
 | `/dashboard/tracks/<id>` | [app/dashboard/tracks/[id]/page.tsx](../apps/web/src/app/dashboard/tracks/[id]/page.tsx) | [features/releases/](../apps/web/src/features/releases/), [features/audio-upload/](../apps/web/src/features/audio-upload/), [features/audio-status/](../apps/web/src/features/audio-status/), [features/preview-settings/](../apps/web/src/features/preview-settings/) | The track's owner only |
 | `/explore` | [app/explore/page.tsx](../apps/web/src/app/explore/page.tsx) | [features/catalog/](../apps/web/src/features/catalog/) | Everyone |
 | `/creators/<slug>` | [app/creators/[slug]/page.tsx](../apps/web/src/app/creators/[slug]/page.tsx) | [features/catalog/queries.ts](../apps/web/src/features/catalog/queries.ts) | Everyone |
@@ -247,6 +250,8 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 | "This release changed in the meantime" | The `WHERE` conditions in [releases/service.ts](../apps/web/src/features/releases/service.ts) didn't match; reload and retry |
 | A "Listen to the full song" link is refused | Only https links to YouTube, Spotify or SoundCloud, with a path and no login or port: [releases/listen-link.ts](../apps/web/src/features/releases/listen-link.ts), the site list in [constants/tracks.ts](../packages/db/src/constants/tracks.ts) (`LISTEN_HOSTS`; adding a site needs a migration too, [decision 032](decisions/032-listen-link.md)) |
 | A storage file disappeared | The daily clean-up deletes files no track points to (masters after 24 h, previews after 1 h); the worker log lists each one ([decision 033](decisions/033-storage-clean-up.md)) |
+| A license is refused | [licensing/service.ts](../apps/web/src/features/licensing/service.ts): only published tracks whose audio isn't failed, never your own; choices are checked in [licensing/rules.ts](../apps/web/src/features/licensing/rules.ts) and by the database (`licenses_*` checks) |
+| After sign-in you land on the homepage, not where you were | The return address must be a path on this site ([lib/return-to.ts](../apps/web/src/lib/return-to.ts)); anything else falls back to `/` |
 | Upload fails | Browser Network tab (the PUT to `localhost:9000`); use `localhost:3000`, **not** `127.0.0.1`; [audio-upload/service.ts](../apps/web/src/features/audio-upload/service.ts) |
 | Sign-in / sign-up error | [components/auth/auth-errors.ts](../apps/web/src/components/auth/auth-errors.ts) maps error codes to messages; server side in [lib/auth.ts](../apps/web/src/lib/auth.ts) |
 | Database "violates check constraint …" | The constraint name says which rule: see [schema/tracks.ts](../packages/db/src/schema/tracks.ts) |

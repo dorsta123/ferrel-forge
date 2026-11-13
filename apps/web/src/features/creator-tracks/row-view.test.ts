@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { editedAgo, rowView } from "./row-view";
 
-const base = { status: "published" as const, basePriceCents: 1250, hasAudio: true, durationMs: null };
+const base = { status: "published" as const, baseRateMicros: 12_500_000, hasAudio: true, durationMs: null };
 
 describe("rowView", () => {
   it("shows the artist's own base rate", () => {

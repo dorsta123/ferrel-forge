@@ -7,14 +7,14 @@ import { ago, createUsers, removeCreatedUsers, type TestUser } from "./support";
 
 let A: TestUser, B: TestUser, C: TestUser;
 const live = (creatorId: string, slug: string, minutesAgo: number, extra: object = {}) => ({
-  creatorId, title: slug, slug, genre: "pop" as const, basePriceCents: 500,
+  creatorId, title: slug, slug, genre: "pop" as const, baseRateMicros: 5_000_000,
   status: "published" as const, publishedAt: ago(minutesAgo), audioKey: `${creatorId}/x/${slug}.wav`, audioSizeBytes: 10, audioFormat: "wav" as const, audioStatus: "processing" as const, ...extra,
 });
 
 beforeAll(async () => {
   [A, B, C] = await createUsers(["pa", "pb", "pc"]);
   await db.insert(tracks).values([
-    { creatorId: A.id, title: "a-draft", slug: "a-draft", genre: "pop", basePriceCents: 500 },
+    { creatorId: A.id, title: "a-draft", slug: "a-draft", genre: "pop", baseRateMicros: 5_000_000 },
     live(A.id, "a-live", 2, { genre: "lo-fi" }),
     live(A.id, "a-gone", 3, { status: "archived" }),
     live(B.id, "b-live", 1),

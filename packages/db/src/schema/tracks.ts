@@ -15,7 +15,7 @@ const listenUrlPattern = `^https://(${Object.keys(LISTEN_HOSTS).map((h) => h.rep
 
 /**
  * A release a creator sells licenses for. One license type per track (phase 3).
- * `basePriceCents` is the artist's placeholder rate until pricing is decided (PRODUCT.md question 15).
+ * `baseRateMicros` is the artist's base rate per 1,000 exposure-seconds; licenses lock it until the pricing model (phase 8).
  */
 export const tracks = pgTable(
   "tracks",
@@ -33,7 +33,8 @@ export const tracks = pgTable(
     bpm: smallint("bpm"),
     musicalKey: musicalKey("musical_key"),
     status: trackStatus("status").notNull().default("draft"),
-    basePriceCents: integer("base_price_cents").notNull(),
+    // Base rate per 1,000 exposure-seconds, in micro-dollars (decision 034).
+    baseRateMicros: integer("base_rate_micros").notNull().default(L.rateDefaultMicros),
     // Master file in the private bucket. All three set together, or none.
     audioKey: text("audio_key"),
     audioSizeBytes: bigint("audio_size_bytes", { mode: "number" }),
@@ -68,7 +69,7 @@ export const tracks = pgTable(
     ),
     check("tracks_description_len", sql`${t.description} is null or char_length(${t.description}) <= ${lit(L.descriptionMax)}`),
     check("tracks_bpm_range", sql`${t.bpm} is null or ${t.bpm} between ${lit(L.bpmMin)} and ${lit(L.bpmMax)}`),
-    check("tracks_price_range", sql`${t.basePriceCents} between ${lit(L.priceMinCents)} and ${lit(L.priceMaxCents)}`),
+    check("tracks_rate_range", sql`${t.baseRateMicros} between ${lit(L.rateMinMicros)} and ${lit(L.rateMaxMicros)}`),
     check("tracks_duration_range", sql`${t.durationMs} is null or ${t.durationMs} between 1 and ${lit(L.durationMaxMs)}`),
     check(
       "tracks_audio_all_or_none",

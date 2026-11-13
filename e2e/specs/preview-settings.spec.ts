@@ -12,8 +12,8 @@ test("a creator moves the preview window, saves it, and switches previews off", 
   const aliceId = await userIdByEmail(alice.email);
   const waveform = Array.from({ length: 200 }, (_, i) => (i * 37) % 1000);
   const [{ id: trackId }] = await sql<{ id: string }[]>`
-    insert into tracks (creator_id, title, slug, genre, base_price_cents, audio_key, audio_size_bytes, audio_format, audio_status)
-    values (${aliceId}, 'Midnight Run', 'midnight-run', 'electronic', 1000, ${`${aliceId}/x/a.wav`}, 10, 'wav', 'processing') returning id`;
+    insert into tracks (creator_id, title, slug, genre, base_rate_micros, audio_key, audio_size_bytes, audio_format, audio_status)
+    values (${aliceId}, 'Midnight Run', 'midnight-run', 'electronic', 10000000, ${`${aliceId}/x/a.wav`}, 10, 'wav', 'processing') returning id`;
   const stored = async () => (await sql<{ start: number | null; enabled: boolean; key: string | null }[]>`
     select preview_start_ms as start, preview_enabled as enabled, preview_key as key from tracks where id = ${trackId}`)[0];
 

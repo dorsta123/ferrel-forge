@@ -1,6 +1,6 @@
 // Forged requests against the release service, following one release through its lifecycle.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { db, eq, tracks } from "@ferrel/db";
+import { db, eq, licenses, tracks } from "@ferrel/db";
 import { createUploadUrl, getObjectInfo, newMasterKey, newPreviewKey } from "@ferrel/storage";
 import { changeReleaseStatus, createRelease, updateRelease } from "@/features/releases/service";
 import type { ReleaseFormValues } from "@/features/releases/types";
@@ -31,11 +31,11 @@ beforeAll(async () => {
 afterAll(removeCreatedUsers);
 
 describe("create", () => {
-  it("stores a valid draft with a slug from the title and the price in cents", async () => {
+  it("stores a valid draft with a slug from the title and the rate in micro-dollars", async () => {
     const r = await createRelease(A.id, form());
     expect(r.ok).toBe(true);
     id = r.ok ? r.id : "";
-    expect(await row(id)).toMatchObject({ status: "draft", slug: "midnight-run", basePriceCents: 1250, durationMs: null });
+    expect(await row(id)).toMatchObject({ status: "draft", slug: "midnight-run", baseRateMicros: 12_500_000, durationMs: null });
   });
 
   it("numbers a repeated title (midnight-run-2)", async () => {
@@ -68,7 +68,7 @@ describe("update", () => {
   it("lets the owner edit a draft, including its URL", async () => {
     const r = await updateRelease(A.id, id, form({ title: "Midnight Run (Extended)", slug: "midnight-run-extended", bpm: "124", musicalKey: "Am", price: "15" }));
     expect(r.ok).toBe(true);
-    expect(await row(id)).toMatchObject({ slug: "midnight-run-extended", bpm: 124, basePriceCents: 1500 });
+    expect(await row(id)).toMatchObject({ slug: "midnight-run-extended", bpm: 124, baseRateMicros: 15_000_000 });
   });
 
   it("refuses a URL the creator already uses", async () => {
@@ -120,10 +120,10 @@ describe("publish, unpublish, lock", () => {
   });
 });
 
-describe("base rate (placeholder until pricing is decided)", () => {
+describe("base rate (per 1,000 exposure-seconds; licenses lock it)", () => {
   it("stays editable while published", async () => {
-    expect((await updateRelease(A.id, id, form({ title: "Renamed", price: "499" }))).ok).toBe(true);
-    expect((await row(id)).basePriceCents).toBe(49_900);
+    expect((await updateRelease(A.id, id, form({ title: "Renamed", price: "49" }))).ok).toBe(true);
+    expect((await row(id)).baseRateMicros).toBe(49_000_000);
   });
 
   it("refuses a forged out-of-range rate", async () => {
@@ -161,11 +161,24 @@ describe("archive and delete", () => {
   });
 });
 
+describe("licensed releases (phase 5)", () => {
+  it("can't be deleted, even after unpublishing: a clear message instead of a database error", async () => {
+    const [{ id: lid }] = await db
+      .insert(tracks)
+      .values({ creatorId: A.id, title: "Licensed", slug: "licensed", genre: "pop", baseRateMicros: 500_000, audioKey: `${A.id}/x/l.wav`, audioSizeBytes: 10, audioFormat: "wav", audioStatus: "processing", status: "draft", publishedAt: new Date() })
+      .returning({ id: tracks.id });
+    const startsAt = new Date();
+    await db.insert(licenses).values({ trackId: lid, licenseeId: B.id, platforms: ["tiktok"], cities: ["paris"], termDays: 30, startsAt, endsAt: new Date(startsAt.getTime() + 30 * 86_400_000), rateMicros: 500_000, quote: {}, termsVersion: "2026-11-13" });
+    expect(failure(await changeReleaseStatus(A.id, lid, "delete"))).toContain("Licensed releases can");
+    expect(await row(lid)).toBeDefined();
+  });
+});
+
 describe("the full-song link (slice 11)", () => {
   it("is stored cleaned up; hostile links are refused and change nothing", async () => {
     const [{ id: linkId }] = await db
       .insert(tracks)
-      .values({ creatorId: A.id, title: "Linked", slug: "linked", genre: "pop", basePriceCents: 500 })
+      .values({ creatorId: A.id, title: "Linked", slug: "linked", genre: "pop", baseRateMicros: 5_000_000 })
       .returning({ id: tracks.id });
     const save = (listenUrl: string) => updateRelease(A.id, linkId, form({ title: "Linked", slug: "linked", price: "5", listenUrl }));
 

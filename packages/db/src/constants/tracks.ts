@@ -61,8 +61,10 @@ export const TRACK_LIMITS = {
   descriptionMax: 2000,
   bpmMin: 40,
   bpmMax: 250,
-  priceMinCents: 100, // $1
-  priceMaxCents: 50_000, // $500
+  // The artist's base rate per 1,000 exposure-seconds, in micro-dollars (decision 034).
+  rateMinMicros: 10_000, // $0.01
+  rateMaxMicros: 50_000_000, // $50.00
+  rateDefaultMicros: 500_000, // $0.50
   audioMaxBytes: 150 * 1024 * 1024, // 150 MB
   durationMaxMs: 4 * 60 * 60 * 1000, // 4 hours
   audioErrorMax: 500, // the reason shown to the artist when processing fails

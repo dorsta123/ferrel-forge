@@ -13,7 +13,7 @@ export async function listCreatorTracks(creatorId: string, filter: TrackFilter) 
       title: tracks.title,
       status: tracks.status,
       genre: tracks.genre,
-      basePriceCents: tracks.basePriceCents,
+      baseRateMicros: tracks.baseRateMicros,
       durationMs: tracks.durationMs,
       hasAudio: sql<boolean>`${tracks.audioKey} is not null`,
       updatedAt: tracks.updatedAt,

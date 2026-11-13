@@ -14,8 +14,8 @@ test("the audio status updates without reloading, and a failed file blocks publi
   const alice = await newCreator(page, "Alice");
   const aliceId = await userIdByEmail(alice.email);
   const [{ id: trackId }] = await sql<{ id: string }[]>`
-    insert into tracks (creator_id, title, slug, genre, base_price_cents, audio_key, audio_size_bytes, audio_format, audio_status)
-    values (${aliceId}, 'Midnight Run', 'midnight-run', 'electronic', 1000, ${`${aliceId}/x/a.wav`}, 10, 'wav', 'processing') returning id`;
+    insert into tracks (creator_id, title, slug, genre, base_rate_micros, audio_key, audio_size_bytes, audio_format, audio_status)
+    values (${aliceId}, 'Midnight Run', 'midnight-run', 'electronic', 10000000, ${`${aliceId}/x/a.wav`}, 10, 'wav', 'processing') returning id`;
 
   await page.goto(`/dashboard/tracks/${trackId}`);
   const status = m.getByTestId("audio-status");

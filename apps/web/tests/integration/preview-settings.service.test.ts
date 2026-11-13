@@ -13,7 +13,7 @@ beforeAll(async () => {
   [A, B] = await createUsers(["previewa", "previewb"]);
   [{ id: trackId }] = await db
     .insert(tracks)
-    .values({ creatorId: A.id, title: "Preview", slug: "preview", genre: "pop", basePriceCents: 500 })
+    .values({ creatorId: A.id, title: "Preview", slug: "preview", genre: "pop", baseRateMicros: 5_000_000 })
     .returning({ id: tracks.id });
   await getAudioQueue().drain(true);
 });

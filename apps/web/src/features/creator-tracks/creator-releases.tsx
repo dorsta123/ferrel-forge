@@ -7,10 +7,10 @@ import { TRACK_LIST_LIMIT, listCreatorTracks, type CreatorTrackStats } from "./q
 import { StatusTabs } from "./status-tabs";
 import { TrackRow } from "./track-row";
 
-type Props = { creatorId: string; filter: TrackFilter; stats: CreatorTrackStats };
+type Props = { creatorId: string; filter: TrackFilter; stats: CreatorTrackStats; licenseCounts: Record<string, number> };
 
 /** "Your releases" panel: header, filter tabs, and the list (or an empty state). Server component. */
-export async function CreatorReleases({ creatorId, filter, stats }: Props) {
+export async function CreatorReleases({ creatorId, filter, stats, licenseCounts }: Props) {
   const rows = stats.all === 0 ? [] : await listCreatorTracks(creatorId, filter);
   const now = new Date();
 
@@ -38,7 +38,7 @@ export async function CreatorReleases({ creatorId, filter, stats }: Props) {
           ) : (
             <ul className="-mx-2 flex flex-col divide-y sm:-mx-3" aria-label={`${rows.length} releases`}>
               {rows.map((track) => (
-                <TrackRow key={track.id} track={track} now={now} />
+                <TrackRow key={track.id} track={track} now={now} activeLicenses={licenseCounts[track.id] ?? 0} />
               ))}
             </ul>
           )}

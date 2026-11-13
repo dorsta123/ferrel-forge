@@ -41,7 +41,7 @@ export function TrackCard({ data, className }: { data: TrackCardData; className?
           </ul>
         )}
         <p className="mt-auto border-t pt-3 text-xs text-muted-foreground" data-testid="card-status">
-          Licensing opens soon
+          Available to license
         </p>
       </div>
     </article>

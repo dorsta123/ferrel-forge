@@ -2,13 +2,13 @@
 // code) are refused by Postgres with the expected constraint.
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { creatorProfiles, db, eq, sql, tracks, users } from "@ferrel/db";
+import { billingProfiles, creatorProfiles, db, eq, licenses, sql, tracks, users } from "@ferrel/db";
 import { createUsers, pgError, removeCreatedUsers, type TestUser } from "./support";
 
 let A: TestUser, B: TestUser, buyer: TestUser;
 type TrackRow = typeof tracks.$inferInsert;
 
-const valid = (): TrackRow => ({ creatorId: A.id, title: "Valid", slug: "valid", genre: "pop", basePriceCents: 500 });
+const valid = (): TrackRow => ({ creatorId: A.id, title: "Valid", slug: "valid", genre: "pop", baseRateMicros: 5_000_000 });
 // Built when the test table is collected (before users exist), so no user ids here.
 const audio = () => ({ audioKey: "db-rules/t/x.wav", audioSizeBytes: 100, audioFormat: "wav" as const, audioStatus: "processing" as const });
 /** A waveform: `n` bars of height `v` (0–1000). */
@@ -44,8 +44,8 @@ describe("tracks table", () => {
     ["description over 2000 chars", { description: "a".repeat(2001) }, "tracks_description_len"],
     ["bpm below 40", { bpm: 39 }, "tracks_bpm_range"],
     ["bpm above 250", { bpm: 251 }, "tracks_bpm_range"],
-    ["price under $1", { basePriceCents: 99 }, "tracks_price_range"],
-    ["price over $500", { basePriceCents: 50_001 }, "tracks_price_range"],
+    ["rate under $0.01", { baseRateMicros: 9_999 }, "tracks_rate_range"],
+    ["rate over $50", { baseRateMicros: 50_000_001 }, "tracks_rate_range"],
     ["zero-length track", { ...audio(), durationMs: 0 }, "tracks_duration_range"],
     ["track over 4 hours", { ...audio(), durationMs: 4 * 60 * 60 * 1000 + 1 }, "tracks_duration_range"],
     ["audio key without size and format", { audioKey: "k.wav" }, "tracks_audio_all_or_none"],
@@ -127,7 +127,7 @@ describe("tracks table", () => {
   });
 
   it("refuses later updates that break the rules", async () => {
-    await expectRefused(() => db.update(tracks).set({ basePriceCents: 0 }).where(eq(tracks.creatorId, A.id)), "tracks_price_range");
+    await expectRefused(() => db.update(tracks).set({ baseRateMicros: 0 }).where(eq(tracks.creatorId, A.id)), "tracks_rate_range");
     const [t] = await insert({ ...audio(), status: "published", publishedAt: new Date() }).returning({ id: tracks.id });
     await expectRefused(
       () => db.update(tracks).set({ audioKey: null, audioSizeBytes: null, audioFormat: null, audioStatus: "none" }).where(eq(tracks.id, t.id)),
@@ -140,5 +140,65 @@ describe("deleting accounts", () => {
   it("is blocked while the creator has releases (licenses must survive)", async () => {
     await expectRefused(() => db.delete(creatorProfiles).where(eq(creatorProfiles.userId, A.id)), "23503");
     await expectRefused(() => db.delete(users).where(eq(users.id, A.id)), "23503");
+  });
+});
+
+describe("licenses table (phase 5)", () => {
+  const day = 24 * 60 * 60_000;
+  let trackId = "";
+  const license = (patch: Record<string, unknown> = {}) => {
+    const startsAt = new Date("2026-11-13T00:00:00Z");
+    return db.insert(licenses).values({
+      trackId,
+      licenseeId: B.id,
+      platforms: ["instagram"],
+      cities: ["london"],
+      termDays: 30,
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 30 * day),
+      rateMicros: 500_000,
+      quote: { rateMicros: 500_000, factors: [] },
+      termsVersion: "2026-11-13",
+      ...patch,
+    } as typeof licenses.$inferInsert);
+  };
+
+  beforeAll(async () => {
+    [{ id: trackId }] = await insert({ ...audio(), status: "published", publishedAt: new Date() }).returning({ id: tracks.id });
+  });
+
+  it("accepts a valid license (control)", async () => {
+    await expect(license()).resolves.toBeDefined();
+  });
+
+  it.each<[string, Record<string, unknown>, string]>([
+    ["no platform", { platforms: [] }, "licenses_platforms"],
+    ["no city", { cities: [] }, "licenses_cities"],
+    ["an unknown city", { cities: ["atlantis"] }, "licenses_cities"],
+    ["a term that isn't offered", { termDays: 45, endsAt: new Date(new Date("2026-11-13T00:00:00Z").getTime() + 45 * day) }, "licenses_term"],
+    ["an end date that doesn't match the term", { endsAt: new Date("2027-01-01T00:00:00Z") }, "licenses_dates"],
+    ["a rate under $0.01", { rateMicros: 9_999 }, "licenses_rate"],
+    ["an unknown platform", { platforms: ["myspace"] }, "22P02"],
+  ])("refuses %s", async (_, patch, expected) => {
+    await expectRefused(() => license(patch), expected);
+  });
+
+  it("accepts a term crossing a daylight-saving change, whatever the database session's time zone", async () => {
+    const startsAt = new Date("2026-10-20T12:00:00Z"); // New York and London change clocks within 30 days
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`set local time zone 'America/New_York'`);
+      await expect(
+        tx.insert(licenses).values({ trackId, licenseeId: B.id, platforms: ["instagram"], cities: ["london"], termDays: 30, startsAt, endsAt: new Date(startsAt.getTime() + 30 * day), rateMicros: 500_000, quote: {}, termsVersion: "2026-11-13" }),
+      ).resolves.toBeDefined();
+    });
+  });
+
+  it("keeps a licensed track and its licensee from being deleted", async () => {
+    await expectRefused(() => db.delete(tracks).where(eq(tracks.id, trackId)), "23503");
+  });
+
+  it("refuses billing details with an unknown country or a blank company", async () => {
+    await expectRefused(() => db.insert(billingProfiles).values({ userId: B.id, companyName: "Acme", country: "XX" }), "billing_profiles_country");
+    await expectRefused(() => db.insert(billingProfiles).values({ userId: B.id, companyName: "  ", country: "GB" }), "billing_profiles_company_name_len");
   });
 });

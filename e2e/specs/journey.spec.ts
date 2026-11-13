@@ -37,7 +37,7 @@ for (const variant of VARIANTS) {
       await creator.waitForLoadState("networkidle");
       await c.getByLabel("Title", { exact: true }).fill(title);
       await c.getByLabel("Genre").selectOption("cinematic");
-      await c.getByLabel("Base rate", { exact: true }).fill("8");
+      await c.getByLabel("Base rate per 1,000 exposure-seconds", { exact: true }).fill("8");
       await checkWidth(creator, "new release");
       await c.getByRole("button", { name: "Create draft" }).click();
       await creator.waitForURL(/\/dashboard\/tracks\/[0-9a-f-]{36}$/);
@@ -59,7 +59,7 @@ for (const variant of VARIANTS) {
       await checkWidth(visitor, "home");
       await card.click();
       await visitor.waitForURL(`**/creators/${artist.slug}/${trackSlug}`);
-      await expect(v.getByTestId("license-panel")).toContainText("Licensing opens soon");
+      await expect(v.getByTestId("license-panel")).toContainText("License this track");
       await expect(v).not.toContainText("$8.00");
       await checkWidth(visitor, "release");
       await visitor.goto("/explore?genre=cinematic");

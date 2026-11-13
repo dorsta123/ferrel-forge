@@ -1,5 +1,5 @@
 import type { Genre, MusicalKey } from "@ferrel/db/constants";
-import { centsToInput } from "./money";
+import { rateToInput } from "@/lib/rate";
 import type { ReleaseFormValues } from "./types";
 
 /** Starting values for a new release. */
@@ -10,7 +10,7 @@ export const NEW_RELEASE_VALUES: ReleaseFormValues = {
   genre: "",
   bpm: "",
   musicalKey: "",
-  price: "10.00",
+  price: "0.50",
   listenUrl: "",
 };
 
@@ -22,7 +22,7 @@ export function releaseFormValues(track: {
   genre: Genre;
   bpm: number | null;
   musicalKey: MusicalKey | null;
-  basePriceCents: number;
+  baseRateMicros: number;
   listenUrl: string | null;
 }): ReleaseFormValues {
   return {
@@ -32,7 +32,7 @@ export function releaseFormValues(track: {
     genre: track.genre,
     bpm: track.bpm === null ? "" : String(track.bpm),
     musicalKey: track.musicalKey ?? "",
-    price: centsToInput(track.basePriceCents),
+    price: rateToInput(track.baseRateMicros),
     listenUrl: track.listenUrl ?? "",
   };
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDownIcon, LayoutDashboardIcon, LogOutIcon, SparklesIcon } from "lucide-react";
+import { ChevronDownIcon, FileCheckIcon, LayoutDashboardIcon, LogOutIcon, SparklesIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,6 +55,11 @@ export function UserMenu({ name, email, isCreator }: Props) {
         >
           {isCreator ? <LayoutDashboardIcon /> : <SparklesIcon />}
           {isCreator ? "Dashboard" : "Become a creator"}
+        </MenuPrimitive.LinkItem>
+        {/* Every signed-in account can license tracks (decision 034). */}
+        <MenuPrimitive.LinkItem className={itemClass} render={<Link href="/licenses" />}>
+          <FileCheckIcon />
+          My licenses
         </MenuPrimitive.LinkItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut} className="gap-2 px-2 py-1.5">
