@@ -14,8 +14,13 @@ test("sign up from a release page, license the track, and see it on both dashboa
     values (${artistId}, 'Midnight Run', 'midnight-run', 'electronic', 750000, 'published', now(), ${`${artistId}/x/a.wav`}, 10, 'wav', 'processing') returning id`;
 
   const page = await open();
+  const stripeCalls: string[] = []; // simulated mode must never load or call Stripe
+  page.on("request", (r) => {
+    if (/(^|\.)stripe\.(com|network)$/.test(new URL(r.url()).hostname)) stripeCalls.push(r.url());
+  });
   const m = main(page);
   const releaseUrl = `/creators/${artist.slug}/midnight-run`;
+  const buyerEmail = testEmail("buyer");
 
   await test.step("a signed-out visitor is sent to sign in, then signs up instead and comes straight back", async () => {
     await page.goto(releaseUrl);
@@ -26,7 +31,7 @@ test("sign up from a release page, license the track, and see it on both dashboa
     await page.waitForURL(/\/sign-up\?next=/);
     await page.waitForLoadState("networkidle");
     await page.getByLabel("Name").fill("Brand Buyer");
-    await page.getByLabel("Email").fill(testEmail("buyer"));
+    await page.getByLabel("Email").fill(buyerEmail);
     await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
     await page.getByLabel("Confirm password").fill(PASSWORD);
     await page.getByRole("button", { name: "Create account" }).click();
@@ -39,6 +44,24 @@ test("sign up from a release page, license the track, and see it on both dashboa
     await m.getByRole("button", { name: "License this track" }).click();
     await expect(m.getByText("Choose at least one platform")).toBeVisible();
     await expect(m.getByText("Please agree to the license terms.")).toBeVisible();
+  });
+
+  await test.step("a valid form still needs a payment card; without Stripe keys a labelled simulated one is added", async () => {
+    await m.getByLabel("Instagram").check();
+    await m.getByLabel("London").check();
+    await m.getByLabel("30 days").check();
+    await m.getByLabel("Company or brand").fill("Acme Sneakers");
+    await m.getByLabel("Billing country").selectOption("GB");
+    await m.getByLabel("I agree to these license terms").check();
+    await m.getByRole("button", { name: "License this track" }).click();
+    await expect(m.getByRole("alert").filter({ hasText: "Add a payment card before licensing." })).toBeVisible();
+    await m.getByRole("button", { name: "Add simulated test card" }).click();
+    await expect(m.getByTestId("saved-card")).toHaveText("Visa ending 4242");
+    await expect(m.getByTestId("card-section")).toContainText("Simulated");
+    expect(stripeCalls).toEqual([]);
+    expect((await sql`select provider, stripe_customer_id from payment_cards pc join users u on u.id = pc.user_id where u.email = ${buyerEmail}`)).toEqual([
+      { provider: "simulated", stripe_customer_id: null },
+    ]);
   });
 
   await test.step("choosing platforms, cities and a term, and agreeing, licenses the track", async () => {

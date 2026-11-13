@@ -1,6 +1,6 @@
 // Licensing a track (phase 5 part 1), with forged input: what a tampered browser could send.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { billingProfiles, db, eq, licenses, tracks } from "@ferrel/db";
+import { billingProfiles, db, eq, licenses, paymentCards, tracks } from "@ferrel/db";
 import { creatorLicenseCounts, createLicense, licenseOffer, myLicenses } from "@/features/licensing/service";
 import type { LicenseFormValues } from "@/features/licensing/rules";
 import { createUsers, removeCreatedUsers, type TestUser } from "./support";
@@ -19,10 +19,14 @@ const form = (patch: Partial<LicenseFormValues> = {}): LicenseFormValues => ({
   agreed: true,
   ...patch,
 });
+/** A saved (simulated) card: part 2 makes one a condition of licensing. */
+const withCard = (...users: TestUser[]) =>
+  db.insert(paymentCards).values(users.map((u) => ({ userId: u.id, provider: "simulated" as const, brand: "visa", last4: "4242" })));
 const error = (r: { ok: boolean; error?: string; errors?: object }) => (r.ok ? "ok" : (r.error ?? JSON.stringify(r.errors)));
 
 beforeAll(async () => {
   [artist, advertiser, other] = await createUsers(["licartist", "licadv", "licother"]);
+  await withCard(artist, advertiser, other);
   const audio = (s: string) => ({ audioKey: `${artist.id}/x/${s}.wav`, audioSizeBytes: 10, audioFormat: "wav" as const, audioStatus: "processing" as const });
   const base = { creatorId: artist.id, genre: "pop" as const, baseRateMicros: 750_000 };
   const live = { status: "published" as const, publishedAt: new Date() };
@@ -76,6 +80,7 @@ describe("createLicense", () => {
 
   it("asks for billing details the first time only", async () => {
     const [fresh] = await createUsers(["licfresh"]);
+    await withCard(fresh);
     expect(error(await createLicense(fresh.id, liveId, form({ companyName: "", country: "" })))).toContain("companyName");
     expect((await createLicense(fresh.id, liveId, form())).ok).toBe(true);
     expect((await createLicense(fresh.id, liveId, form({ companyName: "", country: "" }))).ok).toBe(true);
@@ -89,6 +94,13 @@ describe("createLicense", () => {
     ["a malformed id", () => "1 or 1=1", "isn't available to license"],
   ])("refuses %s", async (_, id, message) => {
     expect(error(await createLicense(advertiser.id, id(), form()))).toContain(message);
+  });
+
+  it("refuses an account without a saved card, saving nothing", async () => {
+    const [cardless] = await createUsers(["licnocard"], { creators: false });
+    expect(error(await createLicense(cardless.id, liveId, form()))).toContain("Add a payment card");
+    expect(await db.select().from(licenses).where(eq(licenses.licenseeId, cardless.id))).toHaveLength(0);
+    expect(await db.select().from(billingProfiles).where(eq(billingProfiles.userId, cardless.id))).toHaveLength(0);
   });
 
   it("refuses the artist's own track", async () => {
@@ -107,8 +119,8 @@ describe("createLicense", () => {
 describe("licenseOffer", () => {
   it("tells the page the rate, and whether billing details are still needed", async () => {
     const [fresh] = await createUsers(["licoffer"]);
-    expect(await licenseOffer(fresh.id, liveId)).toEqual({ ok: true, rateMicros: 2_000_000, needsBilling: true });
-    expect(await licenseOffer(advertiser.id, liveId)).toEqual({ ok: true, rateMicros: 2_000_000, needsBilling: false });
+    expect(await licenseOffer(fresh.id, liveId)).toEqual({ ok: true, rateMicros: 2_000_000, needsBilling: true, needsCard: true });
+    expect(await licenseOffer(advertiser.id, liveId)).toEqual({ ok: true, rateMicros: 2_000_000, needsBilling: false, needsCard: false });
     expect(await licenseOffer(artist.id, liveId)).toMatchObject({ ok: false, error: expect.stringContaining("your own") });
     expect(await licenseOffer(advertiser.id, draftId)).toMatchObject({ ok: false });
   });

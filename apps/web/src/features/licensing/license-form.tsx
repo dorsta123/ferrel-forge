@@ -131,7 +131,7 @@ export function LicenseForm({ trackId, rateMicros, needsBilling }: Props) {
         <Button type="submit" disabled={f.pending} className="h-11 px-6 text-base font-semibold">
           {f.pending ? "Licensing…" : "License this track"}
         </Button>
-        <p className="text-xs text-muted-foreground">Testing: no card needed yet, and no real money moves.</p>
+        <p className="text-xs text-muted-foreground">Nothing is charged now. During testing no real money moves.</p>
       </div>
     </form>
   );
