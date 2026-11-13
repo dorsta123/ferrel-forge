@@ -28,7 +28,6 @@ async function Licenses({ searchParams }: { searchParams: PageProps<"/licenses">
   const [user, params] = await Promise.all([getCurrentUser(), searchParams]);
   if (!user) redirect("/sign-in?next=%2Flicenses");
   const rows = await myLicenses(user.id);
-  const now = new Date();
   const justLicensed = typeof params.new === "string" && rows.some((r) => r.id === params.new);
 
   if (rows.length === 0) {
@@ -53,15 +52,15 @@ async function Licenses({ searchParams }: { searchParams: PageProps<"/licenses">
       )}
       <ul className="flex flex-col gap-3" aria-label={`${rows.length} licenses`}>
         {rows.map((l) => (
-          <LicenseCard key={l.id} license={l} now={now} />
+          <LicenseCard key={l.id} license={l} />
         ))}
       </ul>
     </>
   );
 }
 
-function LicenseCard({ license: l, now }: { license: MyLicense; now: Date }) {
-  const active = l.endsAt > now;
+function LicenseCard({ license: l }: { license: MyLicense }) {
+  const active = l.active;
   return (
     <li className="flex flex-col gap-3 rounded-2xl border bg-card p-5 sm:flex-row sm:items-start sm:justify-between" data-testid="license-card">
       <div className="flex min-w-0 flex-col gap-1">

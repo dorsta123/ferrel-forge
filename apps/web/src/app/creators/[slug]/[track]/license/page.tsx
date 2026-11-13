@@ -63,7 +63,7 @@ async function License({ params }: { params: Params }) {
       {offer.ok ? (
         <>
           <CardSection card={card} mode={currentPaymentsMode().kind} />
-          <LicenseForm trackId={track.id} rateMicros={offer.rateMicros} needsBilling={offer.needsBilling} />
+          <LicenseForm trackId={track.id} rateMicros={offer.rateMicros} needsBilling={offer.needsBilling} needsCard={offer.needsCard} />
         </>
       ) : (
         <p role="alert" className="rounded-2xl border bg-card p-5 text-sm">

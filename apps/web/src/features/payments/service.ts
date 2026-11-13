@@ -10,15 +10,22 @@ type Result = { ok: true } | { ok: false; error: string };
 
 const NO_STRIPE = { ok: false, error: "Card payments aren't set up on this server." } as const;
 
-/** What to show for the account's card, or null. Never the Stripe ids. */
+/**
+ * The account's card that can be billed, for display (never the Stripe ids), or null. Once Stripe
+ * keys are set, a simulated card saved earlier doesn't count: there's nothing to charge.
+ */
 export async function savedCard(userId: string): Promise<SavedCard | null> {
   const [card] = await db
     .select({ provider: paymentCards.provider, brand: paymentCards.brand, last4: paymentCards.last4 })
     .from(paymentCards)
     .where(eq(paymentCards.userId, userId))
     .limit(1);
-  return card ?? null;
+  if (!card || (card.provider === "simulated" && currentPaymentsMode().kind === "stripe")) return null;
+  return card;
 }
+
+/** Whether the account can license: it has a card that can be billed. */
+export const hasUsableCard = async (userId: string) => (await savedCard(userId)) !== null;
 
 async function saveCard(userId: string, card: Omit<typeof paymentCards.$inferInsert, "userId">) {
   const values = { stripeCustomerId: null, stripePaymentMethodId: null, ...card };
@@ -44,8 +51,8 @@ export async function startCardSetup(userId: string): Promise<{ ok: true; client
     .from(paymentCards)
     .where(eq(paymentCards.userId, userId))
     .limit(1);
-  const { clientSecret } = await startStripeSetup(getStripe(mode.secretKey), userId, existing?.customerId ?? null);
-  return { ok: true, clientSecret, publishableKey: mode.publishableKey };
+  const setup = await startStripeSetup(getStripe(mode.secretKey), userId, existing?.customerId ?? null);
+  return setup.ok ? { ...setup, publishableKey: mode.publishableKey } : setup;
 }
 
 /** After Stripe's form succeeds: checks the SetupIntent with Stripe, then saves the card. */

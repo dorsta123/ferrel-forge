@@ -1,7 +1,7 @@
 // Saved cards (phase 5 part 2, step B), with forged input. Runs without Stripe keys (simulated mode).
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { db, eq, paymentCards } from "@ferrel/db";
-import { finishCardSetup, saveSimulatedCard, savedCard, startCardSetup } from "@/features/payments/service";
+import { finishCardSetup, hasUsableCard, saveSimulatedCard, savedCard, startCardSetup } from "@/features/payments/service";
 import { createUsers, pgError, removeCreatedUsers, type TestUser } from "./support";
 
 let a: TestUser, b: TestUser;
@@ -44,6 +44,14 @@ describe("with Stripe keys set", () => {
     process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = "pk_test_fake";
     expect(await saveSimulatedCard(b.id)).toMatchObject({ ok: false });
     expect(await savedCard(b.id)).toBeNull();
+  });
+
+  it("doesn't count a simulated card saved before the keys were set: it can't be billed", async () => {
+    expect(await hasUsableCard(a.id)).toBe(true); // simulated mode: saved above
+    process.env.STRIPE_SECRET_KEY = "sk_test_fake";
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = "pk_test_fake";
+    expect(await hasUsableCard(a.id)).toBe(false);
+    expect(await savedCard(a.id)).toBeNull();
   });
 
   it("refuses live keys outright", async () => {

@@ -8,8 +8,8 @@ function fakeStripe(intents: Record<string, Intent> = {}) {
   const calls: string[] = [];
   const stripe: StripeLike = {
     customers: {
-      create: async (p) => {
-        calls.push(`customer ${p.metadata.userId}`);
+      create: async (p, o) => {
+        calls.push(`customer ${p.metadata.userId} ${o.idempotencyKey}`);
         return { id: "cus_new" };
       },
     },
@@ -41,14 +41,23 @@ const succeeded = (patch: Partial<Intent> = {}): Intent => ({
 describe("startStripeSetup", () => {
   it("creates a customer the first time and a SetupIntent for later (off-session) monthly charges", async () => {
     const { stripe, calls } = fakeStripe();
-    expect(await startStripeSetup(stripe, "u1", null)).toEqual({ clientSecret: "seti_1_secret_x" });
-    expect(calls).toEqual(["customer u1", "intent cus_new u1 off_session"]);
+    expect(await startStripeSetup(stripe, "u1", null)).toEqual({ ok: true, clientSecret: "seti_1_secret_x" });
+    // The idempotency key makes Stripe return the same customer if the form is opened again.
+    expect(calls).toEqual(["customer u1 customer-u1", "intent cus_new u1 off_session"]);
   });
 
   it("reuses the account's Stripe customer", async () => {
     const { stripe, calls } = fakeStripe();
     await startStripeSetup(stripe, "u1", "cus_old");
     expect(calls).toEqual(["intent cus_old u1 off_session"]);
+  });
+
+  it("says so, instead of crashing, when Stripe fails (outage, bad key)", async () => {
+    const { stripe } = fakeStripe();
+    stripe.customers.create = async () => {
+      throw new Error("Invalid API Key provided");
+    };
+    expect(await startStripeSetup(stripe, "u1", null)).toEqual({ ok: false, error: expect.stringContaining("Stripe") });
   });
 });
 

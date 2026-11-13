@@ -29,11 +29,16 @@ function CardFields({ onSaved }: { onSaved: () => void }) {
     if (!stripe || !elements) return;
     setPending(true);
     setError(null);
-    const { error: stripeError, setupIntent } = await stripe.confirmSetup({ elements, redirect: "if_required" });
-    const result = stripeError || !setupIntent ? { ok: false as const, error: stripeError?.message ?? "We couldn't save that card." } : await finishCardSetupAction(setupIntent.id);
-    setPending(false);
-    if (result.ok) onSaved();
-    else setError(result.error);
+    try {
+      const { error: stripeError, setupIntent } = await stripe.confirmSetup({ elements, redirect: "if_required" });
+      const result = stripeError || !setupIntent ? { ok: false as const, error: stripeError?.message ?? "We couldn't save that card." } : await finishCardSetupAction(setupIntent.id);
+      if (result.ok) onSaved();
+      else setError(result.error);
+    } catch {
+      setError("We couldn't save that card. Please try again.");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (

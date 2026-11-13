@@ -4,7 +4,7 @@
 
 /** The few Stripe calls we use; the real `Stripe` client fits this shape. */
 export type StripeLike = {
-  customers: { create(params: { metadata: { userId: string } }): Promise<{ id: string }> };
+  customers: { create(params: { metadata: { userId: string } }, options: { idempotencyKey: string }): Promise<{ id: string }> };
   setupIntents: {
     create(params: {
       customer: string;
@@ -30,17 +30,29 @@ export type StripeCard = { stripeCustomerId: string; stripePaymentMethodId: stri
 const SETUP_INTENT_ID = /^seti_[A-Za-z0-9]{1,200}$/;
 const FAILED = { ok: false, error: "We couldn't save that card. Please try again." } as const;
 
-/** A SetupIntent for this account's Stripe customer (created the first time), for later monthly charges. */
-export async function startStripeSetup(stripe: StripeLike, userId: string, customerId: string | null): Promise<{ clientSecret: string }> {
-  const customer = customerId ?? (await stripe.customers.create({ metadata: { userId } })).id;
-  const intent = await stripe.setupIntents.create({
-    customer,
-    usage: "off_session",
-    payment_method_types: ["card"],
-    metadata: { userId },
-  });
-  if (!intent.client_secret) throw new Error("Stripe returned a SetupIntent without a client secret.");
-  return { clientSecret: intent.client_secret };
+/**
+ * A SetupIntent for this account's Stripe customer, for later monthly charges. The customer is
+ * created the first time; the idempotency key makes Stripe hand back the same one if the form is
+ * opened again before a card is saved (for 24 hours), instead of piling up empty customers.
+ */
+export async function startStripeSetup(
+  stripe: StripeLike,
+  userId: string,
+  customerId: string | null,
+): Promise<{ ok: true; clientSecret: string } | { ok: false; error: string }> {
+  try {
+    const customer = customerId ?? (await stripe.customers.create({ metadata: { userId } }, { idempotencyKey: `customer-${userId}` })).id;
+    const intent = await stripe.setupIntents.create({
+      customer,
+      usage: "off_session",
+      payment_method_types: ["card"],
+      metadata: { userId },
+    });
+    if (intent.client_secret) return { ok: true, clientSecret: intent.client_secret };
+  } catch (err) {
+    console.error("Stripe card setup failed", err instanceof Error ? err.message : err);
+  }
+  return { ok: false, error: "Stripe isn't responding. Please try again in a moment." };
 }
 
 /**

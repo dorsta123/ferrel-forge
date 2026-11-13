@@ -28,14 +28,14 @@ export function CardSection({ card, mode }: Props) {
   const run = (action: () => Promise<{ ok: true } | { ok: false; error: string }>) =>
     startTransition(async () => {
       setError(null);
-      const result = await action();
+      const result = await action().catch(() => ({ ok: false as const, error: "Something went wrong. Please try again." }));
       if (result.ok) saved();
       else setError(result.error);
     });
   const startStripe = () =>
     startTransition(async () => {
       setError(null);
-      const result = await startCardSetupAction();
+      const result = await startCardSetupAction().catch(() => ({ ok: false as const, error: "Something went wrong. Please try again." }));
       if (result.ok) setSetup({ clientSecret: result.clientSecret, publishableKey: result.publishableKey });
       else setError(result.error);
     });
