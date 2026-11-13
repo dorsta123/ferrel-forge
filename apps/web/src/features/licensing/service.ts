@@ -99,6 +99,7 @@ export async function myLicenses(userId: string) {
       startsAt: licenses.startsAt,
       endsAt: licenses.endsAt,
       rateMicros: licenses.rateMicros,
+      audioStatus: tracks.audioStatus,
     })
     .from(licenses)
     .innerJoin(tracks, eq(tracks.id, licenses.trackId))

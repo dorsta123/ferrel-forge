@@ -39,6 +39,10 @@ Four steps, one PR.
 
 **Done when:** unit tests (rate in the new unit, license choices); integration tests with forged requests (no account, own track, draft/archived/failed tracks, bad choices, a forged rate ignored, database checks); a browser test (sign up → license → "My licenses" → the creator sees the count); one code review + a security review; CI green; docs.
 
+## Part 2 in detail (user: "code it", 2026-11-14)
+- **Step A — master download.** An active license shows **Download master** in "My licenses". A route checks the license is the signed-in user's and active, then redirects to a private storage link valid for 5 minutes (`Content-Disposition: attachment`, named after the track). The storage key never appears on a page. Nobody else (other users, ended licenses, failed audio) gets a link.
+- **Step B — a saved card before licensing.** A small payments adapter with two implementations: **Stripe test mode** (used when `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` are set: a SetupIntent and Stripe's own card form; we store only Stripe's customer and payment-method ids plus brand/last 4 for display) and a **simulated card** when no keys are set, clearly labelled, so the app and CI work at $0 without an account. A license needs a saved card.
+
 ## Needs from the user
 - A free **Stripe account** and its **test-mode keys** in `.env` (part 2). Test mode never charges real money.
 

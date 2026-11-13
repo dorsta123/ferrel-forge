@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { CheckCircle2Icon, FileCheckIcon } from "lucide-react";
+import { CheckCircle2Icon, DownloadIcon, FileCheckIcon } from "lucide-react";
 import { AD_PLATFORM_LABELS, CITIES } from "@ferrel/db/constants";
 import { buttonVariants } from "@/components/ui/button";
 import { myLicenses, type MyLicense } from "@/features/licensing/service";
@@ -80,6 +80,12 @@ function LicenseCard({ license: l, now }: { license: MyLicense; now: Date }) {
         <span className="text-sm">
           <span className="font-semibold tabular-nums">{formatRate(l.rateMicros)}</span> <span className="text-muted-foreground">{RATE_UNIT}</span>
         </span>
+        {active && l.audioStatus !== "failed" && (
+          // A plain link (not client navigation): the route answers with a redirect to the file.
+          <a href={`/licenses/${l.id}/master`} download className={buttonVariants({ variant: "outline", className: "mt-2 h-9 gap-2 px-4" })}>
+            <DownloadIcon className="size-4" aria-hidden="true" /> Download master
+          </a>
+        )}
       </div>
     </li>
   );
