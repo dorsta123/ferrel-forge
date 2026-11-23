@@ -25,7 +25,7 @@ flowchart LR
   PR[packages/pricing<br/>pure rate engine]
 
   SIM[Ad platform simulator<br/>Instagram · TikTok · Google<br/>&#40;6&#41;]:::planned
-  ST[Stripe test mode<br/>saved cards, invoices,<br/>Connect payouts &#40;5–7&#41;]:::planned
+  ST[Stripe test mode<br/>saved cards &#40;5, or simulated&#41;,<br/>invoices, Connect payouts &#40;7&#41;]
   ML[Pricing model + market data<br/>&#40;8&#41;]:::planned
 
   A -- sign in, create, edit --> P
@@ -34,6 +34,7 @@ flowchart LR
   SA -- SQL --> PG
   A -- upload audio via<br/>5-minute signed link --> S3M
   SA -- verify bytes, sign links --> S3M
+  SA -- card setup &#40;5&#41; --> ST
   SA -. jobs &#40;4&#41; .-> R
   R --> W
   W -. FFmpeg previews &#40;4&#41; .-> S3P

@@ -1,6 +1,6 @@
 # Plan: phase 5 — licensing
 
-**Status:** Approved by the user 2026-11-13; part 1 done · **Why:** Everything built so far is the artist side. Phase 5 adds the core of the marketplace: an advertiser licenses a track at a locked rate, saves a card, and downloads the master; every contributor's share is agreed before a track can be licensed.
+**Status:** Approved by the user 2026-11-13; parts 1 and 2 done · **Why:** Everything built so far is the artist side. Phase 5 adds the core of the marketplace: an advertiser licenses a track at a locked rate, saves a card, and downloads the master; every contributor's share is agreed before a track can be licensed.
 
 ## How we work this phase (lighter, user request 2026-11-13)
 - **Visible first:** an advertiser can license a track at the end of part 1; depth (cards, downloads, splits) follows.
@@ -10,7 +10,7 @@
 | # | What | You can… |
 |---|---|---|
 | 1 ✅ | **Advertisers license a track.** Every signed-in account is an advertiser (browsing needs no account; creator stays the opt-in extra). Company name and country are asked once, at the first license. "License this track" on release pages → choose platforms (Instagram, TikTok, Google/YouTube), cities (a starter list of ~20 major cities), term (30/90/365 days) → see the rate (the artist's base rate for now, *per 1,000 exposure-seconds*) and the license terms → confirm. A license record keeps the **locked rate**, the quote snapshot and the dates. Advertisers see it under "My licenses"; artists see their licenses on their dashboard | **Sign up, license a track, and see it on both dashboards** |
-| 2 | **Pay and receive.** The advertiser saves a card in Stripe test mode (Stripe's own form; we store only Stripe's ids, never card details) before confirming a license. An active license unlocks the full-quality master through a short-lived private link; nobody else can get it | License with a saved test card and download the master |
+| 2 ✅ | **Pay and receive.** The advertiser saves a card in Stripe test mode (Stripe's own form; we store only Stripe's ids, never card details) before confirming a license. An active license unlocks the full-quality master through a short-lived private link; nobody else can get it | License with a saved test card and download the master |
 | 3 | **Contributors and splits.** The lead artist lists contributors (name, role, %) totalling exactly 100%; each gets an invite link and accepts or declines (signing in or up from the link). Until a split exists a track is 100% the lead artist's. A track is licensable only when everyone has accepted; each license **locks the split version** in force | Split a track, have contributors accept, and see a license keep its split after the split changes |
 | 4 | **Rules and hardening.** No unpublish / archive / delete while licenses are active (the phase 3 placeholders); a license can be extended at its locked rate before it ends. The full journey as a browser test (split → accept → license → card → download), a security review of licensing and downloads, docs | Phase 5 done |
 
@@ -43,14 +43,18 @@ Four steps, one PR.
 - **Step A — master download.** An active license shows **Download master** in "My licenses". A route checks the license is the signed-in user's and active, then redirects to a private storage link valid for 5 minutes (`Content-Disposition: attachment`, named after the track). The storage key never appears on a page. Nobody else (other users, ended licenses, failed audio) gets a link.
 - **Step B — a saved card before licensing.** A small payments adapter with two implementations: **Stripe test mode** (used when `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` are set: a SetupIntent and Stripe's own card form; we store only Stripe's customer and payment-method ids plus brand/last 4 for display) and a **simulated card** when no keys are set, clearly labelled, so the app and CI work at $0 without an account. A license needs a saved card.
 
+**Done (2026-11-23, [decision 035](../decisions/035-cards-and-master-downloads.md)):** both steps, one code review (9 fixes; the 10th moves to part 4 below) and a security review ([security.md](../security.md)).
+
+**Added to part 4 from the review:** block replacing a licensed track's audio (unpublish → new upload would change the licensee's master).
+
 ## Needs from the user
-- A free **Stripe account** and its **test-mode keys** in `.env` (part 2). Test mode never charges real money.
+- *Optional:* a free **Stripe account** and its **test-mode keys** in `.env` to try Stripe's real card form. Without them a labelled simulated card is used. Test mode never charges real money.
 
 ## Acceptance criteria (whole phase)
 - [x] Every signed-in account can license tracks and see its licenses.
 - [x] An advertiser licenses a published track for chosen platforms, cities and term; the rate shown is the rate locked on the license.
-- [ ] A license needs a saved test card; no card data is stored by us.
-- [ ] Only an active licensee can download the master, through a short-lived private link.
+- [x] A license needs a saved test card; no card data is stored by us.
+- [x] Only an active licensee can download the master, through a short-lived private link.
 - [ ] Shares total exactly 100%; every contributor must accept before a track can be licensed; each license keeps the split version it started with.
 - [ ] Licensed tracks can't be unpublished, archived or deleted while a license is active.
 - [ ] CI passes, including the full licensing journey in the browser.
