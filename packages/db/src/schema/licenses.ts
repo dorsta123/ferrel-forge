@@ -1,9 +1,10 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, jsonb, pgEnum, pgTable, smallint, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { check, foreignKey, index, integer, jsonb, pgEnum, pgTable, smallint, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { AD_PLATFORMS, CITY_CODES, COUNTRY_CODES, LICENSE_TERM_DAYS, LICENSING_LIMITS } from "../constants/licensing";
 import { TRACK_LIMITS } from "../constants/tracks";
 import { users } from "./auth";
 import { lit, timestamps } from "./columns";
+import { splitVersions } from "./splits";
 import { tracks } from "./tracks";
 
 export const adPlatform = pgEnum("ad_platform", AD_PLATFORMS);
@@ -54,11 +55,15 @@ export const licenses = pgTable(
     /** How the rate was worked out (the pricing engine's inputs and factors), so it can be replayed. */
     quote: jsonb("quote").notNull(),
     termsVersion: text("terms_version").notNull(),
+    /** The contributor split in force when the license started; its invoices always use it (decision 019). */
+    splitVersionId: uuid("split_version_id").notNull(),
     ...timestamps,
   },
   (t) => [
     index("licenses_track_id_idx").on(t.trackId),
     index("licenses_licensee_id_idx").on(t.licenseeId),
+    // (split, track) together: a license can only lock a split of its own track.
+    foreignKey({ name: "licenses_split_version_fk", columns: [t.splitVersionId, t.trackId], foreignColumns: [splitVersions.id, splitVersions.trackId] }).onDelete("restrict"),
     check("licenses_platforms", sql`cardinality(${t.platforms}) between 1 and ${lit(AD_PLATFORMS.length)}`),
     check("licenses_cities", sql`cardinality(${t.cities}) between 1 and ${lit(LICENSING_LIMITS.citiesMax)} and ${t.cities} <@ ${textList(CITY_CODES)}`),
     check("licenses_term", sql`${t.termDays} in (${sql.raw(LICENSE_TERM_DAYS.join(", "))})`),

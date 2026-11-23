@@ -47,6 +47,19 @@ Four steps, one PR.
 
 **Added to part 4 from the review:** block replacing a licensed track's audio (unpublish → new upload would change the licensee's master).
 
+## Part 3 in detail (approved by the user 2026-11-24)
+Four steps, one PR.
+- **A. Tables and rules.** `split_versions` (a track's numbered splits) and `split_shares` (name, role, basis points, the account once claimed, invite-code hash, pending/accepted/declined). Pure rules: percentages ↔ basis points, total exactly 10,000, at most 50 people, at least 0.5% each, fixed roles (producer, vocalist, writer, mixer, musician, other + note).
+- **B. The lead artist's "Contributors" box** in the release editor: rows of name, role, %; the lead artist is always on the split (at least 0.5%) and accepted automatically; saving makes a new version that everyone else accepts again; "copy invite link" per person (a new link can be made any time); "2 of 3 accepted".
+- **C. Invite links and "My splits".** `/splits/invite/<code>`: sign in or up and come back; the track, your role and share, the whole split, Accept / Decline. Accepting ties the share to your account (one share per person per version). Links stop working when the split changes. Only a hash of the code is stored. "My splits" in the account menu lists every track you're on.
+- **D. Licensing.** A track is licensable only when everyone has accepted the current split; no split = 100% the lead artist's. The release page says "Not yet available to license" meanwhile. Each license locks the split version in force; existing licenses get a "100% lead artist" version.
+
+**Choices (user, 2026-11-24):** the lead artist always keeps a share; splits can be edited while licenses are active (running licenses keep theirs; new licenses wait for the new split to be accepted); contributors see the whole split.
+
+**Not in part 3:** paying contributors (phase 7), unclaimed shares (phase 7), blocking unpublish while licensed (part 4).
+
+**Done when:** unit tests (split maths, limits); integration tests with forged requests (someone else's track, an old or reused link, two shares for one person, accepting someone else's share, 99.99%, licensing while someone is pending); a browser test (split → contributor signs up from the link and accepts → license → split changes → license keeps the old split); a code review + security review; docs.
+
 ## Needs from the user
 - *Optional:* a free **Stripe account** and its **test-mode keys** in `.env` to try Stripe's real card form. Without them a labelled simulated card is used. Test mode never charges real money.
 
