@@ -62,7 +62,7 @@ export async function getInvite(userId: string, code: string): Promise<{ ok: tru
   const share = lines.find((l) => l.id === row.id)!;
   return {
     ok: true,
-    invite: { trackTitle: row.trackTitle, artistName: row.artistName, version: row.version, share, shares: lines.map(({ id: _, ...line }) => line) },
+    invite: { trackTitle: row.trackTitle, artistName: row.artistName, version: row.version, share, shares: lines.map((l) => ({ name: l.name, role: l.role, roleNote: l.roleNote, basisPoints: l.basisPoints, isLead: l.isLead, status: l.status })) },
   };
 }
 
