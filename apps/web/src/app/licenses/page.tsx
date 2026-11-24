@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { CheckCircle2Icon, DownloadIcon, FileCheckIcon } from "lucide-react";
 import { AD_PLATFORM_LABELS, CITIES } from "@ferrel/db/constants";
 import { buttonVariants } from "@/components/ui/button";
+import { ExtendLicense } from "@/features/licensing/extend-license";
 import { myLicenses, type MyLicense } from "@/features/licensing/service";
 import { formatRate, RATE_UNIT } from "@/lib/rate";
 import { getCurrentUser } from "@/lib/session";
@@ -73,9 +74,10 @@ function LicenseCard({ license: l }: { license: MyLicense }) {
       </div>
       <div className="flex shrink-0 flex-col gap-1 sm:items-end sm:text-right">
         <span className={active ? "text-sm font-medium text-brand-text" : "text-sm text-muted-foreground"}>{active ? "Active" : "Ended"}</span>
-        <span className="text-sm tabular-nums">
+        <span className="text-sm tabular-nums" data-testid="license-dates">
           {date(l.startsAt)} – {date(l.endsAt)}
         </span>
+        {l.extendedDays > 0 && <span className="text-xs text-muted-foreground">Extended by {l.extendedDays} days</span>}
         <span className="text-sm">
           <span className="font-semibold tabular-nums">{formatRate(l.rateMicros)}</span> <span className="text-muted-foreground">{RATE_UNIT}</span>
         </span>
@@ -85,6 +87,8 @@ function LicenseCard({ license: l }: { license: MyLicense }) {
             <DownloadIcon className="size-4" aria-hidden="true" /> Download master
           </a>
         )}
+        {/* Archived tracks are no longer for sale: their licenses run out as agreed. */}
+        {active && l.trackStatus === "published" && <ExtendLicense licenseId={l.id} rateMicros={l.rateMicros} />}
       </div>
     </li>
   );

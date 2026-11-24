@@ -126,6 +126,8 @@ export async function myLicenses(userId: string) {
       endsAt: licenses.endsAt,
       rateMicros: licenses.rateMicros,
       audioStatus: tracks.audioStatus,
+      trackStatus: tracks.status,
+      extendedDays: licenses.extendedDays,
       // The database clock, as the download route uses: page and route never disagree.
       active: isActive,
     })
