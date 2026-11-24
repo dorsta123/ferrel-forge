@@ -15,7 +15,6 @@ const UNAVAILABLE = { ok: false, error: "This track isn't available to license."
 const OWN_TRACK = { ok: false, error: "You can't license your own track." } as const;
 const NO_CARD = { ok: false, error: "Add a payment card before licensing." } as const;
 const SPLIT_PENDING = { ok: false, error: "This track isn't available to license yet: its contributors are still confirming their shares." } as const;
-const DAY_MS = 24 * 60 * 60_000;
 
 /**
  * A published track with usable audio (processing is fine: publishing never waits for it), and
@@ -74,7 +73,6 @@ export async function createLicense(userId: string, trackId: string, input: Lice
   if (quote.rateMicros !== input.shownRateMicros) {
     return { ok: false, error: `The rate changed to ${formatRate(quote.rateMicros)}. Review it and confirm again.`, rateMicros: quote.rateMicros };
   }
-  const startsAt = new Date();
 
   const licenseId = await db.transaction(async (tx) => {
     // Hold the track as it is (shared lock): an unpublish waits for this license, then sees it.
@@ -96,8 +94,10 @@ export async function createLicense(userId: string, trackId: string, input: Lice
         platforms,
         cities,
         termDays,
-        startsAt,
-        endsAt: new Date(startsAt.getTime() + termDays * DAY_MS),
+        // The database clock, the same one every "is it active?" check uses: an app server whose
+        // clock runs ahead can't create a license that looks not-yet-started (review, part 4).
+        startsAt: sql`now()`,
+        endsAt: sql`now() + ${termDays}::int * interval '24 hours'`,
         rateMicros: quote.rateMicros,
         quote: { inputs, ...quote },
         termsVersion: LICENSE_TERMS_VERSION,

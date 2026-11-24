@@ -1,6 +1,6 @@
 // Phase 5 part 4: licensed tracks are protected, and licenses can be extended. Forged input throughout.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { db, eq, licenseExtensions, licenses, paymentCards, tracks } from "@ferrel/db";
+import { db, eq, licenseExtensions, licenses, paymentCards, sql, tracks } from "@ferrel/db";
 import { requestAudioUpload } from "@/features/audio-upload/service";
 import { extendLicense } from "@/features/licensing/extend";
 import { masterDownload } from "@/features/licensing/master-download";
@@ -44,6 +44,12 @@ describe("a track with an active license", () => {
     expect(failure(await changeReleaseStatus(artist.id, id, "unpublish"))).toContain("active licenses");
     await db.update(licenses).set({ startsAt: new Date(Date.now() - 40 * DAY), endsAt: new Date(Date.now() - 10 * DAY) }).where(eq(licenses.id, active));
     expect(await changeReleaseStatus(artist.id, id, "unpublish")).toEqual({ ok: true });
+  });
+
+  it("a license that starts a moment from now still protects the track (clocks differ)", async () => {
+    const id = await track("just-licensed");
+    await license(id, new Date(Date.now() + 5_000));
+    expect(failure(await changeReleaseStatus(artist.id, id, "unpublish"))).toContain("active licenses");
   });
 
   it("can be archived: existing licenses keep working, but no new licenses or extensions", async () => {
@@ -96,6 +102,22 @@ describe("extending a license", () => {
     await db.delete(paymentCards).where(eq(paymentCards.userId, buyer.id));
     expect(failure(await extendLicense(buyer.id, licenseId, "30"))).toContain("card");
     await db.insert(paymentCards).values({ userId: buyer.id, provider: "simulated", brand: "visa", last4: "4242" });
+  });
+
+  it("refuses while the track's audio has failed (the master can't be downloaded)", async () => {
+    const id = await track("failed-later");
+    const l = await license(id, new Date());
+    await db.update(tracks).set({ audioStatus: "failed", audioError: "This file has no audio in it." }).where(eq(tracks.id, id));
+    expect((await extendLicense(buyer.id, l, "30")).ok).toBe(false);
+  });
+
+  it("keeps exact dates when the end has microseconds (written by the database clock)", async () => {
+    const id = await track("micro");
+    const l = await license(id, new Date());
+    await db.execute(sql`update licenses set starts_at = now(), ends_at = now() + interval '30 days' where id = ${l}`);
+    expect(await extendLicense(buyer.id, l, "30")).toMatchObject({ ok: true });
+    const [check] = await db.execute<{ ok: boolean }>(sql`select ends_at = starts_at + interval '60 days' as ok from licenses where id = ${l}`);
+    expect(check.ok).toBe(true);
   });
 
   it("stops at 5 years in total", async () => {

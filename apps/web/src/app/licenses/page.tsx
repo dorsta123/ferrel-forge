@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { CheckCircle2Icon, DownloadIcon, FileCheckIcon } from "lucide-react";
-import { AD_PLATFORM_LABELS, CITIES } from "@ferrel/db/constants";
+import { AD_PLATFORM_LABELS, CITIES, LICENSE_TERM_DAYS, LICENSING_LIMITS } from "@ferrel/db/constants";
 import { buttonVariants } from "@/components/ui/button";
 import { ExtendLicense } from "@/features/licensing/extend-license";
 import { myLicenses, type MyLicense } from "@/features/licensing/service";
@@ -11,6 +11,7 @@ import { getCurrentUser } from "@/lib/session";
 
 export const metadata = { title: "My licenses · ferrel-forge" };
 
+const MIN_EXTENSION = Math.min(...LICENSE_TERM_DAYS);
 const CITY_NAMES: Record<string, string> = Object.fromEntries(CITIES.map((c) => [c.code, c.name]));
 const date = (d: Date) => d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 
@@ -88,7 +89,9 @@ function LicenseCard({ license: l }: { license: MyLicense }) {
           </a>
         )}
         {/* Archived tracks are no longer for sale: their licenses run out as agreed. */}
-        {active && l.trackStatus === "published" && <ExtendLicense licenseId={l.id} rateMicros={l.rateMicros} />}
+        {active && l.trackStatus === "published" && l.audioStatus !== "failed" && l.termDays + l.extendedDays + MIN_EXTENSION <= LICENSING_LIMITS.maxTotalDays && (
+          <ExtendLicense licenseId={l.id} rateMicros={l.rateMicros} />
+        )}
       </div>
     </li>
   );

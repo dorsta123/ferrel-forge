@@ -26,7 +26,8 @@ export type ReleaseFacts = {
 
 export function releaseFacts(
   track: { status: TrackStatus; audioKey: string | null; audioStatus: AudioStatus; publishedAt: Date | null },
-  activeLicenses = 0,
+  /** Licenses not yet ended. Required: assuming none would offer Unpublish on a licensed track. */
+  activeLicenses: number,
 ): ReleaseFacts {
   return {
     status: track.status,

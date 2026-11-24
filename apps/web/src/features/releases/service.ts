@@ -44,7 +44,8 @@ export async function createRelease(creatorId: string, input: ReleaseFormValues)
 export async function updateRelease(creatorId: string, trackId: string, input: ReleaseFormValues): Promise<UpdateReleaseResult> {
   const track = await getOwnedTrack(creatorId, trackId);
   if (!track) return { ok: false, errors: { form: NOT_FOUND } };
-  const locks = releaseLocks(releaseFacts(track));
+  // Locks depend on status and first publish only, not on licenses.
+  const locks = releaseLocks(releaseFacts(track, 0));
   if (locks.readOnly) return { ok: false, errors: { form: "Archived releases can't be edited." } };
 
   const check = validateRelease({
@@ -81,7 +82,8 @@ export async function changeReleaseStatus(creatorId: string, trackId: string, ac
   if (!RELEASE_ACTIONS.includes(action)) return { ok: false, error: "Unknown action." };
   const track = await getOwnedTrack(creatorId, trackId);
   if (!track) return { ok: false, error: NOT_FOUND };
-  const check = checkAction(releaseFacts(track, await activeLicenseCount(track.id)), action);
+  // Licenses only matter to unpublish, which counts them inside its own locked step below.
+  const check = checkAction(releaseFacts(track, 0), action);
   if (!check.ok) return check;
 
   const owned = and(eq(tracks.id, trackId), eq(tracks.creatorId, creatorId));
@@ -103,10 +105,11 @@ export async function changeReleaseStatus(creatorId: string, trackId: string, ac
       const result = await db.transaction(async (tx) => {
         const [row] = await tx.select({ id: tracks.id }).from(tracks).where(and(owned, eq(tracks.status, "published"))).for("update");
         if (!row) return [];
-        if ((await activeLicenseCount(row.id, tx)) > 0) return null;
+        const licensed = checkAction(releaseFacts(track, await activeLicenseCount(row.id, tx)), "unpublish");
+        if (!licensed.ok) return licensed;
         return tx.update(tracks).set({ status: "draft" }).where(eq(tracks.id, row.id)).returning({ id: tracks.id });
       });
-      if (result === null) return { ok: false, error: "Releases with active licenses can't be unpublished: advertisers rely on them. Archive it to stop new licenses." };
+      if (!Array.isArray(result)) return result;
       changed = result;
       break;
     }

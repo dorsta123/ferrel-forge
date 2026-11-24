@@ -57,7 +57,16 @@ export function ExtendLicense({ licenseId, rateMicros }: { licenseId: string; ra
         <Button type="button" onClick={extend} disabled={pending} className="h-9 px-4">
           {pending ? "Extending…" : "Confirm extension"}
         </Button>
-        <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={pending} className="h-9 px-3">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            setOpen(false);
+            setError(null);
+          }}
+          disabled={pending}
+          className="h-9 px-3"
+        >
           Cancel
         </Button>
       </div>

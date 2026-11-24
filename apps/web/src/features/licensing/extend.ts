@@ -9,7 +9,7 @@ import { isActive } from "./active";
 export type ExtendResult = { ok: true; endsAt: Date } | { ok: false; error: string };
 
 const NOT_FOUND = { ok: false, error: "License not found." } as const;
-const DAY_MS = 24 * 60 * 60_000;
+const MAX_REACHED = `A license can run for at most ${LICENSING_LIMITS.maxTotalDays / 365} years in total.`;
 
 /** "30" | "90" | "365" → days; anything else → null. */
 const parseDays = (input: string) => LICENSE_TERM_DAYS.find((d) => String(d) === input) ?? null;
@@ -31,19 +31,32 @@ export async function extendLicense(userId: string, licenseId: string, daysInput
     if (!license) return NOT_FOUND;
     if (!license.active) return { ok: false, error: "This license has ended. License the track again to keep using it." };
 
-    // The track must still be for sale (archiving stops new licenses and extensions). Shared lock:
-    // it can't be archived or unpublished until this extension is in.
-    const [live] = await tx.select({ id: tracks.id }).from(tracks).where(and(eq(tracks.id, license.trackId), eq(tracks.status, "published"))).for("share");
+    // The track must still be for sale, like for a new license: published (archiving stops new
+    // licenses and extensions) with audio the licensee can download. Shared lock: it can't be
+    // archived or unpublished until this extension is in.
+    const [live] = await tx
+      .select({ id: tracks.id })
+      .from(tracks)
+      .where(and(eq(tracks.id, license.trackId), eq(tracks.status, "published"), sql`${tracks.audioStatus} <> 'failed'`))
+      .for("share");
     if (!live) return { ok: false, error: "This track is no longer for sale, so its licenses can't be extended." };
 
-    if (license.termDays + license.extendedDays + days > LICENSING_LIMITS.maxTotalDays) return { ok: false, error: "A license can run for at most 5 years in total." };
+    if (license.termDays + license.extendedDays + days > LICENSING_LIMITS.maxTotalDays) return { ok: false, error: MAX_REACHED };
 
-    const endsAt = new Date(license.endsAt.getTime() + days * DAY_MS);
-    await tx
+    // Dates are worked out by the database: its timestamps carry microseconds a JavaScript date
+    // would drop, and the date checks compare exactly (review, part 4).
+    const span = sql`${days}::int * interval '24 hours'`;
+    const [updated] = await tx
       .update(licenses)
-      .set({ extendedDays: sql`${licenses.extendedDays} + ${days}`, endsAt })
-      .where(eq(licenses.id, license.id));
-    await tx.insert(licenseExtensions).values({ licenseId: license.id, days, previousEndsAt: license.endsAt, endsAt });
-    return { ok: true, endsAt };
+      .set({ extendedDays: sql`${licenses.extendedDays} + ${days}::int`, endsAt: sql`${licenses.endsAt} + ${span}` })
+      .where(eq(licenses.id, license.id))
+      .returning({ endsAt: licenses.endsAt });
+    await tx.insert(licenseExtensions).values({
+      licenseId: license.id,
+      days,
+      previousEndsAt: sql`(select ${licenses.endsAt} - ${span} from ${licenses} where ${licenses.id} = ${license.id})`,
+      endsAt: sql`(select ${licenses.endsAt} from ${licenses} where ${licenses.id} = ${license.id})`,
+    });
+    return { ok: true, endsAt: updated.endsAt };
   });
 }
