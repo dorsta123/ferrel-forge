@@ -6,7 +6,8 @@
 //     └────unpublish───────┘
 //   draft ──delete──▶ gone
 //
-// Phase 5 adds license-based limits (e.g. no unpublish or delete while licenses are active).
+// Phase 5 part 4: no unpublish while licenses are active (archive stays allowed: it stops new
+// licenses while existing ones keep working). Deleting a licensed release is refused in the service.
 import type { AudioStatus, TrackStatus } from "@ferrel/db/constants";
 
 export const RELEASE_ACTIONS = ["publish", "unpublish", "archive", "delete"] as const;
@@ -19,14 +20,20 @@ export type ReleaseFacts = {
   audioFailed: boolean;
   /** Set on the first publish and never cleared; it locks the URL. */
   everPublished: boolean;
+  /** Licenses running now: advertisers rely on the release staying up. */
+  activeLicenses: number;
 };
 
-export function releaseFacts(track: { status: TrackStatus; audioKey: string | null; audioStatus: AudioStatus; publishedAt: Date | null }): ReleaseFacts {
+export function releaseFacts(
+  track: { status: TrackStatus; audioKey: string | null; audioStatus: AudioStatus; publishedAt: Date | null },
+  activeLicenses = 0,
+): ReleaseFacts {
   return {
     status: track.status,
     hasAudio: track.audioKey !== null,
     audioFailed: track.audioStatus === "failed",
     everPublished: track.publishedAt !== null,
+    activeLicenses,
   };
 }
 
@@ -42,6 +49,7 @@ export function checkAction(t: ReleaseFacts, action: ReleaseAction): ActionCheck
       return { ok: true };
     case "unpublish":
       if (t.status !== "published") return no("Only published releases can be unpublished.");
+      if (t.activeLicenses > 0) return no("Releases with active licenses can't be unpublished: advertisers rely on them. Archive it to stop new licenses.");
       return { ok: true };
     case "archive":
       if (t.status !== "published") return no("Only published releases can be archived.");

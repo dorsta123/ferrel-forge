@@ -113,6 +113,13 @@
       "when": 1795459080140,
       "tag": "0015_contributor_splits",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1795547355989,
+      "tag": "0016_license_extensions",
+      "breakpoints": true
     }
   ]
 }

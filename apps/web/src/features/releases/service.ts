@@ -4,6 +4,7 @@
 import { and, db, eq, licenses, sql, tracks } from "@ferrel/db";
 import { deleteObject } from "@ferrel/storage";
 import { PG_UNIQUE_VIOLATION, pgError } from "@/lib/pg-error";
+import { activeLicenseCount } from "../licensing/active";
 import { getOwnedTrack } from "../tracks/track-access";
 import { validateRelease } from "./rules";
 import { firstFreeSlug } from "./slug";
@@ -80,7 +81,7 @@ export async function changeReleaseStatus(creatorId: string, trackId: string, ac
   if (!RELEASE_ACTIONS.includes(action)) return { ok: false, error: "Unknown action." };
   const track = await getOwnedTrack(creatorId, trackId);
   if (!track) return { ok: false, error: NOT_FOUND };
-  const check = checkAction(releaseFacts(track), action);
+  const check = checkAction(releaseFacts(track, await activeLicenseCount(track.id)), action);
   if (!check.ok) return check;
 
   const owned = and(eq(tracks.id, trackId), eq(tracks.creatorId, creatorId));
@@ -96,14 +97,19 @@ export async function changeReleaseStatus(creatorId: string, trackId: string, ac
         .where(and(owned, eq(tracks.status, "draft"), sql`${tracks.audioKey} is not null and ${tracks.audioStatus} <> 'failed'`))
         .returning({ id: tracks.id });
       break;
-    case "unpublish":
-      changed = await db
-        .update(tracks)
-        .set({ status: "draft" })
-        // PHASE 5: also require "no active licenses" here, matching checkAction (decision 021).
-        .where(and(owned, eq(tracks.status, "published")))
-        .returning({ id: tracks.id });
+    case "unpublish": {
+      // Lock the track first: a license being created waits for this (it locks the row too), and
+      // the count below is read after the lock, so a license can't slip in between (phase 5 part 4).
+      const result = await db.transaction(async (tx) => {
+        const [row] = await tx.select({ id: tracks.id }).from(tracks).where(and(owned, eq(tracks.status, "published"))).for("update");
+        if (!row) return [];
+        if ((await activeLicenseCount(row.id, tx)) > 0) return null;
+        return tx.update(tracks).set({ status: "draft" }).where(eq(tracks.id, row.id)).returning({ id: tracks.id });
+      });
+      if (result === null) return { ok: false, error: "Releases with active licenses can't be unpublished: advertisers rely on them. Archive it to stop new licenses." };
+      changed = result;
       break;
+    }
     case "archive":
       changed = await db
         .update(tracks)
@@ -112,8 +118,7 @@ export async function changeReleaseStatus(creatorId: string, trackId: string, ac
         .returning({ id: tracks.id });
       break;
     case "delete": {
-      // A licensed track is kept for its licensees (the database refuses too). Phase 5 part 4
-      // adds the full rules (no unpublish or archive while licenses are active).
+      // A licensed track is kept for its licensees, even after its licenses end (the database refuses too).
       const [licensed] = await db.select({ id: licenses.id }).from(licenses).where(eq(licenses.trackId, trackId)).limit(1);
       if (licensed) return { ok: false, error: "Licensed releases can't be deleted: advertisers rely on them." };
       const [gone] = await db

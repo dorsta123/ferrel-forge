@@ -62,6 +62,14 @@ Four steps, one PR.
 
 **Done when:** unit tests (split maths, limits); integration tests with forged requests (someone else's track, an old or reused link, two shares for one person, accepting someone else's share, 99.99%, licensing while someone is pending); a browser test (split → contributor signs up from the link and accepts → license → split changes → license keeps the old split); a code review + security review; docs.
 
+## Part 4 in detail (user: "plan and execute", 2026-11-25)
+- **Licensed tracks are protected.** While a track has an active license: **unpublish is refused** (the reason shows under the button) and **its audio can't be replaced** (from the part 2 review; the server refuses even though uploads are draft-only). Unpublish and new licenses lock the track row, so the two can't race past each other. Delete was already refused for any licensed track.
+- **Archive stays allowed** (a change from the table above): archiving is how an artist stops selling — no new licenses or extensions — while existing licenses and master downloads keep working, as the release page already promises. Blocking it would leave no way to stop sales.
+- **Extend a license.** "Extend" on an active license in "My licenses": add 30, 90 or 365 days at the **same locked rate and split**, while the track is still published and with a usable card; at most 5 years in total. `licenses.extended_days` (the end date = start + term + extensions, checked by the database) and a `license_extensions` history table.
+- **Hardening.** One browser test for the whole journey: split → contributor accepts → advertiser adds a card → licenses → downloads the master → extends; the artist can't unpublish. A security review of licensing, cards, downloads and splits together. Docs.
+
+**Done when:** unit tests (status rules); integration tests with forged requests (unpublish with an active license, audio upload on a licensed track, extending someone else's / an ended / an archived track's license, bad terms, over 5 years, the database checks); the journey browser test; code review + security review; docs.
+
 ## Needs from the user
 - *Optional:* a free **Stripe account** and its **test-mode keys** in `.env` to try Stripe's real card form. Without them a labelled simulated card is used. Test mode never charges real money.
 

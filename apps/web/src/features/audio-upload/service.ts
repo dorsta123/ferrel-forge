@@ -16,16 +16,20 @@ import {
 } from "@ferrel/storage";
 import { checkAudioFile, type AudioFileInfo } from "./rules";
 import { getOwnedTrack } from "../tracks/track-access";
+import { activeLicenseCount } from "../licensing/active";
 import type { ConfirmUploadResult, RequestUploadResult } from "./types";
 
 const NOT_FOUND = { ok: false, error: "Track not found." } as const;
 const NOT_DRAFT = { ok: false, error: "Audio can only be changed while the track is a draft." } as const;
+// Licensees download this exact file (phase 5 part 4, from the part 2 review).
+const LICENSED = { ok: false, error: "This track is licensed: its audio can't be replaced while licenses are active." } as const;
 
 /** Step 1: validate the file description and hand out a signed upload link. */
 export async function requestAudioUpload(creatorId: string, trackId: string, file: AudioFileInfo): Promise<RequestUploadResult> {
   const track = await getOwnedTrack(creatorId, trackId);
   if (!track) return NOT_FOUND;
   if (track.status !== "draft") return NOT_DRAFT;
+  if ((await activeLicenseCount(track.id)) > 0) return LICENSED;
 
   const check = checkAudioFile(file);
   if (!check.ok) return check;
@@ -61,6 +65,7 @@ export async function confirmAudioUpload(creatorId: string, trackId: string, key
     const owned = and(eq(tracks.id, track.id), eq(tracks.creatorId, creatorId), eq(tracks.status, "draft"));
     const [current] = await tx.select({ audioKey: tracks.audioKey, previewKey: tracks.previewKey }).from(tracks).where(owned).for("update");
     if (!current) return null; // published in the meantime
+    if ((await activeLicenseCount(track.id, tx)) > 0) return "licensed" as const;
     await tx
       .update(tracks)
       // A new file starts over: the old song's length, waveform, start point, error and
@@ -81,6 +86,7 @@ export async function confirmAudioUpload(creatorId: string, trackId: string, key
     return current;
   });
   if (!old) return reject(key, NOT_DRAFT.error);
+  if (old === "licensed") return reject(key, LICENSED.error);
 
   // Only now remove the files it replaced.
   if (old.audioKey && old.audioKey !== key) await deleteObject("masters", old.audioKey);

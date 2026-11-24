@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { checkAction, releaseLocks, visibleActions, type ReleaseFacts } from "./status";
 
-const draft: ReleaseFacts = { status: "draft", hasAudio: true, audioFailed: false, everPublished: false };
-const live: ReleaseFacts = { status: "published", hasAudio: true, audioFailed: false, everPublished: true };
+const draft: ReleaseFacts = { status: "draft", hasAudio: true, audioFailed: false, everPublished: false, activeLicenses: 0 };
+const live: ReleaseFacts = { status: "published", hasAudio: true, audioFailed: false, everPublished: true, activeLicenses: 0 };
 const archived: ReleaseFacts = { ...live, status: "archived" };
 
 describe("checkAction", () => {
@@ -23,6 +23,15 @@ describe("checkAction", () => {
     expect(checkAction(live, "archive").ok).toBe(true);
     expect(checkAction(draft, "unpublish").ok).toBe(false);
     expect(checkAction(draft, "archive").ok).toBe(false);
+  });
+
+  it("refuses to unpublish while licenses are active, but still lets the artist archive (phase 5 part 4)", () => {
+    const licensed = { ...live, activeLicenses: 2 };
+    expect(checkAction(licensed, "unpublish")).toEqual({
+      ok: false,
+      error: "Releases with active licenses can't be unpublished: advertisers rely on them. Archive it to stop new licenses.",
+    });
+    expect(checkAction(licensed, "archive").ok).toBe(true);
   });
 
   it("deletes drafts only, including ones that were published before", () => {
