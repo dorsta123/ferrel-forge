@@ -5,13 +5,14 @@
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/session";
 import { currentCreatorId } from "../tracks/current-creator";
-import { respondByCode, respondToShare, type Answer } from "./respond";
+import { respondByCode, respondToShare } from "./respond";
+import { parseAnswer } from "./rules";
 import { createInviteLink, saveSplit, type SaveSplitResult, type SplitRowSubmit } from "./service";
 
 const str = (v: unknown) => (typeof v === "string" ? v : "");
-const answerOf = (v: unknown): Answer => (v === "accept" ? "accept" : "decline");
+const BAD_ANSWER = { ok: false as const, error: "Choose accept or decline." };
 
-export async function saveSplitAction(trackId: string, rows: SplitRowSubmit[]): Promise<SaveSplitResult> {
+export async function saveSplitAction(trackId: string, rows: SplitRowSubmit[], baseVersion: number): Promise<SaveSplitResult> {
   const creatorId = await currentCreatorId();
   if (typeof creatorId !== "string") return { ok: false, errors: { form: "Please sign in again." } };
   // Plain strings only, and no more rows than the limit could ever accept (the rules count them).
@@ -22,7 +23,8 @@ export async function saveSplitAction(trackId: string, rows: SplitRowSubmit[]): 
     percent: str(r?.percent).slice(0, 20),
     ...(str(r?.shareId) && { shareId: str(r?.shareId) }),
   }));
-  const result = await saveSplit(creatorId, String(trackId), clean);
+  const base = Number.isSafeInteger(baseVersion) && baseVersion >= 0 ? baseVersion : -1;
+  const result = await saveSplit(creatorId, String(trackId), clean, base);
   if (result.ok) revalidatePath(`/dashboard/tracks/${trackId}`);
   return result;
 }
@@ -33,18 +35,22 @@ export async function createInviteLinkAction(trackId: string, shareId: string) {
   return createInviteLink(creatorId, String(trackId), String(shareId));
 }
 
-export async function respondByCodeAction(code: string, answer: Answer) {
+export async function respondByCodeAction(code: string, answer: unknown) {
   const user = await getCurrentUser();
   if (!user) return { ok: false as const, error: "Please sign in again." };
-  const result = await respondByCode(user.id, String(code), answerOf(answer));
+  const parsed = parseAnswer(answer);
+  if (!parsed) return BAD_ANSWER;
+  const result = await respondByCode(user.id, String(code), parsed);
   if (result.ok) revalidatePath("/splits");
   return result;
 }
 
-export async function respondToShareAction(shareId: string, answer: Answer) {
+export async function respondToShareAction(shareId: string, answer: unknown) {
   const user = await getCurrentUser();
   if (!user) return { ok: false as const, error: "Please sign in again." };
-  const result = await respondToShare(user.id, String(shareId), answerOf(answer));
+  const parsed = parseAnswer(answer);
+  if (!parsed) return BAD_ANSWER;
+  const result = await respondToShare(user.id, String(shareId), parsed);
   if (result.ok) revalidatePath("/splits");
   return result;
 }

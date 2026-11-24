@@ -6,20 +6,20 @@ import { PG_UNIQUE_VIOLATION, pgError } from "@/lib/pg-error";
 import { isUuid } from "../tracks/track-access";
 import { isCurrentVersion } from "./current-version";
 import { inviteCodeHash } from "./invite-code";
+import type { Answer } from "./rules";
 
-export type Answer = "accept" | "decline";
 type Result = { ok: true } | { ok: false; error: string };
 
 const EXPIRED = { ok: false, error: "This invite link has expired or was already used. Ask the artist for a new one." } as const;
 const ALREADY_ON = { ok: false, error: "You're already on this split." } as const;
 const NOT_FOUND = { ok: false, error: "This share isn't waiting for your answer." } as const;
 
-type ShareLine = { name: string; role: ContributorRole; roleNote: string | null; basisPoints: number; isLead: boolean; status: ShareStatus };
+type ShareLine = { id: string; name: string; role: ContributorRole; roleNote: string | null; basisPoints: number; isLead: boolean; status: ShareStatus };
 export type Invite = {
   trackTitle: string;
   artistName: string;
   version: number;
-  share: ShareLine & { id: string };
+  share: ShareLine;
   /** The whole split, so everyone sees what they're agreeing to (user, 2026-11-24). */
   shares: ShareLine[];
 };
@@ -62,7 +62,7 @@ export async function getInvite(userId: string, code: string): Promise<{ ok: tru
   const share = lines.find((l) => l.id === row.id)!;
   return {
     ok: true,
-    invite: { trackTitle: row.trackTitle, artistName: row.artistName, version: row.version, share, shares: lines.map((l) => ({ name: l.name, role: l.role, roleNote: l.roleNote, basisPoints: l.basisPoints, isLead: l.isLead, status: l.status })) },
+    invite: { trackTitle: row.trackTitle, artistName: row.artistName, version: row.version, share, shares: lines },
   };
 }
 

@@ -1,6 +1,6 @@
 // Split rules, shared by the browser and the server (pure). Shares are whole basis points:
 // 100% = 10,000, so totals are exact and never rounded (decision 019).
-import { CONTRIBUTOR_ROLES, SPLIT_LIMITS as L, type ContributorRole } from "@ferrel/db/constants";
+import { CONTRIBUTOR_ROLES, CONTRIBUTOR_ROLE_LABELS, SPLIT_LIMITS as L, type ContributorRole } from "@ferrel/db/constants";
 
 /** One row as typed into the form. The first row is always the lead artist. */
 export type SplitRowInput = { name: string; role: string; roleNote: string; percent: string };
@@ -60,3 +60,12 @@ export function validateSplit(rows: SplitRowInput[]): { ok: true; value: SplitRo
   if (total !== L.totalBp) return { ok: false, errors: { form: `Shares add up to ${formatShare(total)}, not 100%.` } };
   return { ok: true, value };
 }
+
+export type Answer = "accept" | "decline";
+
+/** A contributor's answer from the browser: exactly "accept" or "decline", anything else refused. */
+export const parseAnswer = (value: unknown): Answer | null => (value === "accept" || value === "decline" ? value : null);
+
+/** How a share's role reads: the lead, the note for "other", or the role's name. */
+export const roleLabel = (s: { isLead: boolean; role: ContributorRole; roleNote: string | null }) =>
+  s.isLead ? "Lead artist" : s.role === "other" && s.roleNote ? s.roleNote : CONTRIBUTOR_ROLE_LABELS[s.role];

@@ -43,7 +43,7 @@ async function Invite({ params }: { params: PageProps<"/splits/invite/[code]">["
   }
 
   const { invite } = result;
-  const you = invite.shares.findIndex((s) => s.name === invite.share.name);
+  const you = invite.shares.findIndex((s) => s.id === invite.share.id);
   return (
     <>
       <header className="flex flex-col gap-1">

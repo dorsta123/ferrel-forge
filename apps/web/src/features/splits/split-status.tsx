@@ -3,11 +3,10 @@
 // Who has answered the split in force, with an invite link for each person still to answer.
 import { useState, useTransition } from "react";
 import { CheckIcon, CopyIcon, LinkIcon } from "lucide-react";
-import { CONTRIBUTOR_ROLE_LABELS } from "@ferrel/db/constants";
 import { Button } from "@/components/ui/button";
 import { createInviteLinkAction } from "./actions";
 import type { CurrentShare, CurrentSplit } from "./queries";
-import { formatShare } from "./rules";
+import { formatShare, roleLabel } from "./rules";
 import { ShareStatusBadge } from "./share-status-badge";
 
 export function SplitStatus({ trackId, split }: { trackId: string; split: CurrentSplit }) {
@@ -33,20 +32,25 @@ export function SplitStatus({ trackId, split }: { trackId: string; split: Curren
 function ShareLine({ trackId, share: s }: { trackId: string; share: CurrentShare }) {
   const [link, setLink] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"yes" | "failed" | null>(null);
   const [pending, startTransition] = useTransition();
 
   const makeLink = () =>
     startTransition(async () => {
       setError(null);
       const r = await createInviteLinkAction(trackId, s.id).catch(() => ({ ok: false as const, error: "Something went wrong. Please try again." }));
+      setCopied(null);
       if (r.ok) setLink(`${window.location.origin}/splits/invite/${r.code}`);
       else setError(r.error);
     });
   const copy = async () => {
     if (!link) return;
-    await navigator.clipboard?.writeText(link).catch(() => undefined);
-    setCopied(true);
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied("yes");
+    } catch {
+      setCopied("failed"); // e.g. no clipboard access: the link is selectable in the box
+    }
   };
 
   return (
@@ -54,7 +58,7 @@ function ShareLine({ trackId, share: s }: { trackId: string; share: CurrentShare
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="font-medium">{s.name}</span>
         <span className="text-sm text-muted-foreground">
-          {s.isLead ? "Lead artist" : s.role === "other" && s.roleNote ? s.roleNote : CONTRIBUTOR_ROLE_LABELS[s.role]}
+          {roleLabel(s)}
         </span>
         <span className="text-sm tabular-nums">{formatShare(s.basisPoints)}</span>
         <ShareStatusBadge status={s.status} />
@@ -72,9 +76,14 @@ function ShareLine({ trackId, share: s }: { trackId: string; share: CurrentShare
           <div className="flex items-center gap-2">
             <input readOnly value={link} aria-label={`Invite link for ${s.name}`} className="h-8 min-w-0 flex-1 rounded-md border bg-muted px-2 font-mono text-xs" onFocus={(ev) => ev.target.select()} />
             <Button type="button" variant="outline" onClick={copy} className="h-8 gap-1.5 px-3 text-xs">
-              {copied ? <CheckIcon aria-hidden="true" /> : <CopyIcon aria-hidden="true" />} {copied ? "Copied" : "Copy"}
+              {copied === "yes" ? <CheckIcon aria-hidden="true" /> : <CopyIcon aria-hidden="true" />} {copied === "yes" ? "Copied" : "Copy"}
             </Button>
           </div>
+          {copied === "failed" && (
+            <p role="alert" className="text-xs text-destructive">
+              Couldn&rsquo;t copy automatically: select the link and copy it.
+            </p>
+          )}
           <p className="text-xs text-muted-foreground">Send it to {s.name} yourself. Anyone with it can claim this share, and it stops working once used or replaced.</p>
         </div>
       )}

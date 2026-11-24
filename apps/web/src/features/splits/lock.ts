@@ -1,5 +1,6 @@
 // The split a new license locks (decision 019), inside the license's own transaction.
 import { creatorProfiles, db, desc, eq, splitShares, splitVersions, sql } from "@ferrel/db";
+import { allAccepted } from "./current-version";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -11,7 +12,7 @@ export async function lockSplitForLicense(tx: Tx, trackId: string, creatorId: st
   const [current] = await tx
     .select({
       id: splitVersions.id,
-      ready: sql<boolean>`not exists (select 1 from split_shares s where s.split_version_id = ${splitVersions.id} and s.status <> 'accepted')`,
+      ready: allAccepted(sql`${splitVersions.id}`),
     })
     .from(splitVersions)
     .where(eq(splitVersions.trackId, trackId))

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { respondByCodeAction, respondToShareAction } from "./actions";
-import type { Answer } from "./respond";
+import type { Answer } from "./rules";
 
 type Props = { by: { code: string } | { shareId: string } };
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatShare, parsePercent, validateSplit, type SplitRowInput } from "./rules";
+import { formatShare, parseAnswer, parsePercent, roleLabel, validateSplit, type SplitRowInput } from "./rules";
 
 const row = (patch: Partial<SplitRowInput> = {}): SplitRowInput => ({ name: "Sam", role: "vocalist", roleNote: "", percent: "40", ...patch });
 const lead = (percent = "60") => row({ name: "Alice Music", role: "producer", percent });
@@ -79,5 +79,21 @@ describe("validateSplit", () => {
   it("trims names and refuses ones over 60 characters", () => {
     expect(validateSplit([lead("60"), row({ name: "  Sam  " })])).toMatchObject({ ok: true, value: [{}, { name: "Sam" }] });
     expect(validateSplit([lead("60"), row({ name: "x".repeat(61) })])).toMatchObject({ ok: false });
+  });
+});
+
+describe("parseAnswer", () => {
+  it("takes only 'accept' or 'decline': anything else is refused, never taken as a decline", () => {
+    expect(parseAnswer("accept")).toBe("accept");
+    expect(parseAnswer("decline")).toBe("decline");
+    for (const bad of [undefined, null, "Accept", "yes", 1, {}]) expect(parseAnswer(bad)).toBeNull();
+  });
+});
+
+describe("roleLabel", () => {
+  it("shows the lead, the note for 'other', or the role", () => {
+    expect(roleLabel({ isLead: true, role: "producer", roleNote: null })).toBe("Lead artist");
+    expect(roleLabel({ isLead: false, role: "other", roleNote: "Cover art" })).toBe("Cover art");
+    expect(roleLabel({ isLead: false, role: "mixer", roleNote: null })).toBe("Mixer");
   });
 });

@@ -1,6 +1,7 @@
 // Reading a track's split in force. Callers check who may see it (the lead artist's editor).
 import { asc, db, desc, eq, splitShares, splitVersions } from "@ferrel/db";
 import type { ContributorRole, ShareStatus } from "@ferrel/db/constants";
+import { isUuid } from "../tracks/track-access";
 
 export type CurrentShare = {
   id: string;
@@ -17,6 +18,7 @@ export type CurrentSplit = { versionId: string; version: number; shares: Current
 
 /** The highest split version of a track, or null if it has none (100% the lead artist's). */
 export async function currentSplit(trackId: string): Promise<CurrentSplit | null> {
+  if (!isUuid(trackId)) return null;
   const [version] = await db
     .select({ id: splitVersions.id, version: splitVersions.version })
     .from(splitVersions)

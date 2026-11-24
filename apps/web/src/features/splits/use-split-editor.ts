@@ -48,6 +48,7 @@ export function useSplitEditor(trackId: string, split: CurrentSplit | null, arti
       const result = await saveSplitAction(
         trackId,
         rows.map((r) => ({ shareId: r.shareId, name: r.name, role: r.role, roleNote: r.roleNote, percent: r.percent })),
+        split?.version ?? 0, // the version this form shows: a newer one in the meantime is refused
       ).catch(() => ({ ok: false as const, errors: { form: "Something went wrong. Please try again." } }));
       if (result.ok) {
         setErrors({});

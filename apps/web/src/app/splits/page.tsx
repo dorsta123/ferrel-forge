@@ -2,9 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { UsersIcon } from "lucide-react";
-import { CONTRIBUTOR_ROLE_LABELS } from "@ferrel/db/constants";
 import { mySplits, type MySplit } from "@/features/splits/respond";
-import { formatShare } from "@/features/splits/rules";
+import { formatShare, roleLabel } from "@/features/splits/rules";
 import { ShareAnswer } from "@/features/splits/share-answer";
 import { ShareStatusBadge } from "@/features/splits/share-status-badge";
 import { getCurrentUser } from "@/lib/session";
@@ -63,7 +62,7 @@ function SplitCard({ split: s }: { split: MySplit }) {
         <div className="flex min-w-0 flex-col gap-1">
           {title}
           <p className="text-sm text-muted-foreground">
-            by {s.artistName} · {s.isLead ? "Lead artist" : s.role === "other" && s.roleNote ? s.roleNote : CONTRIBUTOR_ROLE_LABELS[s.role]}
+            by {s.artistName} · {roleLabel(s)}
           </p>
         </div>
         <div className="flex items-center gap-2">

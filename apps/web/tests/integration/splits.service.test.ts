@@ -14,6 +14,8 @@ let otherTrackId = "";
 
 const row = (name: string, percent: string, patch: Partial<SplitRowSubmit> = {}): SplitRowSubmit => ({ name, role: "vocalist", roleNote: "", percent, ...patch });
 const leadRow = (percent: string) => row("Lead Artist", percent, { role: "producer" });
+/** Saves as the editor does: based on the version it was showing (the one in force). */
+const save = async (userId: string, track: string, rows: SplitRowSubmit[]) => saveSplit(userId, track, rows, (await currentSplit(track))?.version ?? 0);
 const licenseForm = (): LicenseFormValues => ({
   shownRateMicros: 500_000,
   platforms: ["tiktok"],
@@ -60,7 +62,7 @@ describe("before any split", () => {
 
 describe("the lead artist's split", () => {
   it("saves a new version; the lead is accepted, everyone else pending", async () => {
-    expect(await saveSplit(lead.id, trackId, [leadRow("60"), row("Sam", "30"), row("Ana", "10", { role: "writer" })])).toEqual({ ok: true });
+    expect(await save(lead.id, trackId, [leadRow("60"), row("Sam", "30"), row("Ana", "10", { role: "writer" })])).toEqual({ ok: true });
     const split = await currentSplit(trackId);
     expect(split?.version).toBe(2);
     expect(split?.shares.map((s) => [s.name, s.basisPoints, s.status, s.isLead])).toEqual([
@@ -71,10 +73,10 @@ describe("the lead artist's split", () => {
   });
 
   it("refuses someone else's track, a malformed id, and totals that aren't 100%", async () => {
-    expect(await saveSplit(sam.id, trackId, [leadRow("100")])).toMatchObject({ ok: false });
-    expect(await saveSplit(lead.id, otherTrackId, [leadRow("100")])).toMatchObject({ ok: false });
-    expect(await saveSplit(lead.id, "1 or 1=1", [leadRow("100")])).toMatchObject({ ok: false });
-    expect(await saveSplit(lead.id, trackId, [leadRow("60"), row("Sam", "39.99")])).toMatchObject({ ok: false, errors: { form: expect.stringContaining("99.99%") } });
+    expect(await save(sam.id, trackId, [leadRow("100")])).toMatchObject({ ok: false });
+    expect(await save(lead.id, otherTrackId, [leadRow("100")])).toMatchObject({ ok: false });
+    expect(await save(lead.id, "1 or 1=1", [leadRow("100")])).toMatchObject({ ok: false });
+    expect(await save(lead.id, trackId, [leadRow("60"), row("Sam", "39.99")])).toMatchObject({ ok: false, errors: { form: expect.stringContaining("99.99%") } });
     expect((await currentSplit(trackId))?.version).toBe(2);
   });
 
@@ -162,7 +164,7 @@ describe("changing the split", () => {
     const before = (await currentSplit(trackId))!;
     const [, samShare, anaShare] = before.shares;
     expect(
-      await saveSplit(lead.id, trackId, [leadRow("50"), row("Sam", "40", { shareId: samShare.id }), row("Ana", "10", { role: "writer", shareId: anaShare.id })]),
+      await save(lead.id, trackId, [leadRow("50"), row("Sam", "40", { shareId: samShare.id }), row("Ana", "10", { role: "writer", shareId: anaShare.id })]),
     ).toEqual({ ok: true });
     const after = (await currentSplit(trackId))!;
     expect(after.version).toBe(3);
@@ -179,7 +181,7 @@ describe("changing the split", () => {
   it("an old version's link no longer works", async () => {
     const code = await inviteFor("Sam");
     const [, samShare, anaShare] = (await currentSplit(trackId))!.shares;
-    await saveSplit(lead.id, trackId, [leadRow("50"), row("Sam", "40", { shareId: samShare.id }), row("Ana", "10", { role: "writer", shareId: anaShare.id })]);
+    await save(lead.id, trackId, [leadRow("50"), row("Sam", "45", { shareId: samShare.id }), row("Ana", "5", { role: "writer", shareId: anaShare.id })]);
     expect((await currentSplit(trackId))!.version).toBe(4);
     expect((await getInvite(sam.id, code)).ok).toBe(false);
     expect(await respondByCode(sam.id, code, "accept")).toMatchObject({ ok: false });
@@ -187,7 +189,7 @@ describe("changing the split", () => {
 
   it("people already on the split answer from 'My splits', by share id", async () => {
     const mine = await mySplits(sam.id);
-    expect(mine).toMatchObject([{ trackTitle: "Split Song", basisPoints: 4_000, status: "pending" }]);
+    expect(mine).toMatchObject([{ trackTitle: "Split Song", basisPoints: 4_500, status: "pending" }]);
     expect(await respondToShare(sam.id, mine[0].shareId, "accept")).toEqual({ ok: true });
   });
 
@@ -197,9 +199,10 @@ describe("changing the split", () => {
       .insert(splitShares)
       .values({ splitVersionId: foreign.id, position: 0, name: "X", role: "producer", basisPoints: 10_000, isLead: true, userId: other.id, status: "accepted", respondedAt: new Date() })
       .returning();
-    const leadShare = (await currentSplit(trackId))!.shares[0];
-    expect(await saveSplit(lead.id, trackId, [leadRow("50"), row("Thief", "50", { shareId: foreignShare.id })])).toMatchObject({ ok: false });
-    expect(await saveSplit(lead.id, trackId, [leadRow("50"), row("Me again", "50", { shareId: leadShare.id })])).toMatchObject({ ok: false });
+    const [leadShare, samShare, anaShare] = (await currentSplit(trackId))!.shares;
+    const keep = [row("Sam", "40", { shareId: samShare.id }), row("Ana", "5", { role: "writer", shareId: anaShare.id })];
+    expect(await save(lead.id, trackId, [leadRow("50"), ...keep, row("Thief", "5", { shareId: foreignShare.id })])).toMatchObject({ ok: false });
+    expect(await save(lead.id, trackId, [leadRow("50"), ...keep, row("Me again", "5", { shareId: leadShare.id })])).toMatchObject({ ok: false });
   });
 
   it("a declined share: the lead sees it and edits the split", async () => {
@@ -207,6 +210,57 @@ describe("changing the split", () => {
     expect(await respondToShare(ana.id, ana_.shareId, "decline")).toEqual({ ok: true });
     expect((await currentSplit(trackId))!.shares.find((s) => s.name === "Ana")?.status).toBe("declined");
     expect(await licenseOffer(buyer.id, trackId)).toMatchObject({ ok: false });
+  });
+});
+
+describe("consent and stale forms (review)", () => {
+  let songId = "";
+  beforeAll(async () => {
+    [{ id: songId }] = await db.insert(tracks).values({ creatorId: lead.id, title: "Consent", slug: "consent", genre: "pop" }).returning({ id: tracks.id });
+    await saveSplit(lead.id, songId, [leadRow("70"), row("Sam", "30")], 0);
+    const samShare = (await currentSplit(songId))!.shares[1];
+    const r = await createInviteLink(lead.id, songId, samShare.id);
+    if (!r.ok) throw new Error(r.error);
+    expect(await respondByCode(sam.id, r.code, "accept")).toEqual({ ok: true });
+  });
+
+  it("someone who accepted can't be removed, or cut out by the lead taking 100%", async () => {
+    expect(await saveSplit(lead.id, songId, [leadRow("100")], 1)).toMatchObject({ ok: false, errors: { form: expect.stringContaining("Sam") } });
+    expect(await saveSplit(lead.id, songId, [leadRow("70"), row("Someone else", "30")], 1)).toMatchObject({ ok: false });
+    expect((await currentSplit(songId))!.version).toBe(1);
+  });
+
+  it("their share can change, and then they must accept again", async () => {
+    const samShare = (await currentSplit(songId))!.shares[1];
+    expect(await saveSplit(lead.id, songId, [leadRow("80"), row("Sam", "20", { shareId: samShare.id })], 1)).toEqual({ ok: true });
+    expect((await currentSplit(songId))!.shares[1]).toMatchObject({ basisPoints: 2_000, status: "pending", hasAccount: true });
+  });
+
+  it("someone pending or declined can be removed", async () => {
+    const samShare = (await currentSplit(songId))!.shares[1];
+    expect(await respondToShare(sam.id, samShare.id, "decline")).toEqual({ ok: true });
+    expect(await saveSplit(lead.id, songId, [leadRow("100")], 2)).toEqual({ ok: true });
+    expect((await currentSplit(songId))!.version).toBe(3);
+  });
+
+  it("a form based on an older version is refused instead of overwriting a newer split", async () => {
+    expect(await saveSplit(lead.id, songId, [leadRow("90"), row("Bo", "10")], 2)).toMatchObject({ ok: false, errors: { form: expect.stringContaining("changed") } });
+    expect(await saveSplit(lead.id, songId, [leadRow("90"), row("Bo", "10")], 0)).toMatchObject({ ok: false });
+    expect((await currentSplit(songId))!.version).toBe(3);
+  });
+
+  it("saving an unchanged split makes no new version, so nobody is asked again", async () => {
+    expect(await saveSplit(lead.id, songId, [leadRow("100")], 3)).toEqual({ ok: true });
+    expect((await currentSplit(songId))!.version).toBe(3);
+  });
+
+  it("two saves from the same version at once: one wins, the other is told it changed", async () => {
+    const results = await Promise.all([
+      saveSplit(lead.id, songId, [leadRow("90"), row("Bo", "10")], 3),
+      saveSplit(lead.id, songId, [leadRow("80"), row("Cy", "20")], 3),
+    ]);
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect((await currentSplit(songId))!.version).toBe(4);
   });
 });
 
