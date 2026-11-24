@@ -10,13 +10,13 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { formatRate, RATE_UNIT } from "@/lib/rate";
 import { useLicenseForm } from "./use-license-form";
 
-type Props = { trackId: string; rateMicros: number; needsBilling: boolean };
+type Props = { trackId: string; rateMicros: number; needsBilling: boolean; needsCard: boolean };
 
 const TERM_LABELS: Record<number, string> = { 30: "30 days", 90: "90 days", 365: "1 year" };
 const choice = "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors has-checked:border-brand has-checked:bg-brand/10";
 
 /** Choose platforms, cities and term, agree to the terms, and license at the locked rate. */
-export function LicenseForm({ trackId, rateMicros, needsBilling }: Props) {
+export function LicenseForm({ trackId, rateMicros, needsBilling, needsCard }: Props) {
   const f = useLicenseForm(trackId, rateMicros);
 
   return (
@@ -131,7 +131,9 @@ export function LicenseForm({ trackId, rateMicros, needsBilling }: Props) {
         <Button type="submit" disabled={f.pending} className="h-11 px-6 text-base font-semibold">
           {f.pending ? "Licensing…" : "License this track"}
         </Button>
-        <p className="text-xs text-muted-foreground">Testing: no card needed yet, and no real money moves.</p>
+        <p className="text-xs text-muted-foreground">
+          {needsCard ? "Add a payment card above first. " : ""}Nothing is charged now. During testing no real money moves.
+        </p>
       </div>
     </form>
   );

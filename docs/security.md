@@ -28,10 +28,25 @@ CSRF (cross-origin auth requests → 403), session cookie `HttpOnly` + `SameSite
 | Tampered path / oversize / expired link | 403 |
 | Different content type than signed | 403 **only with `signableHeaders`** — must be used for every upload link |
 
+## Licensing downloads and cards (phase 5 part 2, review 2026-11-23)
+| Check | Result |
+|---|---|
+| Master download by another user, the artist, an ended license, a malformed or unknown id | 404 (integration + browser tests) |
+| Signed out | Redirect to sign in |
+| Storage key on any page | Never: the route redirects to a 5-minute signed link (`no-store`) |
+| A forged SetupIntent id (someone else's, unfinished, malformed) | Refused: checked with Stripe (status + account id in metadata); malformed ids never sent |
+| A simulated card while Stripe keys are set | Refused, and an earlier one no longer counts |
+| Live Stripe keys | The app refuses to run payments with them |
+| Card numbers | Never reach our server (Stripe's form) or our database (checks allow only ids, brand, 4 digits) |
+| Stripe.js in simulated mode | Not loaded; the browser makes no Stripe requests (browser test) |
+
+Accepted (low): the signed master link works for whoever holds it for 5 minutes, and its storage path includes the artist's account id (an opaque UUID that grants nothing on its own).
+
 ## Rules that keep it that way
 - Authorize on the server next to the data; the header and UI never protect anything.
 - Every write path that creates/updates users goes through Better Auth `databaseHooks`.
-- Master audio is never public; served later only via short-lived signed URLs.
+- Master audio is never public; licensees get it only via 5-minute signed links after a license check (decision 035).
+- Card numbers never touch our servers; only Stripe test keys are accepted.
 - Never trust a file's name or declared type — verify size and signature bytes server-side.
 - An artist's "Listen to the full song" link is shown publicly, so only https links to YouTube, Spotify or SoundCloud are accepted, checked in the form, the server and the database from one list ([decision 032](decisions/032-listen-link.md)); it opens with `rel="noopener noreferrer nofollow"`.
 - A preview is public by design (15 s with a watermark tone). Draft releases get one too, readable only by someone holding its exact random URL (`<trackId>/<random>.mp3`; the bucket can't be listed). Every path that drops a release or replaces its song must delete the preview: re-upload (inside the locked update), release delete. Previews left by crashes are cleaned up in phase 4 slice 12 ([decision 028](decisions/028-previews.md)).

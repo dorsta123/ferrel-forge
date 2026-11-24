@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { CheckCircle2Icon, FileCheckIcon } from "lucide-react";
+import { CheckCircle2Icon, DownloadIcon, FileCheckIcon } from "lucide-react";
 import { AD_PLATFORM_LABELS, CITIES } from "@ferrel/db/constants";
 import { buttonVariants } from "@/components/ui/button";
 import { myLicenses, type MyLicense } from "@/features/licensing/service";
@@ -28,7 +28,6 @@ async function Licenses({ searchParams }: { searchParams: PageProps<"/licenses">
   const [user, params] = await Promise.all([getCurrentUser(), searchParams]);
   if (!user) redirect("/sign-in?next=%2Flicenses");
   const rows = await myLicenses(user.id);
-  const now = new Date();
   const justLicensed = typeof params.new === "string" && rows.some((r) => r.id === params.new);
 
   if (rows.length === 0) {
@@ -53,15 +52,15 @@ async function Licenses({ searchParams }: { searchParams: PageProps<"/licenses">
       )}
       <ul className="flex flex-col gap-3" aria-label={`${rows.length} licenses`}>
         {rows.map((l) => (
-          <LicenseCard key={l.id} license={l} now={now} />
+          <LicenseCard key={l.id} license={l} />
         ))}
       </ul>
     </>
   );
 }
 
-function LicenseCard({ license: l, now }: { license: MyLicense; now: Date }) {
-  const active = l.endsAt > now;
+function LicenseCard({ license: l }: { license: MyLicense }) {
+  const active = l.active;
   return (
     <li className="flex flex-col gap-3 rounded-2xl border bg-card p-5 sm:flex-row sm:items-start sm:justify-between" data-testid="license-card">
       <div className="flex min-w-0 flex-col gap-1">
@@ -80,6 +79,12 @@ function LicenseCard({ license: l, now }: { license: MyLicense; now: Date }) {
         <span className="text-sm">
           <span className="font-semibold tabular-nums">{formatRate(l.rateMicros)}</span> <span className="text-muted-foreground">{RATE_UNIT}</span>
         </span>
+        {active && l.audioStatus !== "failed" && (
+          // A plain link (not client navigation): the route answers with a redirect to the file.
+          <a href={`/licenses/${l.id}/master`} download className={buttonVariants({ variant: "outline", className: "mt-2 h-9 gap-2 px-4" })}>
+            <DownloadIcon className="size-4" aria-hidden="true" /> Download master
+          </a>
+        )}
       </div>
     </li>
   );

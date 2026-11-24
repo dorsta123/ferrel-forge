@@ -4,11 +4,13 @@ import { and, billingProfiles, creatorProfiles, db, eq, licenses, sql, tracks } 
 import { formatRate } from "@/lib/rate";
 import { LICENSE_TERMS_VERSION } from "@ferrel/db/constants";
 import { quoteRate } from "@ferrel/pricing";
+import { hasUsableCard } from "../payments/service";
 import { isUuid } from "../tracks/track-access";
 import { validateLicenseRequest, type LicenseErrors, type LicenseFormValues } from "./rules";
 
 const UNAVAILABLE = { ok: false, error: "This track isn't available to license." } as const;
 const OWN_TRACK = { ok: false, error: "You can't license your own track." } as const;
+const NO_CARD = { ok: false, error: "Add a payment card before licensing." } as const;
 const DAY_MS = 24 * 60 * 60_000;
 
 /** A published track with usable audio (processing is fine: publishing never waits for it). */
@@ -27,14 +29,15 @@ async function hasBilling(userId: string): Promise<boolean> {
   return row !== undefined;
 }
 
-export type LicenseOffer = { ok: true; rateMicros: number; needsBilling: boolean } | { ok: false; error: string };
+export type LicenseOffer = { ok: true; rateMicros: number; needsBilling: boolean; needsCard: boolean } | { ok: false; error: string };
 
-/** What the license page shows: the rate the license would lock, and whether to ask for billing details. */
+/** What the license page shows: the rate the license would lock, and whether billing details or a card are still needed. */
 export async function licenseOffer(userId: string, trackId: string): Promise<LicenseOffer> {
   const track = await licensableTrack(trackId);
   if (!track) return UNAVAILABLE;
   if (track.creatorId === userId) return OWN_TRACK;
-  return { ok: true, rateMicros: quoteRate({ baseRateMicros: track.baseRateMicros }).rateMicros, needsBilling: !(await hasBilling(userId)) };
+  const [needsBilling, needsCard] = await Promise.all([hasBilling(userId).then((b) => !b), hasUsableCard(userId).then((c) => !c)]);
+  return { ok: true, rateMicros: quoteRate({ baseRateMicros: track.baseRateMicros }).rateMicros, needsBilling, needsCard };
 }
 
 export type CreateLicenseResult =
@@ -48,9 +51,11 @@ export async function createLicense(userId: string, trackId: string, input: Lice
   const track = await licensableTrack(trackId);
   if (!track) return UNAVAILABLE;
   if (track.creatorId === userId) return OWN_TRACK;
-
-  const check = validateLicenseRequest(input, { needsBilling: !(await hasBilling(userId)) });
+  const [billed, carded] = await Promise.all([hasBilling(userId), hasUsableCard(userId)]);
+  const check = validateLicenseRequest(input, { needsBilling: !billed });
   if (!check.ok) return check;
+  // Licenses are billed monthly to the saved card (phase 7), so one must exist first.
+  if (!carded) return NO_CARD;
   const { platforms, cities, termDays, billing } = check.value;
 
   // The rate comes from the database, never from the request, and is locked on the license.
@@ -99,6 +104,9 @@ export async function myLicenses(userId: string) {
       startsAt: licenses.startsAt,
       endsAt: licenses.endsAt,
       rateMicros: licenses.rateMicros,
+      audioStatus: tracks.audioStatus,
+      // The database clock, as the download route uses: page and route never disagree.
+      active: sql<boolean>`${licenses.startsAt} <= now() and ${licenses.endsAt} > now()`,
     })
     .from(licenses)
     .innerJoin(tracks, eq(tracks.id, licenses.trackId))

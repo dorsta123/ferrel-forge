@@ -108,7 +108,8 @@ apps/web/src/
 │   ├── releases/             create, edit, publish/unpublish/archive/delete
 │   ├── audio-status/         the editor's live audio status and "Try again" (polls every 3 s while unsettled)
 │   ├── audio-upload/         uploading the master audio file
-│   ├── licensing/            licensing a track: rules, service (rate from the database, locked), license form, "My licenses"
+│   ├── licensing/            licensing a track: rules, service (rate from the database, locked), license form, "My licenses", master download
+│   ├── payments/             the saved card: mode (Stripe test / simulated), Stripe SetupIntent checks, card box on the license page
 │   ├── preview-settings/     the preview's start (waveform + slider) and on/off
 │   ├── creator-tracks/       the dashboard's release list, filters, stats
 │   ├── catalog/              everything public: Explore, creator & release pages
@@ -143,7 +144,7 @@ apps/worker/src/            background jobs (BullMQ on Redis)
 packages/queues/            what web and worker share: queue names, the audio ticket (track + exact
                             file), its duplicate-proof id, sending with a 2 s limit, the stuck-track sweep
 packages/db/                database: tables, constants, migrations
-├── src/schema/             one file per area: auth.ts, creators.ts, tracks.ts
+├── src/schema/             one file per area: auth.ts, creators.ts, tracks.ts, licenses.ts, payments.ts
 ├── src/constants/          genres, keys, limits: shared by DB, server and browser
 └── drizzle/                migrations: numbered SQL files, applied in order
 packages/storage/           file storage: upload links, file checks, buckets
@@ -169,6 +170,7 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 | `/dashboard/tracks/new` | [app/dashboard/tracks/new/page.tsx](../apps/web/src/app/dashboard/tracks/new/page.tsx) | [features/releases/](../apps/web/src/features/releases/) | Creators |
 | `/creators/<slug>/<track>/license` | [app/creators/[slug]/[track]/license/page.tsx](../apps/web/src/app/creators/[slug]/[track]/license/page.tsx) | [features/licensing/](../apps/web/src/features/licensing/) | Signed-in accounts (others are sent to sign in and back) |
 | `/licenses` | [app/licenses/page.tsx](../apps/web/src/app/licenses/page.tsx) | [features/licensing/service.ts](../apps/web/src/features/licensing/service.ts) | Signed-in accounts (their own licenses) |
+| `/licenses/<id>/master` (download) | [app/licenses/[id]/master/route.ts](../apps/web/src/app/licenses/[id]/master/route.ts) | [features/licensing/master-download.ts](../apps/web/src/features/licensing/master-download.ts), [storage download-url.ts](../packages/storage/src/download-url.ts) | The licensee, while the license is active |
 | `/dashboard/tracks/<id>` | [app/dashboard/tracks/[id]/page.tsx](../apps/web/src/app/dashboard/tracks/[id]/page.tsx) | [features/releases/](../apps/web/src/features/releases/), [features/audio-upload/](../apps/web/src/features/audio-upload/), [features/audio-status/](../apps/web/src/features/audio-status/), [features/preview-settings/](../apps/web/src/features/preview-settings/) | The track's owner only |
 | `/explore` | [app/explore/page.tsx](../apps/web/src/app/explore/page.tsx) | [features/catalog/](../apps/web/src/features/catalog/) | Everyone |
 | `/creators/<slug>` | [app/creators/[slug]/page.tsx](../apps/web/src/app/creators/[slug]/page.tsx) | [features/catalog/queries.ts](../apps/web/src/features/catalog/queries.ts) | Everyone |
@@ -218,6 +220,8 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 | `users`, `sessions`, `accounts`, `verifications` | Logins (managed by Better Auth) | [schema/auth.ts](../packages/db/src/schema/auth.ts) |
 | `creator_profiles` | Artist name, URL slug, bio. *Having a row = being a creator.* | [schema/creators.ts](../packages/db/src/schema/creators.ts) |
 | `tracks` | Title, slug, genre, BPM, key, status, the private base rate, audio file location, length, audio processing results (status, error, preview file and start, preview on/off, waveform — [decision 025](decisions/025-audio-result-columns.md)) | [schema/tracks.ts](../packages/db/src/schema/tracks.ts) |
+| `licenses`, `billing_profiles` | Each license (track, licensee, platforms, cities, term, dates, locked rate, quote, terms version); company name and country per account ([decision 034](decisions/034-licensing-basics.md)) | [schema/licenses.ts](../packages/db/src/schema/licenses.ts) |
+| `payment_cards` | One card per account: provider, Stripe's customer and payment-method ids, brand, last 4 — never card numbers ([decision 035](decisions/035-cards-and-master-downloads.md)) | [schema/payments.ts](../packages/db/src/schema/payments.ts) |
 
 - **Limits** (title length, BPM range…) live once in [constants/tracks.ts](../packages/db/src/constants/tracks.ts) and are used by the database, the server *and* the browser.
 - **Changing a table:**
@@ -251,6 +255,8 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 | A "Listen to the full song" link is refused | Only https links to YouTube, Spotify or SoundCloud, with a path and no login or port: [releases/listen-link.ts](../apps/web/src/features/releases/listen-link.ts), the site list in [constants/tracks.ts](../packages/db/src/constants/tracks.ts) (`LISTEN_HOSTS`; adding a site needs a migration too, [decision 032](decisions/032-listen-link.md)) |
 | A storage file disappeared | The daily clean-up deletes files no track points to (masters after 24 h, previews after 1 h); the worker log lists each one ([decision 033](decisions/033-storage-clean-up.md)) |
 | A license is refused | [licensing/service.ts](../apps/web/src/features/licensing/service.ts): only published tracks whose audio isn't failed, never your own; choices are checked in [licensing/rules.ts](../apps/web/src/features/licensing/rules.ts) and by the database (`licenses_*` checks) |
+| "Add a payment card before licensing" / no card box | [payments/service.ts](../apps/web/src/features/payments/service.ts) (`savedCard`): with Stripe keys set, a simulated card doesn't count; the mode comes from `.env` ([payments/mode.ts](../apps/web/src/features/payments/mode.ts)) — live keys or only one key stop the page with an error |
+| "Download master" missing or 404 | Only for the licensee, while the license is active (database clock) and the audio isn't failed: [licensing/master-download.ts](../apps/web/src/features/licensing/master-download.ts). The link expires after 5 minutes: click again |
 | After sign-in you land on the homepage, not where you were | The return address must be a path on this site ([lib/return-to.ts](../apps/web/src/lib/return-to.ts)); anything else falls back to `/` |
 | Upload fails | Browser Network tab (the PUT to `localhost:9000`); use `localhost:3000`, **not** `127.0.0.1`; [audio-upload/service.ts](../apps/web/src/features/audio-upload/service.ts) |
 | Sign-in / sign-up error | [components/auth/auth-errors.ts](../apps/web/src/components/auth/auth-errors.ts) maps error codes to messages; server side in [lib/auth.ts](../apps/web/src/lib/auth.ts) |

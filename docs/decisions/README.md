@@ -38,6 +38,7 @@ One file per decision, numbered in order. To reverse a decision, add a new recor
 | [032](032-listen-link.md) | An optional "Listen to the full song" link: https to YouTube, Spotify or SoundCloud only, one host list shared by form, server and database check; a safe new-tab button | Accepted |
 | [033](033-storage-clean-up.md) | A daily worker job deletes storage files no track points to (our name formats only): masters after 24 h, previews after 1 h | Accepted |
 | [034](034-licensing-basics.md) | Licensing basics: rates per 1,000 exposure-seconds in micro-dollars; every signed-in account can license (billing details once); licenses lock rate, quote, term and terms version; same-site return after sign-in | Accepted |
+| [035](035-cards-and-master-downloads.md) | A saved card before licensing: Stripe test mode when keys are set (only Stripe's ids stored), a labelled simulated card when not, live keys refused; masters downloaded through a 5-minute signed link after a license check | Accepted |
 
 ## Template
 

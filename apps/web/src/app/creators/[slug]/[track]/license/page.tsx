@@ -8,6 +8,9 @@ import { parseCreatorSlug, parseTrackSlug } from "@/features/catalog/params";
 import { getPublicTrack } from "@/features/catalog/queries";
 import { LicenseForm } from "@/features/licensing/license-form";
 import { licenseOffer } from "@/features/licensing/service";
+import { CardSection } from "@/features/payments/card-section";
+import { currentPaymentsMode } from "@/features/payments/mode";
+import { savedCard } from "@/features/payments/service";
 import { getCurrentUser } from "@/lib/session";
 
 type Params = PageProps<"/creators/[slug]/[track]/license">["params"];
@@ -45,7 +48,7 @@ async function License({ params }: { params: Params }) {
   // Licensing needs an account: sign in or up, then come straight back here.
   const user = await getCurrentUser();
   if (!user) redirect(`/sign-in?next=${encodeURIComponent(`${releaseHref}/license`)}`);
-  const offer = await licenseOffer(user.id, track.id);
+  const [offer, card] = await Promise.all([licenseOffer(user.id, track.id), savedCard(user.id)]);
 
   return (
     <>
@@ -58,7 +61,10 @@ async function License({ params }: { params: Params }) {
         <p className="text-muted-foreground">by {track.artistName}</p>
       </header>
       {offer.ok ? (
-        <LicenseForm trackId={track.id} rateMicros={offer.rateMicros} needsBilling={offer.needsBilling} />
+        <>
+          <CardSection card={card} mode={currentPaymentsMode().kind} />
+          <LicenseForm trackId={track.id} rateMicros={offer.rateMicros} needsBilling={offer.needsBilling} needsCard={offer.needsCard} />
+        </>
       ) : (
         <p role="alert" className="rounded-2xl border bg-card p-5 text-sm">
           {offer.error}
