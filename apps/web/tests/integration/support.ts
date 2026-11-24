@@ -1,7 +1,7 @@
 // Test accounts for integration tests: created straight in the database and
 // removed afterwards together with their tracks and stored audio.
 import { randomUUID } from "node:crypto";
-import { creatorProfiles, db, licenses, sql, tracks, users } from "@ferrel/db";
+import { creatorProfiles, db, licenses, splitShares, splitVersions, sql, tracks, users } from "@ferrel/db";
 import { deleteObject } from "@ferrel/storage";
 
 const run = Date.now().toString(36);
@@ -33,7 +33,26 @@ export async function removeCreatedUsers(): Promise<void> {
   // Licenses keep tracks and users from being deleted (RESTRICT), so they go first.
   await db.delete(licenses).where(sql`${licenses.licenseeId} in (${idList}) or ${licenses.trackId} in (select ${tracks.id} from ${tracks} where ${owned})`);
   await db.delete(tracks).where(owned);
+  // Shares keep contributors' accounts from being deleted (RESTRICT); their tracks' shares went with the tracks.
+  await db.delete(splitShares).where(sql`${splitShares.userId} in (${idList})`);
   await db.delete(users).where(sql`${users.id} in (${idList})`);
+}
+
+/** A "100% the lead artist's" split version for a track, as licensing creates; returns its id (for licenses made by hand). */
+export async function leadSplit(trackId: string, creatorId: string): Promise<string> {
+  const [v] = await db.insert(splitVersions).values({ trackId, version: 1 }).returning({ id: splitVersions.id });
+  await db.insert(splitShares).values({
+    splitVersionId: v.id,
+    position: 0,
+    name: "Lead",
+    role: "producer",
+    basisPoints: 10_000,
+    isLead: true,
+    userId: creatorId,
+    status: "accepted",
+    respondedAt: new Date(),
+  });
+  return v.id;
 }
 
 /** Postgres error code and constraint name from a Drizzle error. */

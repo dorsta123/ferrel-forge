@@ -10,6 +10,7 @@ import { cache } from "react";
 import { and, creatorProfiles, db, eq, sql, tracks } from "@ferrel/db";
 import type { Genre } from "@ferrel/db/constants";
 import { EXPLORE_PAGE_SIZE } from "./params";
+import { splitReady } from "../splits/readiness";
 import { previewInfo } from "./preview-info";
 
 const cardColumns = {
@@ -84,6 +85,8 @@ export const getPublicTrack = cache(async (creatorSlug: string, trackSlug: strin
       waveform: tracks.waveform,
       // The artist's full-song link (decision 032): checked against allowed sites when saved and by the database.
       listenUrl: tracks.listenUrl,
+      // Licensable only once every contributor has accepted the split in force (decision 019).
+      splitReady: splitReady(),
     })
     .from(tracks)
     .innerJoin(creatorProfiles, eq(creatorProfiles.userId, tracks.creatorId))

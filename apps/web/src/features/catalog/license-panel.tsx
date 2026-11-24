@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArchiveIcon, FileCheckIcon } from "lucide-react";
+import { ArchiveIcon, FileCheckIcon, HourglassIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import type { PublicTrack } from "./queries";
 
@@ -15,6 +15,18 @@ export function LicensePanel({ track }: { track: PublicTrack }) {
         <div>
           <p className="font-medium">No longer for sale</p>
           <p className="text-sm text-muted-foreground">The creator archived this release. Existing licenses stay valid.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!track.splitReady) {
+    return (
+      <div className="flex items-start gap-3 rounded-2xl border bg-card p-5" data-testid="license-panel">
+        <HourglassIcon className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <div>
+          <p className="font-medium">Not yet available to license</p>
+          <p className="text-sm text-muted-foreground">The people who made this track are still confirming their shares. Check back soon.</p>
         </div>
       </div>
     );

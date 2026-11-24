@@ -143,8 +143,8 @@ Not yet decided. Answers become decision records.
 | 8 | **Unpaid invoices:** what happens if a saved card fails (retries, license suspended, artist still credited?) | Stage 7 |
 | 9 | **Copyright:** what stops uploads of music the artist doesn't own: report button + manual review, or more? | Before going public |
 | 10 | **City data:** which free datasets cover city income and genre popularity, and where we fall back to countries | Stage 8 |
-| 11 | **Contributor roles:** a fixed list (producer, vocalist, writer, mixer, musician, other) or free text? | Stage 5 |
-| 12 | **Limits:** maximum contributors per track (e.g. 50), minimum share (e.g. 0.5%)? | Stage 5 |
+| 11 | ✅ Fixed list with a note for "other" ([036](decisions/036-splits-in-practice.md)). **Contributor roles:** a fixed list (producer, vocalist, writer, mixer, musician, other) or free text? | Stage 5 |
+| 12 | ✅ 50 people, 0.5% minimum ([036](decisions/036-splits-in-practice.md)). **Limits:** maximum contributors per track (e.g. 50), minimum share (e.g. 0.5%)? | Stage 5 |
 | 13 | **Unclaimed shares:** how long are held balances kept for invitees who never join, and what happens after? | Stage 7 |
-| 14 | **Declined split:** if a contributor declines, does the lead artist just edit and re-send, and can the track stay published (unlicensable) meanwhile? | Stage 5 |
+| 14 | ✅ The lead edits and re-sends; the track stays published but unlicensable ([036](decisions/036-splits-in-practice.md)). **Declined split:** if a contributor declines, does the lead artist just edit and re-send, and can the track stay published (unlicensable) meanwhile? | Stage 5 |
 | 15 | ✅ Answered: per 1,000 exposure-seconds, stored in micro-dollars, base rate $0.01–$50.00 ([034](decisions/034-licensing-basics.md)). **Rate unit and limits:** how rates are shown and stored (e.g. per 1,000 or per 1 million exposure-seconds), the allowed range, and the money precision underneath. Deliberately deferred by the user (2026-10-21); until then phase 3's existing artist price field stays as a placeholder | Before stage 5 |

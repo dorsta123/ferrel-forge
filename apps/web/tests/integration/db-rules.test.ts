@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { billingProfiles, creatorProfiles, db, eq, licenses, sql, tracks, users } from "@ferrel/db";
-import { createUsers, pgError, removeCreatedUsers, type TestUser } from "./support";
+import { createUsers, pgError, removeCreatedUsers, type TestUser, leadSplit } from "./support";
 
 let A: TestUser, B: TestUser, buyer: TestUser;
 type TrackRow = typeof tracks.$inferInsert;
@@ -146,6 +146,7 @@ describe("deleting accounts", () => {
 describe("licenses table (phase 5)", () => {
   const day = 24 * 60 * 60_000;
   let trackId = "";
+  let splitVersionId = "";
   const license = (patch: Record<string, unknown> = {}) => {
     const startsAt = new Date("2026-11-13T00:00:00Z");
     return db.insert(licenses).values({
@@ -159,12 +160,14 @@ describe("licenses table (phase 5)", () => {
       rateMicros: 500_000,
       quote: { rateMicros: 500_000, factors: [] },
       termsVersion: "2026-11-13",
+      splitVersionId,
       ...patch,
     } as typeof licenses.$inferInsert);
   };
 
   beforeAll(async () => {
     [{ id: trackId }] = await insert({ ...audio(), status: "published", publishedAt: new Date() }).returning({ id: tracks.id });
+    splitVersionId = await leadSplit(trackId, A.id);
   });
 
   it("accepts a valid license (control)", async () => {
@@ -188,7 +191,7 @@ describe("licenses table (phase 5)", () => {
     await db.transaction(async (tx) => {
       await tx.execute(sql`set local time zone 'America/New_York'`);
       await expect(
-        tx.insert(licenses).values({ trackId, licenseeId: B.id, platforms: ["instagram"], cities: ["london"], termDays: 30, startsAt, endsAt: new Date(startsAt.getTime() + 30 * day), rateMicros: 500_000, quote: {}, termsVersion: "2026-11-13" }),
+        tx.insert(licenses).values({ trackId, licenseeId: B.id, platforms: ["instagram"], cities: ["london"], termDays: 30, startsAt, endsAt: new Date(startsAt.getTime() + 30 * day), rateMicros: 500_000, quote: {}, termsVersion: "2026-11-13", splitVersionId }),
       ).resolves.toBeDefined();
     });
   });

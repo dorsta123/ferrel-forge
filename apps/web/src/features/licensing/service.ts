@@ -5,19 +5,25 @@ import { formatRate } from "@/lib/rate";
 import { LICENSE_TERMS_VERSION } from "@ferrel/db/constants";
 import { quoteRate } from "@ferrel/pricing";
 import { hasUsableCard } from "../payments/service";
+import { lockSplitForLicense } from "../splits/lock";
+import { splitReady } from "../splits/readiness";
 import { isUuid } from "../tracks/track-access";
 import { validateLicenseRequest, type LicenseErrors, type LicenseFormValues } from "./rules";
 
 const UNAVAILABLE = { ok: false, error: "This track isn't available to license." } as const;
 const OWN_TRACK = { ok: false, error: "You can't license your own track." } as const;
 const NO_CARD = { ok: false, error: "Add a payment card before licensing." } as const;
+const SPLIT_PENDING = { ok: false, error: "This track isn't available to license yet: its contributors are still confirming their shares." } as const;
 const DAY_MS = 24 * 60 * 60_000;
 
-/** A published track with usable audio (processing is fine: publishing never waits for it). */
+/**
+ * A published track with usable audio (processing is fine: publishing never waits for it), and
+ * whether everyone has accepted its split (decision 019).
+ */
 async function licensableTrack(trackId: string) {
   if (!isUuid(trackId)) return null;
   const [track] = await db
-    .select({ id: tracks.id, creatorId: tracks.creatorId, baseRateMicros: tracks.baseRateMicros })
+    .select({ id: tracks.id, creatorId: tracks.creatorId, baseRateMicros: tracks.baseRateMicros, splitReady: splitReady() })
     .from(tracks)
     .where(and(eq(tracks.id, trackId), eq(tracks.status, "published"), sql`${tracks.audioStatus} <> 'failed'`))
     .limit(1);
@@ -36,6 +42,7 @@ export async function licenseOffer(userId: string, trackId: string): Promise<Lic
   const track = await licensableTrack(trackId);
   if (!track) return UNAVAILABLE;
   if (track.creatorId === userId) return OWN_TRACK;
+  if (!track.splitReady) return SPLIT_PENDING;
   const [needsBilling, needsCard] = await Promise.all([hasBilling(userId).then((b) => !b), hasUsableCard(userId).then((c) => !c)]);
   return { ok: true, rateMicros: quoteRate({ baseRateMicros: track.baseRateMicros }).rateMicros, needsBilling, needsCard };
 }
@@ -51,6 +58,7 @@ export async function createLicense(userId: string, trackId: string, input: Lice
   const track = await licensableTrack(trackId);
   if (!track) return UNAVAILABLE;
   if (track.creatorId === userId) return OWN_TRACK;
+  if (!track.splitReady) return SPLIT_PENDING;
   const [billed, carded] = await Promise.all([hasBilling(userId), hasUsableCard(userId)]);
   const check = validateLicenseRequest(input, { needsBilling: !billed });
   if (!check.ok) return check;
@@ -68,6 +76,9 @@ export async function createLicense(userId: string, trackId: string, input: Lice
   const startsAt = new Date();
 
   const licenseId = await db.transaction(async (tx) => {
+    // The split in force, locked for the license's life; null if it changed and isn't accepted yet.
+    const splitVersionId = await lockSplitForLicense(tx, track.id, track.creatorId);
+    if (!splitVersionId) return null;
     if (billing) await tx.insert(billingProfiles).values({ userId, ...billing }).onConflictDoNothing();
     const [row] = await tx
       .insert(licenses)
@@ -82,11 +93,12 @@ export async function createLicense(userId: string, trackId: string, input: Lice
         rateMicros: quote.rateMicros,
         quote: { inputs, ...quote },
         termsVersion: LICENSE_TERMS_VERSION,
+        splitVersionId,
       })
       .returning({ id: licenses.id });
     return row.id;
   });
-  return { ok: true, licenseId };
+  return licenseId ? { ok: true, licenseId } : SPLIT_PENDING;
 }
 
 /** The signed-in account's licenses, newest first (display fields only). */

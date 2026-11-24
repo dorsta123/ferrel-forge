@@ -4,7 +4,7 @@ import { db, eq, licenses, tracks } from "@ferrel/db";
 import { createUploadUrl, getObjectInfo, newMasterKey, newPreviewKey } from "@ferrel/storage";
 import { changeReleaseStatus, createRelease, updateRelease } from "@/features/releases/service";
 import type { ReleaseFormValues } from "@/features/releases/types";
-import { createUsers, removeCreatedUsers, type TestUser } from "./support";
+import { createUsers, removeCreatedUsers, type TestUser, leadSplit } from "./support";
 
 const form = (patch: Partial<ReleaseFormValues> = {}): ReleaseFormValues => ({
   title: "Midnight Run", slug: "", description: "", genre: "electronic", bpm: "", musicalKey: "", price: "12.50", listenUrl: "", ...patch,
@@ -168,7 +168,8 @@ describe("licensed releases (phase 5)", () => {
       .values({ creatorId: A.id, title: "Licensed", slug: "licensed", genre: "pop", baseRateMicros: 500_000, audioKey: `${A.id}/x/l.wav`, audioSizeBytes: 10, audioFormat: "wav", audioStatus: "processing", status: "draft", publishedAt: new Date() })
       .returning({ id: tracks.id });
     const startsAt = new Date();
-    await db.insert(licenses).values({ trackId: lid, licenseeId: B.id, platforms: ["tiktok"], cities: ["paris"], termDays: 30, startsAt, endsAt: new Date(startsAt.getTime() + 30 * 86_400_000), rateMicros: 500_000, quote: {}, termsVersion: "2026-11-13" });
+    const splitVersionId = await leadSplit(lid, A.id);
+    await db.insert(licenses).values({ trackId: lid, licenseeId: B.id, platforms: ["tiktok"], cities: ["paris"], termDays: 30, startsAt, endsAt: new Date(startsAt.getTime() + 30 * 86_400_000), rateMicros: 500_000, quote: {}, termsVersion: "2026-11-13", splitVersionId });
     expect(failure(await changeReleaseStatus(A.id, lid, "delete"))).toContain("Licensed releases can");
     expect(await row(lid)).toBeDefined();
   });

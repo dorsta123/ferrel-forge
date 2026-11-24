@@ -3,12 +3,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db, eq, licenses, tracks } from "@ferrel/db";
 import { createUploadUrl, newMasterKey } from "@ferrel/storage";
 import { masterDownload } from "@/features/licensing/master-download";
-import { createUsers, removeCreatedUsers, type TestUser } from "./support";
+import { createUsers, leadSplit, removeCreatedUsers, type TestUser } from "./support";
 
 let artist: TestUser, licensee: TestUser, stranger: TestUser;
 let trackId = "";
 let activeId = "";
 let endedId = "";
+let splitVersionId = "";
 const DAY = 86_400_000;
 const WAV = Buffer.concat([Buffer.from("RIFF"), Buffer.alloc(4), Buffer.from("WAVE"), Buffer.alloc(32)]);
 
@@ -26,6 +27,7 @@ async function license(startsAt: Date) {
       rateMicros: 500_000,
       quote: {},
       termsVersion: "2026-11-13",
+      splitVersionId,
     })
     .returning({ id: licenses.id });
   return row.id;
@@ -41,6 +43,7 @@ beforeAll(async () => {
   const url = await createUploadUrl({ bucket: "masters", key, contentType: "audio/wav", contentLength: WAV.length });
   await fetch(url, { method: "PUT", body: new Uint8Array(WAV), headers: { "content-type": "audio/wav" } });
   await db.update(tracks).set({ audioKey: key, audioSizeBytes: WAV.length, audioFormat: "wav", audioStatus: "ready", durationMs: 1_000, status: "published", publishedAt: new Date() }).where(eq(tracks.id, trackId));
+  splitVersionId = await leadSplit(trackId, artist.id);
   activeId = await license(new Date());
   endedId = await license(new Date("2020-01-01T00:00:00Z"));
 });

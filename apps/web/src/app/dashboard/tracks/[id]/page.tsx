@@ -16,6 +16,9 @@ import { ReleaseActions } from "@/features/releases/release-actions";
 import { ReleaseForm } from "@/features/releases/release-form";
 import { StatusBadge } from "@/features/releases/status-badge";
 import { releaseFacts, releaseLocks } from "@/features/releases/status";
+import { currentSplit } from "@/features/splits/queries";
+import { SplitEditor } from "@/features/splits/split-editor";
+import { SplitStatus } from "@/features/splits/split-status";
 import { getOwnedTrack } from "@/features/tracks/track-access";
 import { getCurrentUser } from "@/lib/session";
 
@@ -45,6 +48,7 @@ async function TrackEditor({ params }: { params: Promise<{ id: string }> }) {
   const current = track.audioFormat && track.audioSizeBytes ? { format: track.audioFormat, sizeBytes: track.audioSizeBytes } : null;
   const preview = previewInfo(track);
   const statusKey = `${track.audioKey ?? "none"}:${track.previewStartMs ?? "default"}:${track.previewEnabled}`;
+  const split = await currentSplit(track.id);
 
   return (
     <>
@@ -109,6 +113,20 @@ async function TrackEditor({ params }: { params: Promise<{ id: string }> }) {
           />
         </section>
       )}
+
+      <section aria-labelledby="split-heading" className="flex flex-col gap-4 rounded-2xl border bg-card p-6">
+        <div>
+          <h2 id="split-heading" className="font-display text-lg font-semibold">
+            Contributors
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Everyone who made this track and their share of what it earns, totalling exactly 100%. Each person accepts their share before the track can be licensed.
+          </p>
+        </div>
+        {split && <SplitStatus trackId={track.id} split={split} />}
+        {/* Keyed by version: after saving, the rows link to the new version's shares. */}
+        <SplitEditor key={split?.versionId ?? "none"} trackId={track.id} split={split} artistName={user.creator.artistName} editable={track.status !== "archived"} />
+      </section>
 
       <section aria-labelledby="details-heading" className="flex flex-col gap-4">
         <h2 id="details-heading" className="font-display text-lg font-semibold">

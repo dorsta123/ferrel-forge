@@ -33,6 +33,8 @@ export async function purgeTestAccounts(): Promise<void> {
     await db`delete from licenses where licensee_id in (select id from users where email like ${TEST_EMAIL_LIKE})
              or track_id in (select t.id from tracks t join users u on u.id = t.creator_id where u.email like ${TEST_EMAIL_LIKE})`;
     await db`delete from tracks where creator_id in (select id from users where email like ${TEST_EMAIL_LIKE})`;
+    // Shares keep contributors' accounts from being deleted (RESTRICT); their tracks' shares went with the tracks.
+    await db`delete from split_shares where user_id in (select id from users where email like ${TEST_EMAIL_LIKE})`;
     await db`delete from users where email like ${TEST_EMAIL_LIKE}`;
   } finally {
     await db.end();

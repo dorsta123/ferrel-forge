@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDownIcon, FileCheckIcon, LayoutDashboardIcon, LogOutIcon, SparklesIcon } from "lucide-react";
+import { ChevronDownIcon, FileCheckIcon, LayoutDashboardIcon, LogOutIcon, SparklesIcon, UsersIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,6 +60,11 @@ export function UserMenu({ name, email, isCreator }: Props) {
         <MenuPrimitive.LinkItem className={itemClass} render={<Link href="/licenses" />}>
           <FileCheckIcon />
           My licenses
+        </MenuPrimitive.LinkItem>
+        {/* Anyone can be a contributor on someone's track, creator or not (decision 019). */}
+        <MenuPrimitive.LinkItem className={itemClass} render={<Link href="/splits" />}>
+          <UsersIcon />
+          My splits
         </MenuPrimitive.LinkItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut} className="gap-2 px-2 py-1.5">

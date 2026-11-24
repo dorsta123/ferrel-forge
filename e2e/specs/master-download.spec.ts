@@ -24,10 +24,14 @@ test("the licensee downloads the master; others and ended licenses get nothing",
   const buyerEmail = testEmail("buyer");
   await signUp(page, { name: "Brand Buyer", email: buyerEmail });
   const buyerId = await userIdByEmail(buyerEmail);
+  // A license locks a split (phase 5 part 3): 100% the lead artist's, as licensing creates.
+  const [{ id: splitVersionId }] = await sql<{ id: string }[]>`insert into split_versions (track_id, version) values (${trackId}, 1) returning id`;
+  await sql`insert into split_shares (split_version_id, position, name, role, basis_points, is_lead, user_id, status, responded_at)
+            values (${splitVersionId}, 0, 'Alice Music', 'producer', 10000, true, ${artistId}, 'accepted', now())`;
   const insertLicense = (startsAt: string) => sql<{ id: string }[]>`
-    insert into licenses (track_id, licensee_id, platforms, cities, term_days, starts_at, ends_at, rate_micros, quote, terms_version)
+    insert into licenses (track_id, licensee_id, platforms, cities, term_days, starts_at, ends_at, rate_micros, quote, terms_version, split_version_id)
     values (${trackId}, ${buyerId}, '{tiktok}', '{london}', 30, ${startsAt}::timestamptz, ${startsAt}::timestamptz + interval '30 days',
-            500000, '{}', '2026-11-13') returning id`;
+            500000, '{}', '2026-11-13', ${splitVersionId}) returning id`;
   const [{ id: activeId }] = await insertLicense(new Date().toISOString());
   const [{ id: endedId }] = await insertLicense("2020-01-01T00:00:00Z");
   const m = main(page);

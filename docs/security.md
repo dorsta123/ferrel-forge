@@ -42,6 +42,20 @@ CSRF (cross-origin auth requests → 403), session cookie `HttpOnly` + `SameSite
 
 Accepted (low): the signed master link works for whoever holds it for 5 minutes, and its storage path includes the artist's account id (an opaque UUID that grants nothing on its own).
 
+## Contributor splits (phase 5 part 3, review 2026-11-24)
+| Check | Result |
+|---|---|
+| Guess an invite link | 32 random bytes; only the SHA-256 is stored; malformed codes never reach the database |
+| An old, replaced or used link | Refused: only the newest link, on the split in force, while the share is pending |
+| Answer someone else's share from "My splits" | Refused: the share must already be tied to your account |
+| The lead takes a contributor's share | Refused (one share per person per version) |
+| Change a split or make links for someone else's track | Not found (ownership checked next to the data) |
+| A license locking another track's split | Refused by the database (foreign key on version + track) |
+| Who holds a share | Pages get "has an account" only, never account ids |
+| Leaking the code via Referer or search engines | The invite page sends no referrer and isn't indexed |
+
+Accepted (low): anyone holding a live invite link can claim that share (the lead sends it privately and can replace it).
+
 ## Rules that keep it that way
 - Authorize on the server next to the data; the header and UI never protect anything.
 - Every write path that creates/updates users goes through Better Auth `databaseHooks`.
