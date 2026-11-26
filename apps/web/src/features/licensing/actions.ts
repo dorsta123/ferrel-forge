@@ -5,6 +5,7 @@
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/session";
 import type { LicenseFormValues } from "./rules";
+import { extendLicense, type ExtendResult } from "./extend";
 import { createLicense, type CreateLicenseResult } from "./service";
 
 const strings = (value: unknown) => (Array.isArray(value) ? value.filter((v): v is string => typeof v === "string").slice(0, 50) : []);
@@ -22,6 +23,14 @@ export async function createLicenseAction(trackId: string, input: LicenseFormVal
     shownRateMicros: Number(input?.shownRateMicros),
   };
   const result = await createLicense(user.id, String(trackId), values);
+  if (result.ok) revalidatePath("/licenses");
+  return result;
+}
+
+export async function extendLicenseAction(licenseId: string, days: string): Promise<ExtendResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Please sign in again." };
+  const result = await extendLicense(user.id, String(licenseId), String(days));
   if (result.ok) revalidatePath("/licenses");
   return result;
 }

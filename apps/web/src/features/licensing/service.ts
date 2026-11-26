@@ -8,13 +8,13 @@ import { hasUsableCard } from "../payments/service";
 import { lockSplitForLicense } from "../splits/lock";
 import { splitReady } from "../splits/readiness";
 import { isUuid } from "../tracks/track-access";
+import { isActive } from "./active";
 import { validateLicenseRequest, type LicenseErrors, type LicenseFormValues } from "./rules";
 
 const UNAVAILABLE = { ok: false, error: "This track isn't available to license." } as const;
 const OWN_TRACK = { ok: false, error: "You can't license your own track." } as const;
 const NO_CARD = { ok: false, error: "Add a payment card before licensing." } as const;
 const SPLIT_PENDING = { ok: false, error: "This track isn't available to license yet: its contributors are still confirming their shares." } as const;
-const DAY_MS = 24 * 60 * 60_000;
 
 /**
  * A published track with usable audio (processing is fine: publishing never waits for it), and
@@ -73,9 +73,15 @@ export async function createLicense(userId: string, trackId: string, input: Lice
   if (quote.rateMicros !== input.shownRateMicros) {
     return { ok: false, error: `The rate changed to ${formatRate(quote.rateMicros)}. Review it and confirm again.`, rateMicros: quote.rateMicros };
   }
-  const startsAt = new Date();
 
   const licenseId = await db.transaction(async (tx) => {
+    // Hold the track as it is (shared lock): an unpublish waits for this license, then sees it.
+    const [live] = await tx
+      .select({ id: tracks.id })
+      .from(tracks)
+      .where(and(eq(tracks.id, track.id), eq(tracks.status, "published"), sql`${tracks.audioStatus} <> 'failed'`))
+      .for("share");
+    if (!live) return "unavailable" as const;
     // The split in force, locked for the license's life; null if it changed and isn't accepted yet.
     const splitVersionId = await lockSplitForLicense(tx, track.id, track.creatorId);
     if (!splitVersionId) return null;
@@ -88,8 +94,10 @@ export async function createLicense(userId: string, trackId: string, input: Lice
         platforms,
         cities,
         termDays,
-        startsAt,
-        endsAt: new Date(startsAt.getTime() + termDays * DAY_MS),
+        // The database clock, the same one every "is it active?" check uses: an app server whose
+        // clock runs ahead can't create a license that looks not-yet-started (review, part 4).
+        startsAt: sql`now()`,
+        endsAt: sql`now() + ${termDays}::int * interval '24 hours'`,
         rateMicros: quote.rateMicros,
         quote: { inputs, ...quote },
         termsVersion: LICENSE_TERMS_VERSION,
@@ -98,6 +106,7 @@ export async function createLicense(userId: string, trackId: string, input: Lice
       .returning({ id: licenses.id });
     return row.id;
   });
+  if (licenseId === "unavailable") return UNAVAILABLE;
   return licenseId ? { ok: true, licenseId } : SPLIT_PENDING;
 }
 
@@ -117,8 +126,10 @@ export async function myLicenses(userId: string) {
       endsAt: licenses.endsAt,
       rateMicros: licenses.rateMicros,
       audioStatus: tracks.audioStatus,
+      trackStatus: tracks.status,
+      extendedDays: licenses.extendedDays,
       // The database clock, as the download route uses: page and route never disagree.
-      active: sql<boolean>`${licenses.startsAt} <= now() and ${licenses.endsAt} > now()`,
+      active: isActive,
     })
     .from(licenses)
     .innerJoin(tracks, eq(tracks.id, licenses.trackId))

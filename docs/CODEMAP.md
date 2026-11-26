@@ -108,7 +108,7 @@ apps/web/src/
 │   ├── releases/             create, edit, publish/unpublish/archive/delete
 │   ├── audio-status/         the editor's live audio status and "Try again" (polls every 3 s while unsettled)
 │   ├── audio-upload/         uploading the master audio file
-│   ├── licensing/            licensing a track: rules, service (rate from the database, locked), license form, "My licenses", master download
+│   ├── licensing/            licensing a track: rules, service (rate from the database, locked), license form, "My licenses", master download, extensions (extend.ts), when a license counts (active.ts)
 │   ├── splits/               contributor splits: rules (basis points), the lead's Contributors box, invite links, answers, "My splits", licensing readiness and locking
 │   ├── payments/             the saved card: mode (Stripe test / simulated), Stripe SetupIntent checks, card box on the license page
 │   ├── preview-settings/     the preview's start (waveform + slider) and on/off
@@ -224,6 +224,7 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 | `creator_profiles` | Artist name, URL slug, bio. *Having a row = being a creator.* | [schema/creators.ts](../packages/db/src/schema/creators.ts) |
 | `tracks` | Title, slug, genre, BPM, key, status, the private base rate, audio file location, length, audio processing results (status, error, preview file and start, preview on/off, waveform — [decision 025](decisions/025-audio-result-columns.md)) | [schema/tracks.ts](../packages/db/src/schema/tracks.ts) |
 | `licenses`, `billing_profiles` | Each license (track, licensee, platforms, cities, term, dates, locked rate, quote, terms version); company name and country per account ([decision 034](decisions/034-licensing-basics.md)) | [schema/licenses.ts](../packages/db/src/schema/licenses.ts) |
+| `license_extensions` | Each extension of a license: days, previous end, new end (`licenses.extended_days` holds the total; [decision 037](decisions/037-licensed-tracks-and-extensions.md)) | [schema/licenses.ts](../packages/db/src/schema/licenses.ts) |
 | `split_versions`, `split_shares` | A track's numbered splits (the highest is in force) and each person's share: name, role, basis points, account once claimed, invite-code hash, answer ([decision 036](decisions/036-splits-in-practice.md)). Licenses point at the version they locked | [schema/splits.ts](../packages/db/src/schema/splits.ts) |
 | `payment_cards` | One card per account: provider, Stripe's customer and payment-method ids, brand, last 4 — never card numbers ([decision 035](decisions/035-cards-and-master-downloads.md)) | [schema/payments.ts](../packages/db/src/schema/payments.ts) |
 
@@ -260,6 +261,8 @@ docs/                       product, roadmap, workflow, plans, decisions, this m
 | A storage file disappeared | The daily clean-up deletes files no track points to (masters after 24 h, previews after 1 h); the worker log lists each one ([decision 033](decisions/033-storage-clean-up.md)) |
 | A license is refused | [licensing/service.ts](../apps/web/src/features/licensing/service.ts): only published tracks whose audio isn't failed, never your own; choices are checked in [licensing/rules.ts](../apps/web/src/features/licensing/rules.ts) and by the database (`licenses_*` checks) |
 | "Add a payment card before licensing" / no card box | [payments/service.ts](../apps/web/src/features/payments/service.ts) (`savedCard`): with Stripe keys set, a simulated card doesn't count; the mode comes from `.env` ([payments/mode.ts](../apps/web/src/features/payments/mode.ts)) — live keys or only one key stop the page with an error |
+| "Unpublish" is greyed out / audio can't be replaced | The track has a license that hasn't ended ([licensing/active.ts](../apps/web/src/features/licensing/active.ts), rule in [releases/status.ts](../apps/web/src/features/releases/status.ts)); archive is still allowed ([decision 037](decisions/037-licensed-tracks-and-extensions.md)) |
+| "Extend" missing or refused | Only on an active license whose track is still published with usable audio, with a usable card, up to 5 years in total: [licensing/extend.ts](../apps/web/src/features/licensing/extend.ts) |
 | "Not yet available to license" | Someone on the split in force hasn't accepted: the release editor's Contributors box shows who; the rule is [splits/readiness.ts](../apps/web/src/features/splits/readiness.ts) |
 | A split won't save | Totals must be exactly 100% ([splits/rules.ts](../apps/web/src/features/splits/rules.ts)); people who accepted can't be removed; a form from an older version is refused, reload ([splits/service.ts](../apps/web/src/features/splits/service.ts)) |
 | An invite link says expired | It was used, replaced by a newer link, or the split changed since: the lead makes a new one |

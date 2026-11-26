@@ -48,6 +48,8 @@ export const licenses = pgTable(
     platforms: adPlatform("platforms").array().notNull(),
     cities: text("cities").array().notNull(),
     termDays: smallint("term_days").notNull(),
+    /** Days added by extensions, at the same locked rate and split (phase 5 part 4). */
+    extendedDays: integer("extended_days").notNull().default(0),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
     /** Per 1,000 exposure-seconds, in micro-dollars, fixed for the license's life. */
@@ -68,7 +70,28 @@ export const licenses = pgTable(
     check("licenses_cities", sql`cardinality(${t.cities}) between 1 and ${lit(LICENSING_LIMITS.citiesMax)} and ${t.cities} <@ ${textList(CITY_CODES)}`),
     check("licenses_term", sql`${t.termDays} in (${sql.raw(LICENSE_TERM_DAYS.join(", "))})`),
     // Exact 24-hour days: calendar-day maths would depend on the session's time zone (daylight saving).
-    check("licenses_dates", sql`${t.endsAt} = ${t.startsAt} + ${t.termDays} * interval '24 hours'`),
+    check("licenses_dates", sql`${t.endsAt} = ${t.startsAt} + (${t.termDays} + ${t.extendedDays}) * interval '24 hours'`),
+    check("licenses_extended_days", sql`${t.extendedDays} >= 0 and ${t.termDays} + ${t.extendedDays} <= ${lit(LICENSING_LIMITS.maxTotalDays)}`),
     check("licenses_rate", sql`${t.rateMicros} between ${lit(TRACK_LIMITS.rateMinMicros)} and ${lit(TRACK_LIMITS.rateMaxMicros)}`),
+  ],
+);
+
+/** Each extension of a license: when, how many days, and the end date before and after (history). */
+export const licenseExtensions = pgTable(
+  "license_extensions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    licenseId: uuid("license_id")
+      .notNull()
+      .references(() => licenses.id, { onDelete: "restrict" }),
+    days: smallint("days").notNull(),
+    previousEndsAt: timestamp("previous_ends_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("license_extensions_license_id_idx").on(t.licenseId),
+    check("license_extensions_days", sql`${t.days} in (${sql.raw(LICENSE_TERM_DAYS.join(", "))})`),
+    check("license_extensions_dates", sql`${t.endsAt} = ${t.previousEndsAt} + ${t.days} * interval '24 hours'`),
   ],
 );

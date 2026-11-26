@@ -1,6 +1,6 @@
 # Plan: phase 5 — licensing
 
-**Status:** Approved by the user 2026-11-13; parts 1–3 done · **Why:** Everything built so far is the artist side. Phase 5 adds the core of the marketplace: an advertiser licenses a track at a locked rate, saves a card, and downloads the master; every contributor's share is agreed before a track can be licensed.
+**Status:** Approved by the user 2026-11-13; **done** 2026-11-25 (all four parts) · **Why:** Everything built so far is the artist side. Phase 5 adds the core of the marketplace: an advertiser licenses a track at a locked rate, saves a card, and downloads the master; every contributor's share is agreed before a track can be licensed.
 
 ## How we work this phase (lighter, user request 2026-11-13)
 - **Visible first:** an advertiser can license a track at the end of part 1; depth (cards, downloads, splits) follows.
@@ -12,7 +12,7 @@
 | 1 ✅ | **Advertisers license a track.** Every signed-in account is an advertiser (browsing needs no account; creator stays the opt-in extra). Company name and country are asked once, at the first license. "License this track" on release pages → choose platforms (Instagram, TikTok, Google/YouTube), cities (a starter list of ~20 major cities), term (30/90/365 days) → see the rate (the artist's base rate for now, *per 1,000 exposure-seconds*) and the license terms → confirm. A license record keeps the **locked rate**, the quote snapshot and the dates. Advertisers see it under "My licenses"; artists see their licenses on their dashboard | **Sign up, license a track, and see it on both dashboards** |
 | 2 ✅ | **Pay and receive.** The advertiser saves a card in Stripe test mode (Stripe's own form; we store only Stripe's ids, never card details) before confirming a license. An active license unlocks the full-quality master through a short-lived private link; nobody else can get it | License with a saved test card and download the master |
 | 3 ✅ | **Contributors and splits.** The lead artist lists contributors (name, role, %) totalling exactly 100%; each gets an invite link and accepts or declines (signing in or up from the link). Until a split exists a track is 100% the lead artist's. A track is licensable only when everyone has accepted; each license **locks the split version** in force | Split a track, have contributors accept, and see a license keep its split after the split changes |
-| 4 | **Rules and hardening.** No unpublish / archive / delete while licenses are active (the phase 3 placeholders); a license can be extended at its locked rate before it ends. The full journey as a browser test (split → accept → license → card → download), a security review of licensing and downloads, docs | Phase 5 done |
+| 4 ✅ | **Rules and hardening.** No unpublish / delete / audio swap while licenses are active (archive stays allowed, see part 4) (the phase 3 placeholders); a license can be extended at its locked rate before it ends. The full journey as a browser test (split → accept → license → card → download), a security review of licensing and downloads, docs | Phase 5 done |
 
 ## Decisions taken (recommendations — the user confirms or changes)
 | # | Question (PRODUCT.md) | Recommendation |
@@ -62,6 +62,16 @@ Four steps, one PR.
 
 **Done when:** unit tests (split maths, limits); integration tests with forged requests (someone else's track, an old or reused link, two shares for one person, accepting someone else's share, 99.99%, licensing while someone is pending); a browser test (split → contributor signs up from the link and accepts → license → split changes → license keeps the old split); a code review + security review; docs.
 
+## Part 4 in detail (user: "plan and execute", 2026-11-25)
+- **Licensed tracks are protected.** While a track has an active license: **unpublish is refused** (the reason shows under the button) and **its audio can't be replaced** (from the part 2 review; the server refuses even though uploads are draft-only). Unpublish and new licenses lock the track row, so the two can't race past each other. Delete was already refused for any licensed track.
+- **Archive stays allowed** (a change from the table above): archiving is how an artist stops selling — no new licenses or extensions — while existing licenses and master downloads keep working, as the release page already promises. Blocking it would leave no way to stop sales.
+- **Extend a license.** "Extend" on an active license in "My licenses": add 30, 90 or 365 days at the **same locked rate and split**, while the track is still published and with a usable card; at most 5 years in total. `licenses.extended_days` (the end date = start + term + extensions, checked by the database) and a `license_extensions` history table.
+- **Hardening.** One browser test for the whole journey: split → contributor accepts → advertiser adds a card → licenses → downloads the master → extends; the artist can't unpublish. A security review of licensing, cards, downloads and splits together. Docs.
+
+**Done (2026-11-25, [decision 037](../decisions/037-licensed-tracks-and-extensions.md)):** a code review (10 fixes, notably: protection counts licenses not yet ended and license dates come from the database clock; extensions need usable audio; dates computed by the database) and a security review of licensing as a whole ([security.md](../security.md)).
+
+**Done when:** unit tests (status rules); integration tests with forged requests (unpublish with an active license, audio upload on a licensed track, extending someone else's / an ended / an archived track's license, bad terms, over 5 years, the database checks); the journey browser test; code review + security review; docs.
+
 ## Needs from the user
 - *Optional:* a free **Stripe account** and its **test-mode keys** in `.env` to try Stripe's real card form. Without them a labelled simulated card is used. Test mode never charges real money.
 
@@ -71,8 +81,8 @@ Four steps, one PR.
 - [x] A license needs a saved test card; no card data is stored by us.
 - [x] Only an active licensee can download the master, through a short-lived private link.
 - [x] Shares total exactly 100%; every contributor must accept before a track can be licensed; each license keeps the split version it started with.
-- [ ] Licensed tracks can't be unpublished, archived or deleted while a license is active.
-- [ ] CI passes, including the full licensing journey in the browser.
+- [x] Licensed tracks can't be unpublished, deleted or have their audio replaced while a license is active (archive stays allowed to stop sales: [decision 037](../decisions/037-licensed-tracks-and-extensions.md)).
+- [x] CI passes, including the full licensing journey in the browser (`licensing-journey.spec.ts`; CI confirms on the PR).
 
 ## Risks
 - **Money and accounts:** card handling stays inside Stripe; security review on parts 1, 2 and 4.

@@ -40,6 +40,7 @@ One file per decision, numbered in order. To reverse a decision, add a new recor
 | [034](034-licensing-basics.md) | Licensing basics: rates per 1,000 exposure-seconds in micro-dollars; every signed-in account can license (billing details once); licenses lock rate, quote, term and terms version; same-site return after sign-in | Accepted |
 | [035](035-cards-and-master-downloads.md) | A saved card before licensing: Stripe test mode when keys are set (only Stripe's ids stored), a labelled simulated card when not, live keys refused; masters downloaded through a 5-minute signed link after a license check | Accepted |
 | [036](036-splits-in-practice.md) | Splits in practice: numbered versions (never edited), hashed invite links, the lead always on the split, accepted contributors can't be removed without consent, stale or unchanged saves make no version, licenses lock (version, track) | Accepted |
+| [037](037-licensed-tracks-and-extensions.md) | Licensed tracks: no unpublish or audio swap while a license hasn't ended (archive still allowed to stop sales); dates by the database clock with row locks against races; extensions of 30/90/365 days at the same locked rate and split, up to 5 years | Accepted |
 
 ## Template
 

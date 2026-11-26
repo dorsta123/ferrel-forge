@@ -20,6 +20,7 @@ import { currentSplit } from "@/features/splits/queries";
 import { SplitEditor } from "@/features/splits/split-editor";
 import { SplitStatus } from "@/features/splits/split-status";
 import { getOwnedTrack } from "@/features/tracks/track-access";
+import { activeLicenseCount } from "@/features/licensing/active";
 import { getCurrentUser } from "@/lib/session";
 
 export const metadata = { title: "Edit release · ferrel-forge" };
@@ -44,7 +45,7 @@ async function TrackEditor({ params }: { params: Promise<{ id: string }> }) {
   const track = user.creator ? await getOwnedTrack(user.id, id) : null;
   if (!track || !user.creator) notFound();
 
-  const facts = releaseFacts(track);
+  const facts = releaseFacts(track, await activeLicenseCount(track.id));
   const current = track.audioFormat && track.audioSizeBytes ? { format: track.audioFormat, sizeBytes: track.audioSizeBytes } : null;
   const preview = previewInfo(track);
   const statusKey = `${track.audioKey ?? "none"}:${track.previewStartMs ?? "default"}:${track.previewEnabled}`;

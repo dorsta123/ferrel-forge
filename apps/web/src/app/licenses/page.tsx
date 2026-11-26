@@ -2,14 +2,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { CheckCircle2Icon, DownloadIcon, FileCheckIcon } from "lucide-react";
-import { AD_PLATFORM_LABELS, CITIES } from "@ferrel/db/constants";
+import { AD_PLATFORM_LABELS, CITIES, LICENSE_TERM_DAYS, LICENSING_LIMITS } from "@ferrel/db/constants";
 import { buttonVariants } from "@/components/ui/button";
+import { ExtendLicense } from "@/features/licensing/extend-license";
 import { myLicenses, type MyLicense } from "@/features/licensing/service";
 import { formatRate, RATE_UNIT } from "@/lib/rate";
 import { getCurrentUser } from "@/lib/session";
 
 export const metadata = { title: "My licenses · ferrel-forge" };
 
+const MIN_EXTENSION = Math.min(...LICENSE_TERM_DAYS);
 const CITY_NAMES: Record<string, string> = Object.fromEntries(CITIES.map((c) => [c.code, c.name]));
 const date = (d: Date) => d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
 
@@ -73,9 +75,10 @@ function LicenseCard({ license: l }: { license: MyLicense }) {
       </div>
       <div className="flex shrink-0 flex-col gap-1 sm:items-end sm:text-right">
         <span className={active ? "text-sm font-medium text-brand-text" : "text-sm text-muted-foreground"}>{active ? "Active" : "Ended"}</span>
-        <span className="text-sm tabular-nums">
+        <span className="text-sm tabular-nums" data-testid="license-dates">
           {date(l.startsAt)} – {date(l.endsAt)}
         </span>
+        {l.extendedDays > 0 && <span className="text-xs text-muted-foreground">Extended by {l.extendedDays} days</span>}
         <span className="text-sm">
           <span className="font-semibold tabular-nums">{formatRate(l.rateMicros)}</span> <span className="text-muted-foreground">{RATE_UNIT}</span>
         </span>
@@ -84,6 +87,10 @@ function LicenseCard({ license: l }: { license: MyLicense }) {
           <a href={`/licenses/${l.id}/master`} download className={buttonVariants({ variant: "outline", className: "mt-2 h-9 gap-2 px-4" })}>
             <DownloadIcon className="size-4" aria-hidden="true" /> Download master
           </a>
+        )}
+        {/* Archived tracks are no longer for sale: their licenses run out as agreed. */}
+        {active && l.trackStatus === "published" && l.audioStatus !== "failed" && l.termDays + l.extendedDays + MIN_EXTENSION <= LICENSING_LIMITS.maxTotalDays && (
+          <ExtendLicense licenseId={l.id} rateMicros={l.rateMicros} />
         )}
       </div>
     </li>

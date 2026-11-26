@@ -2,6 +2,7 @@
 import { and, db, eq, licenses, sql, tracks } from "@ferrel/db";
 import { createDownloadUrl } from "@ferrel/storage";
 import { isUuid } from "../tracks/track-access";
+import { isActive } from "./active";
 
 export type MasterDownload = { ok: true; url: string } | { ok: false; error: string };
 
@@ -18,7 +19,7 @@ export async function masterDownload(userId: string, licenseId: string): Promise
       and(
         eq(licenses.id, licenseId),
         eq(licenses.licenseeId, userId),
-        sql`${licenses.startsAt} <= now() and ${licenses.endsAt} > now()`,
+        isActive,
         sql`${tracks.audioStatus} <> 'failed'`,
       ),
     )

@@ -68,6 +68,8 @@ export const COUNTRY_CODES = COUNTRIES.map((c) => c.code) as readonly CountryCod
 export const LICENSING_LIMITS = {
   companyNameMax: 100,
   citiesMax: CITIES.length,
+  /** A license's whole life, extensions included (phase 5 part 4). */
+  maxTotalDays: 5 * 365,
 } as const;
 
 /**
